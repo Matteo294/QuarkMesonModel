@@ -38,7 +38,6 @@ typedef class SpinorField {
         SpinorField(fieldMat& psi); // Construct by specifying fields value (needed for the overload of "-" operator)
         ~SpinorField() {;}
         fieldMat psi;
-        double computeNorm();
     private:
         random_device rnddev;
         mt19937 rndgen;
@@ -46,7 +45,6 @@ typedef class SpinorField {
 } SpinorField;
 
 SpinorField* DiracmatSpinorProduct(SpinorField const& s); // applies dirac operator to s
-complex<double> computeAction(SpinorField const& s);
 int PBC(int n, int const N){return (n+N)%N;}
 
 
@@ -121,17 +119,6 @@ SpinorField* DiracmatSpinorProduct(SpinorField const & s){
     return new SpinorField(r);
 }
 
-complex<double> computeAction(SpinorField const&){return 0.;}
-
-double SpinorField::computeNorm(){
-    complex<double> r = 0.0;
-    for(int nt=0; nt<Nt; nt++){
-        for(int nx=0; nx<Nx; nx++){
-            r += (complex<double>) (psi(nt,nx).adjoint()*psi(nt,nx));
-        }
-    }
-    return r.real();
-}
 
 
 
