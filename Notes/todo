@@ -1,5 +1,8 @@
 export data dirac operator and study periodicity of the results
-check that the given basis is indeed the best
 even-odd preconditioning
 antiperiodic boundary conditions
-euclidean gamma
+
+calculate <phi^2> from Langevin equation
+Fix scalar simulation
+
+try to simulate O(2) and see if the symmetry persists in the limit V -> infinity (i.e. clarify apparent contradiction between Mermin Wagner in 2D)
