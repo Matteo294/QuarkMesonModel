@@ -10,7 +10,7 @@
 /// !!!!!!!!!!!!!! Remember to add APBE
 
 
-int const Nt = 8, Nx = 8;
+int const Nt = 4, Nx = 6;
 
 using namespace std;
 using mat2 = Eigen::Matrix2cd;
@@ -35,8 +35,9 @@ typedef class SpinorField {
 } SpinorField;
 
 void DiracmatSpinorProduct(SpinorField const& inPsi, SpinorField& outPsi); // applies dirac operator to s
-unsigned int PBC(int n, int const N){return (n+N)%N;}
-unsigned int toFlat(int nt, int nx, int f, int c){return (c + 2*f + 2*nt*Nf + 2*nx*Nt*Nf);}
+unsigned int PBC(int const n, int const N){return (n+N)%N;}
+//unsigned int toFlat(int const nt, int const nx, int const f, int const c){return (c + 2*f + 2*nt*Nf + 2*nx*Nt*Nf);}
+unsigned int toEOFlat(int const nt, int const nx, int const f, int const c);
 
 
 int main(){
@@ -48,7 +49,7 @@ int main(){
     DiracmatSpinorProduct(psiField, psiField2);
     
     // Test Dirac operator (see notes for details on what is going on here)
-    complex<double> dcp[2];
+    /*complex<double> dcp[2];
     for(int nt=0; nt<Nt; nt++){
         for(int nx=0; nx<Nx; nx++){
             for(int f=0; f<Nf; f++){
@@ -59,9 +60,17 @@ int main(){
             }
             cout << endl;
         }
-    }
+    }*/
+
+
 
     return 0;
+}
+
+unsigned int toEOFlat(int const nt, int const nx, int const f, int const c){
+    int const s = Nt*Nx/2*Nf*2;
+    if ((nt+nx) % 2 == 0) return  nt*Nx/2*Nf*2 + nx/2*Nf*2 + f*2 + c;
+    else return s + nt*Nx/2*Nf + nx/2*Nf + f*2 + c;
 }
 
 
@@ -76,8 +85,8 @@ SpinorField::SpinorField(int const Nt, int const Nx, int const Nf) :
     for(int nt=0; nt<Nt; nt++){
         for(int nx=0; nx<Nx; nx++){
             for(int f=0; f<Nf; f++){
-                val[toFlat(nt, nx, f, 0)] = 1.0 * exp(im*p*(double)nt+im*q*(double)nx);
-                val[toFlat(nt, nx, f, 1)] = 1.3 * exp(im*p*(double)nt+im*q*(double)nx);
+                val[toEOFlat(nt, nx, f, 0)] = 1.0 * exp(im*p*(double)nt+im*q*(double)nx);
+                val[toEOFlat(nt, nx, f, 1)] = 1.3 * exp(im*p*(double)nt+im*q*(double)nx);
             }
         }
     }
@@ -89,15 +98,15 @@ void DiracmatSpinorProduct(SpinorField const& inPsi, SpinorField& outPsi){
     int Nt = inPsi.Nt, Nx = inPsi.Nx, Nf = inPsi.Nf;
     for(int nt=0; nt<Nt; nt++){
         for(int nx=0; nx<Nx; nx++){
-            for(int f=0; f<2; f++){
-                outPsi.val[toFlat(nt, nx, f, 0)] =  2.0*inPsi.val[toFlat(nt, nx, f, 0)] 
-                                                    - inPsi.val[toFlat(PBC(nt-1, Nt), nx, f, 0)] 
-                                                    - 0.5*(inPsi.val[toFlat(nt, PBC(nx-1, Nx), f, 0)] + inPsi.val[toFlat(nt, PBC(nx-1, Nx), f, 1)]) 
-                                                    - 0.5*(inPsi.val[toFlat(nt, PBC(nx+1, Nx), f, 0)] - inPsi.val[toFlat(nt, PBC(nx+1, Nx), f, 1)]);
-                outPsi.val[toFlat(nt, nx, f, 1)] =  2.0*inPsi.val[toFlat(nt, nx, f, 1)]
-                                                    - inPsi.val[toFlat(PBC(nt+1, Nt), nx, f, 1)] 
-                                                    - 0.5*(inPsi.val[toFlat(nt, PBC(nx-1, Nx), f, 1)] - inPsi.val[toFlat(nt, PBC(nx-1, Nx), f, 0)]) 
-                                                    - 0.5*(inPsi.val[toFlat(nt, PBC(nx+1, Nx), f, 0)] + inPsi.val[toFlat(nt, PBC(nx+1, Nx), f, 1)]);
+            for(int f=0; f<Nf; f++){
+                outPsi.val[toEOFlat(nt, nx, f, 0)] =  2.0*inPsi.val[toEOFlat(nt, nx, f, 0)] 
+                                                    - inPsi.val[toEOFlat(PBC(nt-1, Nt), nx, f, 0)] 
+                                                    - 0.5*(inPsi.val[toEOFlat(nt, PBC(nx-1, Nx), f, 0)] + inPsi.val[toEOFlat(nt, PBC(nx-1, Nx), f, 1)]) 
+                                                    - 0.5*(inPsi.val[toEOFlat(nt, PBC(nx+1, Nx), f, 0)] - inPsi.val[toEOFlat(nt, PBC(nx+1, Nx), f, 1)]);
+                outPsi.val[toEOFlat(nt, nx, f, 1)] =  2.0*inPsi.val[toEOFlat(nt, nx, f, 1)]
+                                                    - inPsi.val[toEOFlat(PBC(nt+1, Nt), nx, f, 1)] 
+                                                    - 0.5*(inPsi.val[toEOFlat(nt, PBC(nx-1, Nx), f, 1)] - inPsi.val[toEOFlat(nt, PBC(nx-1, Nx), f, 0)]) 
+                                                    - 0.5*(inPsi.val[toEOFlat(nt, PBC(nx+1, Nx), f, 0)] + inPsi.val[toEOFlat(nt, PBC(nx+1, Nx), f, 1)]);
             }
         }
     }
