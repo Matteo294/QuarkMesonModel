@@ -1,8 +1,6 @@
 export data dirac operator and study periodicity of the results
-even-odd preconditioning
+
 antiperiodic boundary conditions
 
 calculate <phi^2> from Langevin equation
 Fix scalar simulation
-
-try to simulate O(2) and see if the symmetry persists in the limit V -> infinity (i.e. clarify apparent contradiction between Mermin Wagner in 2D)
