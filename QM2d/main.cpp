@@ -4,14 +4,12 @@
 #include <Eigen/Dense>
 #include <complex>
 #include <random>
+#include "stuff.h"
 
 
 
 /*** In this code the chiral (or Weyl) basis is used ***/
 // for free fermions the Dirac operator is diagonal in flavour space so we can store them in two separate arrays
-
-
-int const Nt = 8, Nx = 8;
 
 using namespace std;
 using mat2 = Eigen::Matrix2cd;
