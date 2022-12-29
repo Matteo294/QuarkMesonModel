@@ -5,6 +5,7 @@
 #include <fstream>
 #include <algorithm>
 #include "SpinorField/SpinorField.h"
+#include "DiracOP/DiracOP.h"
 
 
 /// !!! check references when cycling thourgh vectors
@@ -33,13 +34,14 @@ int main(){
 
     
     SpinorField psiField(Nt, Nx, Nf), afterCG(Nt, Nx, Nf);
+    DiracOP Dirac(M);
 
     ofstream datafile;
     datafile.open("data.csv");
     datafile << "psi1,psi2" << endl;
 
-    CG(psiField, afterCG);
-    psiField = DiracSpinorProduct(afterCG, 1);
+    CG(psiField, afterCG, Dirac);   
+    psiField = Dirac.applyTo(afterCG, 1);
 
     vector<int> idx (4); // Nt, Nx, Nf, c
     vector<vector<double>> correlator_psi1(Nt, vector<double> (Nx, 0.0)); // first component

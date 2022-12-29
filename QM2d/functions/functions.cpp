@@ -1,6 +1,6 @@
 #include "functions.h" 
 
-void CG(SpinorField const& inPsi, SpinorField& outPsi){
+void CG(SpinorField const& inPsi, SpinorField& outPsi, DiracOP Dirac, bool hermitian){
     assert(inPsi.Nt == outPsi.Nt && inPsi.Nx == outPsi.Nx && inPsi.Nf == outPsi.Nf);
     
     SpinorField 
@@ -18,7 +18,7 @@ void CG(SpinorField const& inPsi, SpinorField& outPsi){
     int k;
     for(k=0; k<IterMax && sqrt(rmodsq) > tol; k++){
 
-        temp = DiracSpinorProduct(DiracSpinorProduct(p, 1));
+        temp = Dirac.applyTo(Dirac.applyTo(p, 1));
 
         alpha = rmodsq / (p.dot(temp)).real(); 
         for(int i=0; i<inPsi.volume; i++){

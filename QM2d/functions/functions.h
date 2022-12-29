@@ -2,16 +2,23 @@
 
 #include "../params.h"
 #include "../SpinorField/SpinorField.h"
+#include "../DiracOP/DiracOP.h"
+
 #include <complex>
 #include <iostream>
 
 typedef std::vector<std::vector<std::complex<double>>> mat;
 class SpinorField;
+class DiracOP;
+
+// Gamma5
+mat const gamma5 {{0, im}, {-im, 0}};
 
 /*
-    Solve Ax=b where b=inPsi, x=outPsi and A is DD^dagger
+    Solve Ax=b where b=inPsi, x=outPsi and A is DD^dagger. One has to pass D, a Dirac operator.
+    If hermitian is true -> use A=DdaggerD
 */
-void CG(SpinorField const& inPsi, SpinorField& outPsi); 
+void CG(SpinorField const& inPsi, SpinorField& outPsi, DiracOP Dirac, bool hermitian=0); 
 
 /*
     From multi-index (nt, nx, f, c) to flat index.
