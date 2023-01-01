@@ -6,6 +6,8 @@
 #include <algorithm>
 #include "SpinorField/SpinorField.h"
 #include "DiracOP/DiracOP.h"
+#include "Mesons/O4Mesons.h"
+#include "Langevin/Langevin.h"
 
 
 /// !!! check references when cycling thourgh vectors
@@ -34,7 +36,7 @@ int main(){
 
     
     SpinorField psiField(Nt, Nx, Nf), afterCG(Nt, Nx, Nf);
-    DiracOP Dirac(M);
+    DiracOP Dirac(fermion_M);
 
     ofstream datafile;
     datafile.open("data.csv");
@@ -43,7 +45,17 @@ int main(){
     CG(psiField, afterCG, Dirac);   
     psiField = Dirac.applyTo(afterCG, 1);
 
-    vector<int> idx (4); // Nt, Nx, Nf, c
+    O4Mesons mesons(Nt, Nx, meson_M2, lam);
+    Langevin langevin(&mesons);
+
+    for(int n=0; n<1000; n++){
+        langevin.LangevinRun(0.01, 1.0);
+        cout << n << ": " << mesons.norm()  << "\t expected: " << sqrt(-6.0 * meson_M2/lam) << endl;
+    }
+
+
+
+    /*vector<int> idx (4); // Nt, Nx, Nf, c
     vector<vector<double>> correlator_psi1(Nt, vector<double> (Nx, 0.0)); // first component
     auto correlator_psi2 = correlator_psi1; // second component
     for(int i=0; i<vol; i++){
@@ -54,7 +66,7 @@ int main(){
     for(int nt=0; nt<Nt; nt++) 
         datafile    << accumulate(correlator_psi1[nt].begin(), correlator_psi1[nt].end(), 0.0) << "," 
                     << accumulate(correlator_psi2[nt].begin(), correlator_psi2[nt].end(), 0.0) << "\n";
-    
+    */
     
 
     return 0;
