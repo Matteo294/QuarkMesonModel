@@ -9,7 +9,7 @@ O4Mesons::O4Mesons(int const Nt, int const Nx, double const m2, double const lam
 {
     for(int nt=0; nt<Nt; nt++){
         for(int nx=0; nx<Nx; nx++){
-            phi[nt][nx] = Eigen::Vector4cd {1.0*nt, 2.0, 3.0, 4.0};
+            phi[nt][nx] = Eigen::Vector4cd {1.0, 0.0, 0.0, 0.0};
         }
     }
 }

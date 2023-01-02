@@ -1,6 +1,6 @@
 #include "DiracOP.h"
 
-DiracOP::DiracOP(double const M) : M{M} {;}
+DiracOP::DiracOP(double const M, O4Mesons* mesons) : M{M}, mesons{mesons} {;}
 
 SpinorField DiracOP::applyTo(SpinorField const& inPsi, bool dagger){
     
@@ -26,6 +26,8 @@ SpinorField DiracOP::applyTo(SpinorField const& inPsi, bool dagger){
         sgn[0] = (nt == (Nt-1)) ? -1.0 : 1.0;
         sgn[1] = (nt == 0) ? -1.0 : 1.0;
         for(int nx=0; nx<Nx; nx++){
+
+            // Free fermions part
             for(int f=0; f<Nf; f++){
                 outPsi.val[toEOflat(nt, nx, f, 0)] = Diag[0][0] * inPsi.val[toEOflat(nt, nx, f, 0)] 
                                                     - sgn[1]*0.5*_Gamma_p0[0][0]*inPsi.val[toEOflat(PBC(nt-1, Nt), nx, f, 0)] - sgn[1]*0.5*_Gamma_p0[0][1]*inPsi.val[toEOflat(PBC(nt-1, Nt), nx, f, 1)]
@@ -38,6 +40,25 @@ SpinorField DiracOP::applyTo(SpinorField const& inPsi, bool dagger){
                                                     - 0.5*_Gamma_p1[1][0]*inPsi.val[toEOflat(nt, PBC(nx-1, Nx), f, 0)] - 0.5*_Gamma_p1[1][1]*inPsi.val[toEOflat(nt, PBC(nx-1, Nx), f, 1)]
                                                     - 0.5*_Gamma_m1[1][0]*inPsi.val[toEOflat(nt, PBC(nx+1, Nx), f, 0)] - 0.5*_Gamma_m1[1][1]*inPsi.val[toEOflat(nt, PBC(nx+1, Nx), f, 1)];              
             }
+
+            // Yukawa interaction with mesons
+            outPsi.val[toEOflat(nt, nx, 0, 0)] += mesons->phi[nt][nx][0]    * inPsi.val[toEOflat(nt, nx, 0, 0)] 
+                                                + im*mesons->phi[nt][nx][1] * (gamma5[0][0]*inPsi.val[toEOflat(nt, nx, 1, 0)] + gamma5[0][1]*inPsi.val[toEOflat(nt, nx, 1, 1)])
+                                                +    mesons->phi[nt][nx][2] * (gamma5[0][0]*inPsi.val[toEOflat(nt, nx, 1, 0)] + gamma5[0][1]*inPsi.val[toEOflat(nt, nx, 1, 1)])
+                                                + im*mesons->phi[nt][nx][3] * (gamma5[0][0]*inPsi.val[toEOflat(nt, nx, 0, 0)] + gamma5[0][1]*inPsi.val[toEOflat(nt, nx, 0, 1)]);
+            outPsi.val[toEOflat(nt, nx, 0, 1)] += mesons->phi[nt][nx][0]    * inPsi.val[toEOflat(nt, nx, 0, 1)] 
+                                                + im*mesons->phi[nt][nx][1] * (gamma5[1][0]*inPsi.val[toEOflat(nt, nx, 1, 0)] + gamma5[1][1]*inPsi.val[toEOflat(nt, nx, 1, 1)])
+                                                +    mesons->phi[nt][nx][2] * (gamma5[1][0]*inPsi.val[toEOflat(nt, nx, 1, 0)] + gamma5[1][1]*inPsi.val[toEOflat(nt, nx, 1, 1)])
+                                                + im*mesons->phi[nt][nx][3] * (gamma5[1][0]*inPsi.val[toEOflat(nt, nx, 0, 0)] + gamma5[1][1]*inPsi.val[toEOflat(nt, nx, 0, 1)]);
+            outPsi.val[toEOflat(nt, nx, 1, 0)] += mesons->phi[nt][nx][0]    * inPsi.val[toEOflat(nt, nx, 1, 0)] 
+                                                + im*mesons->phi[nt][nx][1] * (gamma5[0][0]*inPsi.val[toEOflat(nt, nx, 0, 0)] + gamma5[0][1]*inPsi.val[toEOflat(nt, nx, 0, 1)])
+                                                -    mesons->phi[nt][nx][2] * (gamma5[0][0]*inPsi.val[toEOflat(nt, nx, 0, 0)] + gamma5[0][1]*inPsi.val[toEOflat(nt, nx, 0, 1)])
+                                                - im*mesons->phi[nt][nx][3] * (gamma5[0][0]*inPsi.val[toEOflat(nt, nx, 1, 0)] + gamma5[0][1]*inPsi.val[toEOflat(nt, nx, 1, 1)]);
+            outPsi.val[toEOflat(nt, nx, 1, 1)] += mesons->phi[nt][nx][0]    * inPsi.val[toEOflat(nt, nx, 0, 1)] 
+                                                + im*mesons->phi[nt][nx][1] * (gamma5[1][0]*inPsi.val[toEOflat(nt, nx, 0, 0)] + gamma5[1][1]*inPsi.val[toEOflat(nt, nx, 0, 1)])
+                                                -    mesons->phi[nt][nx][2] * (gamma5[1][0]*inPsi.val[toEOflat(nt, nx, 0, 0)] + gamma5[1][1]*inPsi.val[toEOflat(nt, nx, 0, 1)])
+                                                - im*mesons->phi[nt][nx][3] * (gamma5[1][0]*inPsi.val[toEOflat(nt, nx, 1, 0)] + gamma5[1][1]*inPsi.val[toEOflat(nt, nx, 1, 1)]);
+
         }
     }
 
