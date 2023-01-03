@@ -39,17 +39,33 @@ int main(){
     SpinorField psiField(Nt, Nx, Nf), afterCG(Nt, Nx, Nf);
     DiracOP Dirac(fermion_M, &mesons);
 
-    CG(psiField, afterCG, Dirac);   
-    psiField = Dirac.applyTo(afterCG, 1);
+    //CG(psiField, afterCG, Dirac);   
+    //psiField = Dirac.applyTo(afterCG, 1);
 
 
     ofstream datafile;
     datafile.open("data.csv");
     datafile << "psi1,psi2" << endl;
 
-    /*for(int n=0; n<1000; n++){
+    ofstream magfile;
+    magfile.open("mag.csv");
+    magfile << "mag" << endl;
+
+    for(int n=0; n<500; n++){
+        magfile << (double) mesons.norm() / (Nt*Nx) << endl;
         langevin.LangevinRun(0.01, 1.0);
-    }*/
+    }
+
+    cout << "Thermalisation done" << endl;
+
+    double M = 0.0;
+    for(int n=0; n<3000; n++){
+        langevin.LangevinRun(0.01, 1.0);
+        M += (double) mesons.norm() / (Nt*Nx);
+    }
+
+    cout << "Magnetization: " << M/3000.0;
+    if (meson_M2 < 0) cout << "\t expected: " << sqrt(-6*meson_M2/lam) << endl;
 
     vector<int> idx (4); // Nt, Nx, Nf, c
     vector<vector<double>> correlator_psi1(Nt, vector<double> (Nx, 0.0)); // first component

@@ -6,6 +6,10 @@ import numpy as np
 Mf = 0.5 + 1
 
 
+mag = read_csv("mag.csv")
+plt.plot(range(len(mag['mag'])), mag['mag'])
+plt.show()
+
 
 data = read_csv("data.csv") 
 
