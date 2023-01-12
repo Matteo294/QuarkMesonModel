@@ -21,15 +21,13 @@ void Langevin::LangevinRun(double dt, double T){
 	
 	for(double t=0; t<T; t+=dt){
 		// Integrate Langevin equation with gaussian noise
-		auto phicopy = mesons->phi;
+		auto phicopy = mesons->M;
 		for(int nt=0; nt<Nt; nt++){
 			for(int nx=0; nx<Nx; nx++){
-				for(int j=0; j<4; j++){
-					phicopy[nt][nx][j] = mesons->phi[nt][nx][j] + dt*mesons->evaluateDrift(nt, nx, j) + 0*sqrt(dt)*gaussian(seed_gaussian);
-				}
+				phicopy[nt][nx] = mesons->M[nt][nx] + dt*mesons->evaluateDrift(nt, nx); // Add stochastic term
 			}
 		}
-		mesons->phi = phicopy;
+		mesons->M = phicopy;
 	}
 } 
 

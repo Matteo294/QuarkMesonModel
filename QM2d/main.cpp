@@ -9,76 +9,73 @@
 #include "Mesons/O4Mesons.h"
 #include "Langevin/Langevin.h"
 
-
 /// !!! check references when cycling thourgh vectors
-/// !!! pass mass to constructor and store it in the class
 
 using namespace std;
 
-void CG(SpinorField const& inPsi, SpinorField& outV);
-
-
 int main(){ 
 
-    // check EO indexing
-    /*vector<int> idx(4);
-    for(int nt=0; nt<Nt; nt++){
-        for(int nx=0; nx<Nx; nx++){
-            for(int f=0; f<Nf; f++){
-                for(int c=0; c<2; c++){
-                    cout << nt << " " << nx << " " << f << " " << c << "\n";
-                    idx = eoToVec(toEOflat(nt, nx, f, c));
-                    cout << idx[0] << " " << idx[1] << " " << idx[2] << " " << idx[3] << "\n \n";
-                }
-            }
-        }
-    }*/
-
-    O4Mesons mesons(Nt, Nx, meson_M2, lam);
+    // Create mesons, Langevin simulator, fermion field and a Dirac operator
+    O4Mesons mesons(Nt, Nx, meson_M2, lam, g, sigma, pi);
     Langevin langevin(&mesons);
-    SpinorField psiField(Nt, Nx, Nf), afterCG(Nt, Nx, Nf);
+    SpinorField psiField(Nt, Nx, Nf);
     DiracOP Dirac(fermion_M, &mesons);
 
-    //CG(psiField, afterCG, Dirac);   
-    //psiField = Dirac.applyTo(afterCG, 1);
+    // Write configuration to file
+    ofstream conffile;
+    conffile.open("conffile.txt");
 
+    // Save parameters to file
+    // !!! substitute these params with those stored in the objects to be sure that we are using the correct ones
+    conffile    << "m0=" << fermion_M << "\n"
+                << "lam=" << lam << "\n"
+                << "g=" << g << "\n"
+                << "sigma=" << sigma << "\n"
+                << "pi1=" << pi[0] << "\n"
+                << "pi2=" << pi[1] << "\n"
+                << "pi3=" << pi[2];
 
-    ofstream datafile;
-    datafile.open("data.csv");
-    datafile << "psi1,psi2" << endl;
+    // Perform CG to get the correlator from which we then extract the mass
+    SpinorField afterCG(Nt, Nx, Nf);
+    CG(psiField, afterCG, Dirac);   
+    psiField = Dirac.applyTo(afterCG, 1);
 
-    ofstream magfile;
-    magfile.open("mag.csv");
-    magfile << "mag" << endl;
-
-    for(int n=0; n<500; n++){
-        magfile << (double) mesons.norm() / (Nt*Nx) << endl;
+    // Thermalisation
+    for(int n=0; n<Ntherm; n++){
         langevin.LangevinRun(0.01, 1.0);
     }
-
     cout << "Thermalisation done" << endl;
 
+    // Calculate stuff
     double M = 0.0;
-    for(int n=0; n<3000; n++){
+    for(int n=0; n<Ndata; n++){
         langevin.LangevinRun(0.01, 1.0);
         M += (double) mesons.norm() / (Nt*Nx);
     }
-
     cout << "Magnetization: " << M/3000.0;
     if (meson_M2 < 0) cout << "\t expected: " << sqrt(-6*meson_M2/lam) << endl;
 
-    vector<int> idx (4); // Nt, Nx, Nf, c
-    vector<vector<double>> correlator_psi1(Nt, vector<double> (Nx, 0.0)); // first component
-    auto correlator_psi2 = correlator_psi1; // second component
-    for(int i=0; i<vol; i++){
-        idx = eoToVec(i);
-        if ((idx[3] == 0) && (idx[2] == 0)) correlator_psi1[idx[0]][idx[1]] = psiField.val[i].real() + psiField.val[i+1].real();
+    // Correlator to extract masses
+    ofstream datafile;
+    datafile.open("data.csv");
+    datafile << "f0c0,f0c1,f1c0,f1c1" << endl;
+    double corr = 0.0;
+    for(int nt=0; nt<Nt; nt++){
+        for(int f=0; f<Nf; f++){
+            for(int c=0; c<2; c++){
+                corr = 0.0;
+                for(int nx=0; nx<Nx; nx++){
+                    corr += psiField.val[toEOflat(nt, nx, f, c)].real() + psiField.val[toEOflat(nt, nx, f, (c+1)%2)].real() + psiField.val[toEOflat(nt, nx, (f+1)%2, c)].real() + psiField.val[toEOflat(nt, nx, (f+1)%2, (c+1)%2)].real();
+                    //corr += psiField.val[toEOflat(nt, nx, f, c)].real() + psiField.val[toEOflat(nt, nx, f, (c+1)%2)].real();
+                    //corr += psiField.val[toEOflat(nt, nx, f, c)].real();
+                }
+                datafile << corr;
+                if (f < Nf-1 || c < 1) datafile << ",";
+            }
+        }
+        datafile << endl;
+
     }
-    
-    for(int nt=0; nt<Nt; nt++) 
-        datafile    << accumulate(correlator_psi1[nt].begin(), correlator_psi1[nt].end(), 0.0) << "," 
-                    << accumulate(correlator_psi2[nt].begin(), correlator_psi2[nt].end(), 0.0) << "\n";
-    
 
     return 0;
 }

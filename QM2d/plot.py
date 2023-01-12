@@ -3,38 +3,99 @@ from pandas import read_csv
 from scipy.optimize import curve_fit as fit
 import numpy as np
 
-Mf = 0.5 + 1
+# Read configuration settings
+params = {}
+with open("conffile.txt") as paramsfile:
+    for line in paramsfile.readlines():
+        x = line.split("=")
+        val = str(x[1]).replace("\n", "")
+        params[x[0]] = float(val)
+    
 
-
-mag = read_csv("mag.csv")
-plt.plot(range(len(mag['mag'])), mag['mag'])
-plt.show()
-
+m0 = params['m0']
+g = params['g']
+sigma = params['sigma']
+pi = [params['pi1'], params['pi2'], params['pi3']]
+print("\nConfiguration: ")
+for p in params:
+    print(p + ": ", params[p])
+print()
 
 data = read_csv("data.csv") 
 
-plt.subplot(2, 1, 1)
-plt.plot(range(len(data['psi1'])), data['psi1'])
-plt.xlabel('Nt')
+Nt = len(data['f0c0'])
 
-plt.subplot(2, 1, 2)
-plt.plot(range(len(data['psi2'])), data['psi2'])
-plt.xlabel('Nt')
+def expectedM(m0, g, sigma, pi):
+    r2 = sigma**2 + pi[0]**2 + pi[1]**2 + pi[2]**2
+    denom = 2*(g*sigma + m0 + 1)
+    sqrroot = np.sqrt((g**2*r2 + 2*m0*(g*sigma + 1) + 2*g*sigma + m0**2 + 2)**2 - 4*(g*sigma+m0+1)**2)
+    num = -sqrroot + g**2*r2 + 2*g*m0*sigma + 2*g*sigma + m0**2 + 2*m0 + 2
+    return -np.log(num/denom)
+
+def fitToSinh(ydata, startidx, endidx):
+    yvals = ydata[startidx:endidx]
+    xvals = np.array(range(startidx, endidx))
+
+    def fitfuncSinh(x, m_re, A):
+        return A * np.sinh(m_re*(Nt/2-x))
+
+    fitparams = fit(fitfuncSinh, xvals, yvals, p0=[np.log(1+m0), 1.0])
+    print("Mass: ", fitparams[0][0])
+    print("Expected: ", expectedM(m0, g, sigma, pi))
+
+    plt.plot(xvals, fitfuncSinh(xvals, fitparams[0][0], fitparams[0][1]), label="fit")
+    plt.plot(xvals, yvals, '.', markersize=6, label="data")
+    plt.legend()
+    plt.show()
+
+def fitToExp(ydata, startidx, endidx):
+    yvals = ydata[startidx:endidx]
+    xvals = np.array(range(startidx, endidx))
+
+    def fitfuncExp(x, m_re, A):
+        return A * np.exp(-m_re*x)
+
+    fitparams = fit(fitfuncExp, xvals, yvals)
+    print("Mass: ", fitparams[0][0])
+    print("Expected: ", expectedM(m0, g, sigma, pi))
+
+    plt.plot(xvals, fitfuncExp(xvals, fitparams[0][0], fitparams[0][1]), label="fit")
+    plt.plot(xvals, yvals, '.', markersize=12, label="data")
+    plt.legend()
+    plt.show()
+
+plt.subplot(2, 2, 1)
+plt.plot(range(Nt), data['f0c0'])
+plt.title("f=0 c=0")
+plt.xlabel('t')
+
+plt.subplot(2, 2, 2)
+plt.plot(range(Nt), data['f0c1'])
+plt.title("f=0 c=1")
+plt.xlabel('t')
+
+plt.subplot(2, 2, 3)
+plt.plot(range(Nt), data['f1c0'])
+plt.title("f=1 c=0")
+plt.xlabel('t')
+
+plt.subplot(2, 2, 4)
+plt.plot(range(Nt), data['f1c1'])
+plt.title("f=1 c=1")
+plt.xlabel('t')
 
 plt.suptitle("Spinor components of the correlator")
+plt.tight_layout()
 plt.show()
 
-Nt = len(data["psi1"]) 
-yvals = data['psi1'][1:] # do not include first point in the fit
-fitfunc = lambda x, m, A: A * np.sinh(m*(Nt/2-x))
-xvals = np.array(range(1, Nt))
 
+fitToSinh(data['f0c0'], 1, Nt)
+#fitToSinh(data['f0c1'], 1, Nt)
+#fitToSinh(data['f1c0'], 1, Nt)
+#fitToSinh(data['f1c1'], 1, Nt)
 
-fitparams = fit(fitfunc, xvals, yvals)
+#fitToExp(data['f0c0'], 1, Nt)
+#fitToExp(data['f0c1'], 4, Nt)
+#fitToExp(data['f1c0'], 8, Nt)
+#fitToExp(data['f1c1'], 16, Nt)
 
-print("Mass: ", fitparams[0][0])
-print("Expected: ", np.log(1+Mf))
-
-plt.plot(xvals, fitfunc(xvals, fitparams[0][0], fitparams[0][1]))
-plt.plot(xvals, yvals)
-plt.show()

@@ -2,22 +2,25 @@
 
 #include <vector>
 #include <complex>
-#include <Eigen/Core>
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Core>
+#include <eigen3/Eigen/Dense>
 #include "../functions/functions.h"
 
 // Not flattened. No flavour.
 
-typedef std::vector<std::vector<Eigen::Vector4cd>> O4field;
+using O4mat = Eigen::Matrix2cd;
+
+typedef std::vector<std::vector<O4mat>> O4field;
 
 class O4Mesons {
     public:
-        O4Mesons(int const Nt, int const Nx, double const m, double const lam);
+        O4Mesons(int const Nt, int const Nx, double const m, double const lam, double const g);
+        O4Mesons(int const Nt, int const Nx, double const m, double const lam, double const g, double const sigma, double const pi[3]);
         ~O4Mesons(){;}
-        std::complex<double> evaluateDrift(int const nt, int const nx, int const j);
+        O4mat evaluateDrift(int const nt, int const nx);
         double norm();
-        O4field phi;
+        O4field M;
         int const Nt, Nx;
-        double const m2, lam;
+        double const m2, lam, g;
     
 };

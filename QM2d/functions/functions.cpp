@@ -28,10 +28,12 @@ void CG(SpinorField const& inPsi, SpinorField& outPsi, DiracOP Dirac, bool hermi
         beta = (r.dot(r)).real() / rmodsq;
         for(int i=0; i<inPsi.volume; i++) p.val[i] = r.val[i] + beta*p.val[i];
         rmodsq = (r.dot(r)).real();
+
+        //std::cout << rmodsq << std::endl;
     }
 
     if (k < IterMax) std::cout << "Convergence reached in " << k-1 << " steps \n";
-    else std::cout << "Max. number of iterations reached (" << IterMax << ") \n";
+    else std::cout << "Max. number of iterations reached (" << IterMax << "), final err: " << rmodsq << "\n";
 }
 
 unsigned int PBC(int const n, int const N){
@@ -75,10 +77,21 @@ std::vector<int> eoToVec(int n){
 void MatMatprod(mat const& M1, mat const& M2, mat& res){
     for(int i=0; i<2; i++){
         for(int j=0; j<2; j++){
-            res[i][j] = 0.0;
+            res(i,j) = 0.0;
             for(int k=0; k<2; k++){
-                res[i][j] += M1[i][k]*M2[k][j];
+                res(i,j) += M1(i,k)*M2(k,j);
             }
         }
     }
 }
+
+
+vec_fc applyFlavouredGamma5(mat const flavourMat, std::vector<std::complex<double>> const& spinor){
+    return vec_fc {
+         im * (flavourMat(0,0)*spinor[1] + flavourMat(0,1)*spinor[3]),
+        -im * (flavourMat(0,0)*spinor[0] + flavourMat(0,1)*spinor[2]),
+         im * (flavourMat(1,0)*spinor[1] + flavourMat(1,1)*spinor[3]),
+        -im * (flavourMat(1,0)*spinor[0] + flavourMat(1,1)*spinor[2])
+    };
+}
+

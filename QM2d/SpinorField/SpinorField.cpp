@@ -10,10 +10,10 @@ SpinorField::SpinorField(int const Nt, int const Nx, int const Nf) :
     volume{2*Nf*Nt*Nx},
     val(2*Nt*Nx*Nf, 0.0)
 {
-    for(int f=0; f<Nf; f++){
-        val[toEOflat(0, 0, f, 0)] = 1.0;
-        val[toEOflat(0, 0, f, 1)] = 1.0;
-    }
+    val[toEOflat(0, 0, 0, 0)] = 1.0;
+    val[toEOflat(0, 0, 0, 1)] = 1.0;
+    val[toEOflat(0, 0, 1, 0)] = 1.0;
+    val[toEOflat(0, 0, 1, 1)] = 1.0;
 }
 
 SpinorField::SpinorField(SpinorField const& s) :
@@ -32,7 +32,6 @@ void SpinorField::operator = (SpinorField const& s){
     assert(Nt == s.Nt && Nx == s.Nx && Nf == s.Nf);
     val = s.val;
 }
-
 
 std::complex<double> SpinorField::dot(SpinorField& s){
     std::complex<double> r = 0.0;
