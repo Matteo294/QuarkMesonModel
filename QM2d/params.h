@@ -4,7 +4,7 @@
 
 // Lattice params
 int const Nt = 128;
-int const Nx = 32;
+int const Nx = 4;
 int const Nf = 2; // works only for Nf = 2
 int const vol = 2*Nf*Nx*Nt;
 
@@ -30,4 +30,4 @@ int const Ndata = 100;
 // Initial field values
 double const sigma = 0.01;
 double const pi[3] {0.02, 0.03, 0.04};
-//double const pi[3] {0, 0, 0};
+//double const pi[3] {0, 0, 0.0};

@@ -24,16 +24,17 @@ SpinorField DiracOP::applyTo(SpinorField const& inPsi, bool dagger){
     D_eo(inPsi, outPsi, dagger);
     D_oe(inPsi, outPsi, dagger);
 
-    
-
-            
+     
     for(int nt=0; nt<Nt; nt++){
         for(int nx=0; nx<Nx; nx++){
+
+            //for(int i=0; i<3; i++) std::cout << 0.5*(Pauli.tau[i]*mesons->M[nt][nx]).trace() << " ";
+            //std::cout << "\n";
 
             // Store pions field values (including i factor)
             std::complex<double> pions[3];
             for(int i=0; i<3; i++) {
-                pions[i] = 0.5*(Pauli.tau[i]*mesons->M[nt][nx]).trace(); 
+                pions[i] = 0.5*(Pauli.tau[i]*mesons->M[nt][nx]).trace();
             }
 
             // Prepare spinor at position (nt, nx)
@@ -43,8 +44,10 @@ SpinorField DiracOP::applyTo(SpinorField const& inPsi, bool dagger){
             // Apply flavour mixing term to spinor
             mat F {{0, 0}, {0, 0}};
             for(int i=0; i<3; i++) F += mesons->g*pions[i]*Pauli.tau[i];
-            std::cout << F << "\n\n";
+            //std::cout << F << "\n\n";
             auto v = applyFlavouredGamma5(F, x);
+            if (dagger) v = applyFlavouredGamma5(F, x, 1);
+            else v = applyFlavouredGamma5(F, x);
 
             // Sum to the result
             //for(int i=0; i<4; i++) std::cout << v[i] << " ";

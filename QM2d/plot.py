@@ -40,12 +40,14 @@ def fitToSinh(ydata, startidx, endidx):
         return A * np.sinh(m_re*(Nt/2-x))
 
     fitparams = fit(fitfuncSinh, xvals, yvals, p0=[np.log(1+m0), 1.0])
-    print("Mass: ", fitparams[0][0])
+    print("Mass: ", abs(fitparams[0][0]))
     print("Expected: ", expectedM(m0, g, sigma, pi))
 
     plt.plot(xvals, fitfuncSinh(xvals, fitparams[0][0], fitparams[0][1]), label="fit")
     plt.plot(xvals, yvals, '.', markersize=6, label="data")
     plt.legend()
+    plt.title("Temporal correlator m0=" + str(m0) + " g=" + str(g) + r" $\phi=[$" + str(sigma) + ", " + str(pi[0]) + ", " + str(pi[1]) + ", " + str(pi[2]) + "]")
+    plt.xlabel("t")
     plt.show()
 
 def fitToExp(ydata, startidx, endidx):

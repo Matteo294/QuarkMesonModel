@@ -86,12 +86,24 @@ void MatMatprod(mat const& M1, mat const& M2, mat& res){
 }
 
 
-vec_fc applyFlavouredGamma5(mat const flavourMat, std::vector<std::complex<double>> const& spinor){
-    return vec_fc {
+vec_fc applyFlavouredGamma5(mat const flavourMat, std::vector<std::complex<double>> const& spinor, bool dagger){
+    //std::cout << spinor[0] << " " << spinor[1] << " " << spinor[2] << " " << spinor[3] << "\n"; 
+
+    /*return vec_fc {
          im * (flavourMat(0,0)*spinor[1] + flavourMat(0,1)*spinor[3]),
         -im * (flavourMat(0,0)*spinor[0] + flavourMat(0,1)*spinor[2]),
          im * (flavourMat(1,0)*spinor[1] + flavourMat(1,1)*spinor[3]),
         -im * (flavourMat(1,0)*spinor[0] + flavourMat(1,1)*spinor[2])
-    };
+    };*/
+    Eigen::Matrix<std::complex<double>, 4, 4> A {
+                    {0, im*flavourMat(0,0), 0, im*flavourMat(0,1)}, 
+                    {-im*flavourMat(0,0), 0, -im*flavourMat(0,1), 0}, 
+                    {0, im*flavourMat(1,0), 0, im*flavourMat(1,1)}, 
+                    {-im*flavourMat(1,0), 0, -im*flavourMat(1,1), 0}};
+    //std::cout << A << std::endl << std::endl;
+    Eigen::Vector4cd psi {spinor[0], spinor[1], spinor[2], spinor[3]};
+    Eigen::Vector4cd eta = A*psi;
+    if (dagger) eta = (A.adjoint()) * psi; 
+    return vec_fc {eta[0], eta[1], eta[2], eta[3]};
 }
 

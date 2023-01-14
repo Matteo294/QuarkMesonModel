@@ -65,4 +65,4 @@ unsigned int PBC(int const n, int const N);
 /*
     Apply gamma5 in spinor space times a matrix (flavourMat) in flavour space
 */
-vec_fc applyFlavouredGamma5(mat const flavourMat, std::vector<std::complex<double>> const& spinor);
+vec_fc applyFlavouredGamma5(mat const flavourMat, std::vector<std::complex<double>> const& spinor, bool dagger=0);
