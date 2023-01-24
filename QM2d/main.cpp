@@ -8,6 +8,8 @@
 #include "DiracOP/DiracOP.h"
 #include "Mesons/O4Mesons.h"
 #include "Langevin/Langevin.h"
+#include <chrono>
+
 
 /// !!! check references when cycling thourgh vectors
 
@@ -36,10 +38,18 @@ int main(){
                 << "pi2=" << pi[1] << "\n"
                 << "pi3=" << pi[2];
 
+
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
     // Perform CG to get the correlator from which we then extract the mass
     SpinorField afterCG(Nt, Nx, Nf);
     CG(psiField, afterCG, Dirac);   
     psiField = Dirac.applyToCSR(afterCG, 1);
+
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
+
+
 
     // Thermalisation
     /*for(int n=0; n<Ntherm; n++){
