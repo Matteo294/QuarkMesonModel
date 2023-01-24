@@ -26,20 +26,13 @@ class DiracOP {
     public:
         DiracOP(double const M, O4Mesons* mesons);
         ~DiracOP(){;}
-        SpinorField applyTo(SpinorField const& inPsi, bool dagger=0);
-        void D_ee(SpinorField const& inPsi, SpinorField& outPsi);
-        void D_oo(SpinorField const& inPsi, SpinorField& outPsi);
-        void D_eo(SpinorField const& inPsi, SpinorField& outPsi, bool dagger=0);
-        void D_oe(SpinorField const& inPsi, SpinorField& outPsi, bool dagger=0);
+        SpinorField applyToCSR(SpinorField const& inPsi, bool const dagger=0);
         O4Mesons* mesons;
         double const M;
         PauliMat Pauli;
 
     private:
-        // Hopping terms Dirac operator
-        mat const Gamma_p0, Gamma_m0, Gamma_p1, Gamma_m1;
-        // Hopping terms Dirac dagger operator
-        mat const Gamma_p0_dagger, Gamma_m0_dagger, Gamma_p1_dagger, Gamma_m1_dagger;
+        std::vector<mat> const GammaMat; // Wilson projectors and dagger
         // Diagonal term Dirac operator
         mat Diag {{2.0 + M, 0}, {0, 2.0 + M}};
 };

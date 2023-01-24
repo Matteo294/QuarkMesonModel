@@ -66,12 +66,12 @@ def fitToExp(ydata, startidx, endidx):
     plt.legend()
     plt.show()
 
-plt.subplot(2, 2, 1)
+#plt.subplot(2, 2, 1)
 plt.plot(range(Nt), data['f0c0'])
 plt.title("f=0 c=0")
 plt.xlabel('t')
 
-plt.subplot(2, 2, 2)
+'''plt.subplot(2, 2, 2)
 plt.plot(range(Nt), data['f0c1'])
 plt.title("f=0 c=1")
 plt.xlabel('t')
@@ -84,9 +84,10 @@ plt.xlabel('t')
 plt.subplot(2, 2, 4)
 plt.plot(range(Nt), data['f1c1'])
 plt.title("f=1 c=1")
-plt.xlabel('t')
+plt.xlabel('t')'''
 
-plt.suptitle("Spinor components of the correlator")
+#plt.suptitle("Spinor components of the correlator")
+plt.title("Spinor components of the correlator")
 plt.tight_layout()
 plt.show()
 

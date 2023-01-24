@@ -7,13 +7,10 @@ SpinorField::SpinorField(int const Nt, int const Nx, int const Nf) :
     Nt{Nt},
     Nx{Nx},
     Nf{Nf},
-    volume{2*Nf*Nt*Nx},
-    val(2*Nt*Nx*Nf, 0.0)
+    volume{Nt*Nx},
+    val(Nt*Nx, vec_fc::Zero())
 {
-    val[toEOflat(0, 0, 0, 0)] = 1.0;
-    val[toEOflat(0, 0, 0, 1)] = 1.0;
-    val[toEOflat(0, 0, 1, 0)] = 1.0;
-    val[toEOflat(0, 0, 1, 1)] = 1.0;
+    val[0] = vec_fc {1.0, 1.0, 1.0, 1.0}; // source at the origin
 }
 
 SpinorField::SpinorField(SpinorField const& s) :
@@ -23,10 +20,8 @@ rndgen(rnddev()),
     Nx{s.Nx},
     Nf{s.Nf},
     volume{s.volume},
-    val(s.volume, 0.0)
-{
-    val = s.val;
-}
+    val{s.val}
+        {;}
 
 void SpinorField::operator = (SpinorField const& s){
     assert(Nt == s.Nt && Nx == s.Nx && Nf == s.Nf);
@@ -35,6 +30,6 @@ void SpinorField::operator = (SpinorField const& s){
 
 std::complex<double> SpinorField::dot(SpinorField& s){
     std::complex<double> r = 0.0;
-    for(int i=0; i<volume; i++) r += conj(val[i]) * s.val[i];
+    for(int i=0; i<volume; i++) r += val[i].dot(s.val[i]);
     return r;
 }

@@ -17,9 +17,10 @@ int main(){
 
     // Create mesons, Langevin simulator, fermion field and a Dirac operator
     O4Mesons mesons(Nt, Nx, meson_M2, lam, g, sigma, pi);
-    Langevin langevin(&mesons);
+    Langevin langevin(&mesons); // for the moment only for mesonic sector (no yukawa)
     SpinorField psiField(Nt, Nx, Nf);
     DiracOP Dirac(fermion_M, &mesons);
+
 
     // Write configuration to file
     ofstream conffile;
@@ -38,10 +39,10 @@ int main(){
     // Perform CG to get the correlator from which we then extract the mass
     SpinorField afterCG(Nt, Nx, Nf);
     CG(psiField, afterCG, Dirac);   
-    psiField = Dirac.applyTo(afterCG, 1);
+    psiField = Dirac.applyToCSR(afterCG, 1);
 
     // Thermalisation
-    for(int n=0; n<Ntherm; n++){
+    /*for(int n=0; n<Ntherm; n++){
         langevin.LangevinRun(0.01, 1.0);
     }
     cout << "Thermalisation done" << endl;
@@ -53,28 +54,19 @@ int main(){
         M += (double) mesons.norm() / (Nt*Nx);
     }
     cout << "Magnetization: " << M/3000.0;
-    if (meson_M2 < 0) cout << "\t expected: " << sqrt(-6*meson_M2/lam) << endl;
+    if (meson_M2 < 0) cout << "\t expected: " << sqrt(-6*meson_M2/lam) << endl;*/
 
     // Correlator to extract masses
     ofstream datafile;
     datafile.open("data.csv");
     datafile << "f0c0,f0c1,f1c0,f1c1" << endl;
-    double corr = 0.0;
+    complex<double> corr = 0.0;
     for(int nt=0; nt<Nt; nt++){
-        for(int f=0; f<Nf; f++){
-            for(int c=0; c<2; c++){
-                corr = 0.0;
-                for(int nx=0; nx<Nx; nx++){
-                    corr += psiField.val[toEOflat(nt, nx, f, c)].real() + psiField.val[toEOflat(nt, nx, f, (c+1)%2)].real() + psiField.val[toEOflat(nt, nx, (f+1)%2, c)].real() + psiField.val[toEOflat(nt, nx, (f+1)%2, (c+1)%2)].real();
-                    //corr += psiField.val[toEOflat(nt, nx, f, c)].real() + psiField.val[toEOflat(nt, nx, f, (c+1)%2)].real();
-                    //corr += psiField.val[toEOflat(nt, nx, f, c)].real();
-                }
-                datafile << corr;
-                if (f < Nf-1 || c < 1) datafile << ",";
-            }
+        corr = 0.0;
+        for(int nx=0; nx<Nx; nx++){
+            corr += std::accumulate(psiField.val[toEOflat(nt, nx)].begin(), psiField.val[toEOflat(nt, nx)].end(), 0.0+0.0*im);
         }
-        datafile << endl;
-
+        datafile << corr.real() << endl;
     }
 
     return 0;

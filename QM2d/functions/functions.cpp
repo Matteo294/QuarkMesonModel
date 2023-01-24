@@ -10,7 +10,7 @@ void CG(SpinorField const& inPsi, SpinorField& outPsi, DiracOP Dirac, bool hermi
     std::complex<double> alpha;
     double beta, rmodsq;
     
-    for(auto& v: outPsi.val) v = 0.0;
+    for(auto& v: outPsi.val) v.setZero();
     r.val = inPsi.val;
     p.val = r.val;
     rmodsq = (r.dot(r)).real();
@@ -18,7 +18,7 @@ void CG(SpinorField const& inPsi, SpinorField& outPsi, DiracOP Dirac, bool hermi
     int k;
     for(k=0; k<IterMax && sqrt(rmodsq) > tol; k++){
 
-        temp = Dirac.applyTo(Dirac.applyTo(p, 1));
+        temp = Dirac.applyToCSR(Dirac.applyToCSR(p, 1));
 
         alpha = rmodsq / (p.dot(temp)).real(); 
         for(int i=0; i<inPsi.volume; i++){
@@ -28,8 +28,6 @@ void CG(SpinorField const& inPsi, SpinorField& outPsi, DiracOP Dirac, bool hermi
         beta = (r.dot(r)).real() / rmodsq;
         for(int i=0; i<inPsi.volume; i++) p.val[i] = r.val[i] + beta*p.val[i];
         rmodsq = (r.dot(r)).real();
-
-        //std::cout << rmodsq << std::endl;
     }
 
     if (k < IterMax) std::cout << "Convergence reached in " << k-1 << " steps \n";
@@ -40,62 +38,35 @@ unsigned int PBC(int const n, int const N){
     return (n+N) % N;
 }
 
-unsigned int toFlat(int const nt, int const nx, int const f, int const c) {
-    return (c + 2*f + 2*nx*Nf + 2*nt*Nx*Nf);
-}
-
-unsigned int toEOflat(int const nt, int const nx, int const f, int const c) {
-    int const s = (2*Nt*Nx*Nf)/2;
+unsigned int toEOflat(int const nt, int const nx){
+    int const s = (Nt*Nx)/2;
     int eo = (nt+nx) % 2;
-    return c + 2*f + (nx/2)*2*Nf + (nt*(2*Nx/2*Nf)) + eo*s;
-}
-
-std::vector<int> toVec(int const idx){
-    std::vector<int> r(4); // Nt, Nx, Nf, c
-    r[0] = idx / (2*Nx*Nf);
-    r[1] = (idx % (2*Nx*Nf)) / (2*Nf);
-    r[2] = (idx % (2*Nf)) / 2;
-    r[3] = idx % 2;
-    return r;
+    return (nx/2) + (nt*Nx/2) + eo*s;
 }
 
 std::vector<int> eoToVec(int n){
-    std::vector<int> idx(4); // nt, nx, f, c
+    std::vector<int> idx(2); // nt, nx
     int alpha = 0;
-    if (n >= Nt*Nx*Nf) {
+    if (n >= Nt*Nx/2) {
         alpha = 1;
-        n -= Nt*Nx*Nf;
+        n -= Nt*Nx/2;
     }
-    idx[3] = n % 2;
-    idx[2] = (n % (2*Nf)) / 2;
-    idx[0] = n / (2*Nf*Nx/2);
-    if (idx[0] % 2) idx[1] = 2*((n % (2*Nf*Nx/2)) / (2*Nf)) + (1-alpha);
-    else idx[1] = 2*((n % (2*Nf*Nx/2)) / (2*Nf)) + alpha; 
+    idx[0] = n / (Nx/2);
+    if (idx[0] % 2) idx[1] = 2*((n % (Nx/2))) + (1-alpha);
+    else idx[1] = 2*((n % (Nx/2))) + alpha; 
     return idx;
 }
 
-void MatMatprod(mat const& M1, mat const& M2, mat& res){
-    for(int i=0; i<2; i++){
-        for(int j=0; j<2; j++){
-            res(i,j) = 0.0;
-            for(int k=0; k<2; k++){
-                res(i,j) += M1(i,k)*M2(k,j);
+mat_fc buildCompositeOP(mat const& flavourMat, mat const& spinorMat){
+    mat_fc M;
+    for(int f1=0; f1<Nf; f1++){
+        for(int f2=0; f2<Nf; f2++){
+            for(int c1=0; c1<2; c1++){
+                for(int c2=0; c2<2; c2++){
+                    M(2*f1+c1, 2*f2+c2) = flavourMat(f1, f2) * spinorMat(c1, c2);
+                }
             }
         }
     }
+    return M;
 }
-
-
-vec_fc applyFlavouredGamma5(mat const flavourMat, std::vector<std::complex<double>> const& spinor, bool dagger){
-    
-    Eigen::Matrix<std::complex<double>, 4, 4> A {
-                    {0, im*flavourMat(0,0), 0, im*flavourMat(0,1)}, 
-                    {-im*flavourMat(0,0), 0, -im*flavourMat(0,1), 0}, 
-                    {0, im*flavourMat(1,0), 0, im*flavourMat(1,1)}, 
-                    {-im*flavourMat(1,0), 0, -im*flavourMat(1,1), 0}};
-    Eigen::Vector4cd psi {spinor[0], spinor[1], spinor[2], spinor[3]};
-    Eigen::Vector4cd eta = A*psi;
-    if (dagger) eta = (A.adjoint()) * psi; 
-    return vec_fc {eta[0], eta[1], eta[2], eta[3]};
-}
-
