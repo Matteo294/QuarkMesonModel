@@ -3,7 +3,6 @@
 #include <vector>
 #include <complex>
 #include "../SpinorField/SpinorField.h"
-#include "../params.h"
 #include "../Mesons/O4Mesons.h"
 #include "../functions/functions.h"
 #include <eigen3/Eigen/Core>
@@ -11,6 +10,7 @@
 
 class SpinorField;
 class O4Mesons;
+class Lattice;
 
 using mat = Eigen::Matrix2cd;
 
@@ -24,15 +24,19 @@ typedef struct PauliMat{
 
 class DiracOP {
     public:
-        DiracOP(double const M, O4Mesons* mesons);
+        DiracOP(double const M, O4Mesons* mesons, Lattice& l);
         ~DiracOP(){;}
-        SpinorField applyToCSR(SpinorField const& inPsi, bool const dagger=0);
+        SpinorField applyTo(SpinorField const& inPsi, bool const dagger=0);
+        SpinorField applyLDRTo(SpinorField const& inPsi, bool const dagger=0);
+        SpinorField applyRto(SpinorField const& inPsi, bool const dagger=0);
+        SpinorField applyLto(SpinorField const& inPsi, bool const dagger=0);
+        void D_ee(SpinorField const& inPsi, SpinorField& outPsi, bool const dagger=0);
+        void D_oo(SpinorField const& inPsi, SpinorField& outPsi, bool const dagger=0);
+        void D_oo_inv(SpinorField const& inPsi, SpinorField& outPsi, bool const dagger=0);
+        void D_eo(SpinorField const& inPsi, SpinorField& outPsi, bool const dagger=0);
+        void D_oe(SpinorField const& inPsi, SpinorField& outPsi, bool const dagger=0);
         O4Mesons* mesons;
         double const M;
         PauliMat Pauli;
-
-    private:
-        std::vector<mat> const GammaMat; // Wilson projectors and dagger
-        // Diagonal term Dirac operator
-        mat Diag {{2.0 + M, 0}, {0, 2.0 + M}};
+        Lattice& l;
 };

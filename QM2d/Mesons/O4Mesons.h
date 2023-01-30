@@ -5,22 +5,21 @@
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Dense>
 #include "../functions/functions.h"
-
-// Not flattened. No flavour.
+#include "../Lattice/Lattice.h"
 
 using O4mat = Eigen::Matrix2cd;
+class Lattice;
 
 typedef std::vector<std::vector<O4mat>> O4field;
 
 class O4Mesons {
     public:
-        O4Mesons(int const Nt, int const Nx, double const m, double const lam, double const g);
-        O4Mesons(int const Nt, int const Nx, double const m, double const lam, double const g, double const sigma, double const pi[3]);
+        O4Mesons(double const m, double const lam, double const g, Lattice& l);
+        O4Mesons(double const m, double const lam, double const g, double const sigma, double const pi[3], Lattice& l);
         ~O4Mesons(){;}
-        O4mat evaluateDrift(int const nt, int const nx);
         double norm();
         O4field M;
-        int const Nt, Nx;
         double const m2, lam, g;
+        Lattice& l;
     
 };

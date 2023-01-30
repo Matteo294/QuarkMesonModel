@@ -4,31 +4,29 @@
 
 // Lattice params
 int constexpr Nt = 128;
-int const Nx = 32;
-int const Nf = 2; // works only for Nf = 2 (hardcoded)
-int const vol = 2*Nf*Nx*Nt;
+int constexpr Nx = 32;
+int constexpr Nf = 2; // works only for Nf = 2
+int constexpr vol = 2*Nf*Nx*Nt;
 
 // CG params
-double const tol = 1e-12;
-int const IterMax = 1000;
+double constexpr tol = 1e-12;
+int constexpr IterMax = 2000;
 
 // Action params
-double const fermion_M = 0.03; // fermions mass
-double const meson_M2 = -1.0; // scalars mass (both sigma and pions)
-double const lam = 1.0; // quartic coupling
-double const g = 3.4; // Yukawa coupling
+double constexpr fermion_M = 0.1; // fermions mass
+double constexpr meson_M2 = -1.0; // scalars mass (both sigma and pions)
+double constexpr lam = 1.0; // quartic coupling
+double constexpr g = 3.4; // Yukawa coupling
 
 // Langevin params
-double const dt = 0.01;
-double const T = 1.0;
+double constexpr dt = 0.01;
+double constexpr T = 1.0;
 
 // Others
-std::complex<double> const im (0.0, 1.0);
-int const Ntherm = 100;
-int const Ndata = 100;  
+//std::complex<double> constexpr im (0.0, 1.0); 
 
 // Initial field values
-double const sigma = 0.02;
-//double const sigma = 0.0;
-double const pi[3] {0.02, 0.03, 0.04};
-//double const pi[3] {0, 0, 0.0};
+double constexpr sigma = 0.01;
+//double constexpr sigma = 0.0;
+//double constexpr pi[3] {0.02, 0.03, 0.04};
+double constexpr pi[3] {0, 0, 0.0};

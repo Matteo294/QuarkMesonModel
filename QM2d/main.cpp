@@ -7,22 +7,26 @@
 #include "SpinorField/SpinorField.h"
 #include "DiracOP/DiracOP.h"
 #include "Mesons/O4Mesons.h"
-#include "Langevin/Langevin.h"
+#include "Lattice/Lattice.h"
+#include "ConjugateGradientSolver/ConjugateGradientSolver.h"
+#include "params.h"
 #include <chrono>
 
 
 /// !!! check references when cycling thourgh vectors
+// hardcode Nf=2
+// set public-private things
 
 using namespace std;
 
 int main(){ 
 
-    // Create mesons, Langevin simulator, fermion field and a Dirac operator
-    O4Mesons mesons(Nt, Nx, meson_M2, lam, g, sigma, pi);
-    Langevin langevin(&mesons); // for the moment only for mesonic sector (no yukawa)
-    SpinorField psiField(Nt, Nx, Nf);
-    DiracOP Dirac(fermion_M, &mesons);
-
+    // Create lattice, mesons, fermions and a Dirac operator
+    Lattice lattice(Nt, Nx);
+    O4Mesons mesons(meson_M2, lam, g, sigma, pi, lattice);
+    SpinorField psiField(lattice);
+    DiracOP Dirac(fermion_M, &mesons, lattice);
+    ConjugateGradientSolver CG(IterMax, tol, Dirac);
 
     // Write configuration to file
     ofstream conffile;
@@ -39,32 +43,17 @@ int main(){
                 << "pi3=" << pi[2];
 
 
-    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
     // Perform CG to get the correlator from which we then extract the mass
-    SpinorField afterCG(Nt, Nx, Nf);
-    CG(psiField, afterCG, Dirac);   
-    psiField = Dirac.applyToCSR(afterCG, 1);
+    SpinorField afterCG(lattice);
+
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
+    CG.baseCG(psiField, afterCG);   
+    psiField = Dirac.applyTo(afterCG, 1);
 
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
-
-
-
-    // Thermalisation
-    /*for(int n=0; n<Ntherm; n++){
-        langevin.LangevinRun(0.01, 1.0);
-    }
-    cout << "Thermalisation done" << endl;
-
-    // Calculate stuff
-    double M = 0.0;
-    for(int n=0; n<Ndata; n++){
-        langevin.LangevinRun(0.01, 1.0);
-        M += (double) mesons.norm() / (Nt*Nx);
-    }
-    cout << "Magnetization: " << M/3000.0;
-    if (meson_M2 < 0) cout << "\t expected: " << sqrt(-6*meson_M2/lam) << endl;*/
 
     // Correlator to extract masses
     ofstream datafile;
@@ -74,10 +63,36 @@ int main(){
     for(int nt=0; nt<Nt; nt++){
         corr = 0.0;
         for(int nx=0; nx<Nx; nx++){
-            corr += std::accumulate(psiField.val[toEOflat(nt, nx)].begin(), psiField.val[toEOflat(nt, nx)].end(), 0.0+0.0*im);
+            corr += std::accumulate(psiField.val[lattice.toEOflat(nt, nx)].begin(), psiField.val[lattice.toEOflat(nt, nx)].end(), 0.0+0.0*im);
         }
         datafile << corr.real() << endl;
     }
+
+    // Perform EO preconditioned CG
+    /*SpinorField afterCG(lattice);
+
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
+    psiField = Dirac.applyLto(psiField, 0);
+    CG.eoCG(psiField, afterCG); 
+    psiField = Dirac.applyLDRTo(afterCG, 1);
+    psiField = Dirac.applyRto(psiField, 0);
+
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
+
+    // Correlator to extract masses
+    ofstream datafile;
+    datafile.open("data.csv");
+    datafile << "f0c0,f0c1,f1c0,f1c1" << endl;
+    complex<double> corr = 0.0;
+    for(int nt=0; nt<Nt; nt++){
+        corr = 0.0;
+        for(int nx=0; nx<Nx; nx++){
+            corr += std::accumulate(psiField.val[lattice.toEOflat(nt, nx)].begin(), psiField.val[lattice.toEOflat(nt, nx)].end(), 0.0+0.0*im);
+        }
+        datafile << corr.real() << endl;
+    }*/
 
     return 0;
 }
