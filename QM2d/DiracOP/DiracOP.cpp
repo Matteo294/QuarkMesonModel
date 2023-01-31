@@ -94,11 +94,32 @@ SpinorField DiracOP::applyLto(SpinorField const& inPsi, bool const dagger){
 void DiracOP::D_oo_inv(SpinorField const& inPsi, SpinorField& outPsi, bool const dagger){
     std::complex<double> sigma;
     std::vector<int> idx(2);
+    mat_fc Y;
+    std::vector<std::complex<double>> pions(3);
+    mat Mbar = mesons->M[0][0];
+    mat_fc Minv;
     for(int i=inPsi.l.vol/2; i<inPsi.l.vol; i++){
         idx = inPsi.l.eoToVec(i);
         sigma = 0.5 * (Pauli.tau0*mesons->M[idx[0]][idx[1]]).trace();
         outPsi.val[i].setZero();
-        outPsi.val[i] += 1.0 / (2.0 + M + mesons->g*sigma) * inPsi.val[i];
+       // outPsi.val[i] += 1.0 / (2.0 + M + mesons->g*sigma) * inPsi.val[i];
+
+        // Projection along basis
+        pions[0] = 0.5 * ((Pauli.tau1*mesons->M[idx[0]][idx[1]]).trace());
+        pions[1] = 0.5 * ((Pauli.tau2*mesons->M[idx[0]][idx[1]]).trace());
+        pions[2] = 0.5 * ((Pauli.tau3*mesons->M[idx[0]][idx[1]]).trace());
+        Mbar = - mesons->g*pions[0]*Pauli.tau1 - mesons->g*pions[1]*Pauli.tau2 - mesons->g*pions[2]*Pauli.tau3;
+        
+        if (dagger)
+            Minv = buildCompositeOP(Mbar.adjoint(), gamma5); // flavour mixing term (just remove diagonal and tensor with gamma5)
+        else
+            Minv = buildCompositeOP(Mbar, gamma5); // flavour mixing term (just remove diagonal and tensor with gamma5)
+
+        Minv += buildCompositeOP((2.0 + M + mesons->g*sigma)*Pauli.tau0, mat::Identity());
+        Minv /= (2.0 + M + mesons->g*sigma)*(2.0 + M + mesons->g*sigma) - mesons->g*mesons->g*pions[0]*pions[0] - mesons->g*mesons->g*pions[1]*pions[1] - mesons->g*mesons->g*pions[2]*pions[2]; // - because the projection contains the i factor
+
+        outPsi.val[i] = Minv * inPsi.val[i];
+
     }
 }
 

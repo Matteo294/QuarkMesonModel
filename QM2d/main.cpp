@@ -45,7 +45,7 @@ int main(){
 
 
     // Perform CG to get the correlator from which we then extract the mass
-    SpinorField afterCG(lattice);
+    /*SpinorField afterCG(lattice);
 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
@@ -66,10 +66,10 @@ int main(){
             corr += std::accumulate(psiField.val[lattice.toEOflat(nt, nx)].begin(), psiField.val[lattice.toEOflat(nt, nx)].end(), 0.0+0.0*im);
         }
         datafile << corr.real() << endl;
-    }
+    }*/
 
     // Perform EO preconditioned CG
-    /*SpinorField afterCG(lattice);
+    SpinorField afterCG(lattice);
 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
@@ -92,7 +92,7 @@ int main(){
             corr += std::accumulate(psiField.val[lattice.toEOflat(nt, nx)].begin(), psiField.val[lattice.toEOflat(nt, nx)].end(), 0.0+0.0*im);
         }
         datafile << corr.real() << endl;
-    }*/
+    }
 
     return 0;
 }

@@ -28,5 +28,5 @@ double constexpr T = 1.0;
 // Initial field values
 double constexpr sigma = 0.01;
 //double constexpr sigma = 0.0;
-//double constexpr pi[3] {0.02, 0.03, 0.04};
-double constexpr pi[3] {0, 0, 0.0};
+double constexpr pi[3] {0.02, 0.03, 0.04};
+//double constexpr pi[3] {0, 0, 0.0};
