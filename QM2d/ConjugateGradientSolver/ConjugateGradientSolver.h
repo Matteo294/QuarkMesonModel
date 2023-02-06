@@ -16,10 +16,9 @@ class ConjugateGradientSolver{
     public:
         ConjugateGradientSolver(int const IterMax, double const tolerance, DiracOP& Dirac);
         ~ConjugateGradientSolver(){;}
-        void baseCG(SpinorField const& inPsi, SpinorField& outPsi);
-        void eoCG(SpinorField const& inPsi, SpinorField& outPsi);
-        //void MixedCG(SpinorField const& inPsi, SpinorField& outPsi);
-        //void eoMixedCG(SpinorField const& inPsi, SpinorField& outPsi);
+        void doubleCG(std::vector<vec_fc>::iterator ybegin, std::vector<vec_fc>::iterator yend, std::vector<vec_fc>::iterator xbegin);
+        void EOdoubleCG(std::vector<vec_fc>::iterator ybegin, std::vector<vec_fc>::iterator yend, std::vector<vec_fc>::iterator xbegin);
+        void singleCG(std::vector<vec_fc_single>::iterator ybegin, std::vector<vec_fc_single>::iterator yend, std::vector<vec_fc_single>::iterator xbegin);
     protected:
         double const tolerance;
         int const IterMax;

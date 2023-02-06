@@ -8,101 +8,73 @@ DiracOP::DiracOP(double const M, O4Mesons* mesons, Lattice& l) :
     l{l}
     {;}
 
-
-
-SpinorField DiracOP::applyTo(SpinorField const& inPsi, bool const dagger){
+void DiracOP::applyTo(std::vector<vec_fc>::iterator vec, std::vector<vec_fc>::iterator res, bool const dagger){
     assert(dagger==1 || dagger==0);
+    for(int i=0; i<l.vol; i++) {res[i].setZero();}
+    D_ee(vec, res, dagger);
+    D_oo(vec + l.vol/2, res + l.vol/2, dagger);
+    D_eo(vec + l.vol/2, res, dagger);
+    D_oe(vec , res + l.vol/2, dagger);
+}
+
+void DiracOP::applyTo_single(std::vector<vec_fc_single>::iterator vec, std::vector<vec_fc_single>::iterator res, bool const dagger){
+    assert(dagger==1 || dagger==0);
+    for(int i=0; i<l.vol; i++) {res[i].setZero();}
+    D_ee_single(vec, res, dagger);
+    D_oo_single(vec + l.vol/2, res + l.vol/2, dagger);
+    D_eo_single(vec + l.vol/2, res, dagger);
+    D_oe_single(vec , res + l.vol/2, dagger);
+}
+
+
+void DiracOP::applyDhatTo(std::vector<vec_fc>::iterator vec, std::vector<vec_fc>::iterator res, bool const dagger){
+    assert(dagger==0 || dagger==1);
     
-    SpinorField outPsi(inPsi.l);
-    for(auto& v: outPsi.val) v.setZero();
+    std::vector<vec_fc> temp(l.vol/2), temp2(l.vol/2);
 
-    D_ee(inPsi, outPsi, dagger);
-    D_oo(inPsi, outPsi, dagger);
-    D_eo(inPsi, outPsi, dagger);
-    D_oe(inPsi, outPsi, dagger);
+    for(int i=0; i<l.vol/2; i++) {temp[i].setZero(); temp2[i].setZero(); res[i].setZero();}
 
-    return outPsi;
+    // for the dagger consider inverting the order of the product
+    D_ee(vec, res, dagger);
+    D_oe(vec, temp.begin(), dagger);  
+    D_oo_inv(temp.begin(), temp2.begin(), dagger);
+    for(int i=0; i<l.vol/2; i++) {temp[i].setZero();}
+    D_eo(temp2.begin(), temp.begin(), dagger);
 
+    for(int i=0; i<l.vol/2; i++) res[i] -= temp[i];
 }
 
-SpinorField DiracOP::applyLDRTo(SpinorField const& inPsi, bool const dagger){
-    assert(dagger==1 or dagger==0);
-
-    SpinorField outPsi(inPsi.l);
-    for(auto& v: outPsi.val) v.setZero();
-
-    // !!!!!!!!!!!!!!!
-    //Very inefficient function -> must be improved 
-    // maybe pass iterators to even-odd parts of original vector instead of creating new full spinors of half volume
-    // !!!!!!!!!!!!!!!!!!
- 
-    // Work out the even part
-    SpinorField outEven(inPsi.l), aux1(inPsi.l), aux2(inPsi.l), aux3(inPsi.l);
-    for(int i=0; i<inPsi.l.vol; i++) {outEven.val[i].setZero(); aux1.val[i].setZero(); aux2.val[i].setZero(); aux3.val[i].setZero();}
-
-    D_ee(inPsi, outEven, dagger);
-    D_oe(inPsi, aux1, dagger);
-    D_oo_inv(aux1, aux2, dagger);
-    D_eo(aux2, aux3, dagger);
-    for(int i=0; i<inPsi.l.vol; i++) outEven.val[i] = outEven.val[i] - aux3.val[i];
-
-    // Work out the odd part
-    SpinorField outOdd(inPsi.l);
-    for(auto& v: outOdd.val) v.setZero();
-    D_oo(inPsi, outOdd, dagger);
-
-    // Write to full spinor
-    std::copy(outEven.val.begin(), outEven.val.begin() + inPsi.l.vol/2, outPsi.val.begin()); // write even part
-    std::copy(outOdd.val.begin() + inPsi.l.vol/2, outOdd.val.end(), outPsi.val.begin() + inPsi.l.vol/2); // write odd part
-
-    return outPsi;
-
-}
-
-SpinorField DiracOP::applyRto(SpinorField const& inPsi, bool const dagger){
-    SpinorField outPsi(inPsi.l);
-    for(auto& v: outPsi.val) v.setZero();
-
-    SpinorField aux1(inPsi.l), aux2(inPsi.l);
-    for(int i=0; i<inPsi.l.vol; i++) {aux1.val[i].setZero(); aux2.val[i].setZero();}
-
-    D_oe(inPsi, aux1, dagger);
-    D_oo_inv(aux1, aux2, dagger);
-
-    std::copy(inPsi.val.begin(), inPsi.val.begin() + inPsi.l.vol/2, outPsi.val.begin()); // even part of the result
-    for(int i=inPsi.l.vol/2; i<inPsi.l.vol; i++) outPsi.val[i] = inPsi.val[i] - aux2.val[i]; // odd part of the result
-
-    return outPsi;
-}
-
-SpinorField DiracOP::applyLto(SpinorField const& inPsi, bool const dagger){
-    SpinorField outPsi(inPsi.l);
-    for(auto& v: outPsi.val) v.setZero();
-
-    SpinorField aux1(inPsi.l), aux2(inPsi.l);
-    for(int i=0; i<inPsi.l.vol; i++) {aux1.val[i].setZero(); aux2.val[i].setZero();}
+void DiracOP::applyDhatTo_single(std::vector<vec_fc_single>::iterator vec, std::vector<vec_fc_single>::iterator res, bool const dagger){
+    assert(dagger==0 || dagger==1);
     
-    D_oo_inv(inPsi, aux1, dagger);
-    D_eo(aux1, aux2, dagger);
+    std::vector<vec_fc_single> temp(l.vol/2), temp2(l.vol/2);
 
-    for(int i=0; i<inPsi.l.vol; i++) outPsi.val[i] = inPsi.val[i] - aux2.val[i]; // even part of the result
-    std::copy(inPsi.val.begin() + inPsi.l.vol/2, inPsi.val.end(), outPsi.val.begin() + inPsi.l.vol/2); // odd part of the result
+    for(int i=0; i<l.vol/2; i++) {temp[i].setZero(); temp2[i].setZero(); res[i].setZero();}
 
-    return outPsi;
+    // for the dagger consider inverting the order of the product
+    D_ee_single(vec, res, dagger);
+    D_oe_single(vec, temp.begin(), dagger);  
+    D_oo_inv_single(temp.begin(), temp2.begin(), dagger);
+    for(int i=0; i<l.vol/2; i++) {temp[i].setZero();}
+    D_eo_single(temp2.begin(), temp.begin(), dagger);
+
+    for(int i=0; i<l.vol/2; i++) res[i] -= temp[i];
 }
 
-void DiracOP::D_oo_inv(SpinorField const& inPsi, SpinorField& outPsi, bool const dagger){
+
+void DiracOP::D_oo_inv(std::vector<vec_fc>::iterator y, std::vector<vec_fc>::iterator x, bool const dagger){
     std::complex<double> sigma;
     std::vector<int> idx(2);
     mat_fc Y;
     std::vector<std::complex<double>> pions(3);
     mat Mbar = mesons->M[0][0];
     mat_fc Minv;
-    for(int i=inPsi.l.vol/2; i<inPsi.l.vol; i++){
-        idx = inPsi.l.eoToVec(i);
+
+    int const vol = l.vol/2;
+
+    for(int i=0; i<vol; i++){
+        idx = l.eoToVec(i+vol);
         sigma = 0.5 * (Pauli.tau0*mesons->M[idx[0]][idx[1]]).trace();
-        outPsi.val[i].setZero();
-       // outPsi.val[i] += 1.0 / (2.0 + M + mesons->g*sigma) * inPsi.val[i];
 
         // Projection along basis
         pions[0] = 0.5 * ((Pauli.tau1*mesons->M[idx[0]][idx[1]]).trace());
@@ -118,56 +90,98 @@ void DiracOP::D_oo_inv(SpinorField const& inPsi, SpinorField& outPsi, bool const
         Minv += buildCompositeOP((2.0 + M + mesons->g*sigma)*Pauli.tau0, mat::Identity());
         Minv /= (2.0 + M + mesons->g*sigma)*(2.0 + M + mesons->g*sigma) - mesons->g*mesons->g*pions[0]*pions[0] - mesons->g*mesons->g*pions[1]*pions[1] - mesons->g*mesons->g*pions[2]*pions[2]; // - because the projection contains the i factor
 
-        outPsi.val[i] = Minv * inPsi.val[i];
+        x[i] = Minv * y[i];
 
     }
 }
 
+// this must be improved
+void DiracOP::D_oo_inv_single(std::vector<vec_fc_single>::iterator y, std::vector<vec_fc_single>::iterator x, bool const dagger){
+    std::complex<float> sigma;
+    std::vector<int> idx(2);
+    mat_fc Y;
+    std::vector<std::complex<float>> pions(3);
+    mat Mbar = mesons->M[0][0];
+    mat_fc Minv;
 
-void DiracOP::D_ee(SpinorField const& inPsi, SpinorField& outPsi, bool const dagger){
+    int const vol = l.vol/2;
+
+    for(int i=0; i<vol; i++){
+        idx = l.eoToVec(i+vol);
+        sigma = 0.5 * (Pauli.tau0*mesons->M[idx[0]][idx[1]]).trace();
+
+        // Projection along basis
+        pions[0] = 0.5 * ((Pauli.tau1*mesons->M[idx[0]][idx[1]]).trace());
+        pions[1] = 0.5 * ((Pauli.tau2*mesons->M[idx[0]][idx[1]]).trace());
+        pions[2] = 0.5 * ((Pauli.tau3*mesons->M[idx[0]][idx[1]]).trace());
+        Mbar = - (std::complex<float>) mesons->g*pions[0]*Pauli.tau1.cast<std::complex<float>>() - (std::complex<float>) mesons->g*pions[1]*Pauli.tau2.cast<std::complex<float>>() - (std::complex<float>) mesons->g*pions[2]*Pauli.tau3.cast<std::complex<float>>();
+        
+        if (dagger)
+            Minv = buildCompositeOP(Mbar.adjoint(), gamma5); // flavour mixing term (just remove diagonal and tensor with gamma5)
+        else
+            Minv = buildCompositeOP(Mbar, gamma5); // flavour mixing term (just remove diagonal and tensor with gamma5)
+
+        Minv += buildCompositeOP((2.0 + (float)M + (std::complex<float>)mesons->g*sigma)*Pauli.tau0, mat::Identity());
+        Minv /= (2.0 + (float)M + (std::complex<float>)mesons->g*sigma)*(2.0 + M + (std::complex<float>)mesons->g*sigma) - (std::complex<float>)mesons->g*(std::complex<float>)mesons->g*pions[0]*pions[0] - (std::complex<float>)mesons->g*(std::complex<float>)mesons->g*pions[1]*pions[1] - (std::complex<float>)mesons->g*(std::complex<float>)mesons->g*pions[2]*pions[2]; // - because the projection contains the i factor
+
+        x[i] = Minv * y[i];
+
+    }
+}
+
+void DiracOP::D_ee(std::vector<vec_fc>::iterator y, std::vector<vec_fc>::iterator x, bool const dagger){
+
     std::complex<double> sigma;
     std::vector<int> idx(2);
+    int const vol = l.vol/2;
 
     // Diagonal term
-    for(int i=0; i<inPsi.l.vol/2; i++){
-        idx = inPsi.l.eoToVec(i);
+    for(int i=0; i<vol; i++){
+        idx = l.eoToVec(i);
         sigma = 0.5 * (Pauli.tau0*mesons->M[idx[0]][idx[1]]).trace();
-        outPsi.val[i] += (2.0 + M + mesons->g*sigma) * inPsi.val[i];
+        x[i] += (2.0 + M + mesons->g*sigma) * y[i];
         if (dagger)
-            outPsi.val[i] += buildCompositeOP(mesons->g * (mesons->M[idx[0]][idx[1]] - sigma*mat::Identity()).adjoint(), gamma5) * inPsi.val[i]; // flavour mixing term (just remove diagonal and tensor with gamma5)
+            x[i] += buildCompositeOP(mesons->g * (mesons->M[idx[0]][idx[1]] - sigma*mat::Identity()).adjoint(), gamma5) * y[i]; // flavour mixing term (just remove diagonal and tensor with gamma5)
         else
-            outPsi.val[i] += buildCompositeOP(mesons->g * (mesons->M[idx[0]][idx[1]] - sigma*mat::Identity()), gamma5) * inPsi.val[i]; // flavour mixing term (just remove diagonal and tensor with gamma5)
+            x[i] += buildCompositeOP(mesons->g * (mesons->M[idx[0]][idx[1]] - sigma*mat::Identity()), gamma5) * y[i]; // flavour mixing term (just remove diagonal and tensor with gamma5)
 
     }
+
 }
 
-void DiracOP::D_oo(SpinorField const& inPsi, SpinorField& outPsi, bool const dagger){
+void DiracOP::D_oo(std::vector<vec_fc>::iterator y, std::vector<vec_fc>::iterator x, bool const dagger){
     std::complex<double> sigma;
     std::vector<int> idx(2);
+    int const vol = l.vol/2;
+
     // Diagonal term
-    for(int i=inPsi.l.vol/2; i<inPsi.l.vol; i++){
-        idx = inPsi.l.eoToVec(i);
+    for(int i=0; i<vol; i++){
+        idx = l.eoToVec(i+vol);
         sigma = 0.5 * (Pauli.tau0*mesons->M[idx[0]][idx[1]]).trace();
-        outPsi.val[i] += (2.0 + M + mesons->g*sigma) * inPsi.val[i];
+        x[i] += (2.0 + M + mesons->g*sigma) * y[i];
         if (dagger)
-            outPsi.val[i] += buildCompositeOP(mesons->g * (mesons->M[idx[0]][idx[1]] - sigma*mat::Identity()).adjoint(), gamma5) * inPsi.val[i]; // flavour mixing term (just remove diagonal and tensor with gamma5)
+            x[i] += buildCompositeOP(mesons->g * (mesons->M[idx[0]][idx[1]] - sigma*mat::Identity()).adjoint(), gamma5) * y[i]; // flavour mixing term (just remove diagonal and tensor with gamma5)
         else
-            outPsi.val[i] += buildCompositeOP(mesons->g * (mesons->M[idx[0]][idx[1]] - sigma*mat::Identity()), gamma5) * inPsi.val[i]; // flavour mixing term (just remove diagonal and tensor with gamma5)
+            x[i] += buildCompositeOP(mesons->g * (mesons->M[idx[0]][idx[1]] - sigma*mat::Identity()), gamma5) * y[i]; // flavour mixing term (just remove diagonal and tensor with gamma5)
 
     }
 }
-void DiracOP::D_eo(SpinorField const& inPsi, SpinorField& outPsi, bool const dagger){
+
+
+void DiracOP::D_eo(std::vector<vec_fc>::iterator y, std::vector<vec_fc>::iterator x, bool const dagger){
 
     std::vector<int> idx(2);
+    int const vol = l.vol/2;
 
-    int const Nt=inPsi.l.Nt, Nx=inPsi.l.Nx;
+
+    int const Nt=l.Nt, Nx=l.Nx;
 
     double sgn[2];
     int nt, nx;
     
-    for(int i=0; i<inPsi.l.vol/2; i++){
+    for(int i=0; i<vol; i++){
 
-        idx = inPsi.l.eoToVec(i);
+        idx = l.eoToVec(i);
         nt = idx[0]; nx = idx[1];
         sgn[0] = (nt == (Nt-1)) ? -1.0 : 1.0;
         sgn[1] = (nt == 0) ? -1.0 : 1.0;
@@ -178,47 +192,49 @@ void DiracOP::D_eo(SpinorField const& inPsi, SpinorField& outPsi, bool const dag
         
         if (dagger) {
 
-            psisum[0] = inPsi.val[l.IDN[i][1]][0] + inPsi.val[l.IDN[i][1]][1];
-            psisum[1] = inPsi.val[l.IDN[i][1]][2] + inPsi.val[l.IDN[i][1]][3];
-            psidiff[0] = inPsi.val[l.IUP[i][1]][0] - inPsi.val[l.IUP[i][1]][1];
-            psidiff[1] = inPsi.val[l.IUP[i][1]][2] - inPsi.val[l.IUP[i][1]][3];
+            psisum[0] = y[l.IDN[i][1] - vol][0] + y[l.IDN[i][1] - vol][1];
+            psisum[1] = y[l.IDN[i][1] - vol][2] + y[l.IDN[i][1] - vol][3];
+            psidiff[0] = y[l.IUP[i][1] - vol][0] - y[l.IUP[i][1] - vol][1];
+            psidiff[1] = y[l.IUP[i][1] - vol][2] - y[l.IUP[i][1] - vol][3];
 
-            outPsi.val[l.toEOflat(nt, nx)][0] -=  sgn[1] * 1.0 * inPsi.val[l.IDN[i][0]][0] + 0.5*psidiff[0] + 0.5*psisum[0];
-            outPsi.val[l.toEOflat(nt, nx)][2] -=  sgn[1] * 1.0 * inPsi.val[l.IDN[i][0]][2] + 0.5*psidiff[1] + 0.5*psisum[1];
-            outPsi.val[l.toEOflat(nt, nx)][1] -=  sgn[0] * 1.0 * inPsi.val[l.IUP[i][0]][1] - 0.5*psidiff[0] + 0.5*psisum[0];
-            outPsi.val[l.toEOflat(nt, nx)][3] -=  sgn[0] * 1.0 * inPsi.val[l.IUP[i][0]][3] - 0.5*psidiff[1] + 0.5*psisum[1];
+            x[l.toEOflat(nt, nx)][0] -=  sgn[1] * 1.0 * y[l.IDN[i][0] - vol][0] + 0.5*psidiff[0] + 0.5*psisum[0];
+            x[l.toEOflat(nt, nx)][2] -=  sgn[1] * 1.0 * y[l.IDN[i][0] - vol][2] + 0.5*psidiff[1] + 0.5*psisum[1];
+            x[l.toEOflat(nt, nx)][1] -=  sgn[0] * 1.0 * y[l.IUP[i][0] - vol][1] - 0.5*psidiff[0] + 0.5*psisum[0];
+            x[l.toEOflat(nt, nx)][3] -=  sgn[0] * 1.0 * y[l.IUP[i][0] - vol][3] - 0.5*psidiff[1] + 0.5*psisum[1];
 
         } else {
 
-            psisum[0] = inPsi.val[l.IUP[i][1]][0] + inPsi.val[l.IUP[i][1]][1];
-            psisum[1] = inPsi.val[l.IUP[i][1]][2] + inPsi.val[l.IUP[i][1]][3];
-            psidiff[0] = inPsi.val[l.IDN[i][1]][0] - inPsi.val[l.IDN[i][1]][1];
-            psidiff[1] = inPsi.val[l.IDN[i][1]][2] - inPsi.val[l.IDN[i][1]][3];
+            psisum[0] = y[l.IUP[i][1] - vol][0] + y[l.IUP[i][1] - vol][1];
+            psisum[1] = y[l.IUP[i][1] - vol][2] + y[l.IUP[i][1] - vol][3];
+            psidiff[0] = y[l.IDN[i][1] - vol][0] - y[l.IDN[i][1] - vol][1];
+            psidiff[1] = y[l.IDN[i][1] - vol][2] - y[l.IDN[i][1] - vol][3];
 
-            outPsi.val[l.toEOflat(nt, nx)][0] -=  sgn[0] * 1.0 * inPsi.val[l.IUP[i][0]][0] + 0.5 * psisum[0] + 0.5 * psidiff[0];
-            outPsi.val[l.toEOflat(nt, nx)][2] -=  sgn[0] * 1.0 * inPsi.val[l.IUP[i][0]][2] + 0.5 * psisum[1] + 0.5 * psidiff[1];
-            outPsi.val[l.toEOflat(nt, nx)][1] -=  sgn[1] * 1.0 * inPsi.val[l.IDN[i][0]][1] + 0.5 * psisum[0] - 0.5 * psidiff[0];
-            outPsi.val[l.toEOflat(nt, nx)][3] -=  sgn[1] * 1.0 * inPsi.val[l.IDN[i][0]][3] + 0.5 * psisum[1] - 0.5 * psidiff[1];
+            x[l.toEOflat(nt, nx)][0] -=  sgn[0] * 1.0 * y[l.IUP[i][0] - vol][0] + 0.5 * psisum[0] + 0.5 * psidiff[0];
+            x[l.toEOflat(nt, nx)][2] -=  sgn[0] * 1.0 * y[l.IUP[i][0] - vol][2] + 0.5 * psisum[1] + 0.5 * psidiff[1];
+            x[l.toEOflat(nt, nx)][1] -=  sgn[1] * 1.0 * y[l.IDN[i][0] - vol][1] + 0.5 * psisum[0] - 0.5 * psidiff[0];
+            x[l.toEOflat(nt, nx)][3] -=  sgn[1] * 1.0 * y[l.IDN[i][0] - vol][3] + 0.5 * psisum[1] - 0.5 * psidiff[1];
 
         }
                                             
     }
 
 }
-
-void DiracOP::D_oe(SpinorField const& inPsi, SpinorField& outPsi, bool const dagger){
-
+void DiracOP::D_oe(std::vector<vec_fc>::iterator y, std::vector<vec_fc>::iterator x, bool const dagger){
     std::vector<int> idx(2);
+    int const vol = l.vol/2;
 
     // Hopping term
-    int const Nt=inPsi.l.Nt, Nx=inPsi.l.Nx;
+    int const Nt=l.Nt, Nx=l.Nx;
 
     double sgn[2];
     int nt, nx;
 
-    for(int i=inPsi.l.vol/2; i<inPsi.l.vol; i++){
+    int i;
+    for(int j=0; j<vol; j++){
 
-        idx = inPsi.l.eoToVec(i);
+        i = j+vol; // full index (for lookup tables)
+
+        idx = l.eoToVec(i);
         nt = idx[0]; nx = idx[1];
         sgn[0] = (nt == (Nt-1)) ? -1.0 : 1.0;
         sgn[1] = (nt == 0) ? -1.0 : 1.0;
@@ -227,31 +243,226 @@ void DiracOP::D_oe(SpinorField const& inPsi, SpinorField& outPsi, bool const dag
         
         if (dagger) {
 
-            psisum[0] = inPsi.val[l.IDN[i][1]][0] + inPsi.val[l.IDN[i][1]][1];
-            psisum[1] = inPsi.val[l.IDN[i][1]][2] + inPsi.val[l.IDN[i][1]][3];
-            psidiff[0] = inPsi.val[l.IUP[i][1]][0] - inPsi.val[l.IUP[i][1]][1];
-            psidiff[1] = inPsi.val[l.IUP[i][1]][2] - inPsi.val[l.IUP[i][1]][3];
+            psisum[0] = y[l.IDN[i][1]][0] + y[l.IDN[i][1]][1];
+            psisum[1] = y[l.IDN[i][1]][2] + y[l.IDN[i][1]][3];
+            psidiff[0] = y[l.IUP[i][1]][0] - y[l.IUP[i][1]][1];
+            psidiff[1] = y[l.IUP[i][1]][2] - y[l.IUP[i][1]][3];
 
-            outPsi.val[l.toEOflat(nt, nx)][0] -=  sgn[1] * 1.0 * inPsi.val[l.IDN[i][0]][0] + 0.5*psidiff[0] + 0.5*psisum[0];
-            outPsi.val[l.toEOflat(nt, nx)][2] -=  sgn[1] * 1.0 * inPsi.val[l.IDN[i][0]][2] + 0.5*psidiff[1] + 0.5*psisum[1];
-            outPsi.val[l.toEOflat(nt, nx)][1] -=  sgn[0] * 1.0 * inPsi.val[l.IUP[i][0]][1] - 0.5*psidiff[0] + 0.5*psisum[0];
-            outPsi.val[l.toEOflat(nt, nx)][3] -=  sgn[0] * 1.0 * inPsi.val[l.IUP[i][0]][3] - 0.5*psidiff[1] + 0.5*psisum[1];
+            x[j][0] -=  sgn[1] * 1.0 * y[l.IDN[i][0]][0] + 0.5*psidiff[0] + 0.5*psisum[0];
+            x[j][2] -=  sgn[1] * 1.0 * y[l.IDN[i][0]][2] + 0.5*psidiff[1] + 0.5*psisum[1];
+            x[j][1] -=  sgn[0] * 1.0 * y[l.IUP[i][0]][1] - 0.5*psidiff[0] + 0.5*psisum[0];
+            x[j][3] -=  sgn[0] * 1.0 * y[l.IUP[i][0]][3] - 0.5*psidiff[1] + 0.5*psisum[1];
 
         } else {
 
-            psisum[0] = inPsi.val[l.IUP[i][1]][0] + inPsi.val[l.IUP[i][1]][1];
-            psisum[1] = inPsi.val[l.IUP[i][1]][2] + inPsi.val[l.IUP[i][1]][3];
-            psidiff[0] = inPsi.val[l.IDN[i][1]][0] - inPsi.val[l.IDN[i][1]][1];
-            psidiff[1] = inPsi.val[l.IDN[i][1]][2] - inPsi.val[l.IDN[i][1]][3];
+            psisum[0] = y[l.IUP[i][1]][0] + y[l.IUP[i][1]][1];
+            psisum[1] = y[l.IUP[i][1]][2] + y[l.IUP[i][1]][3];
+            psidiff[0] = y[l.IDN[i][1]][0] - y[l.IDN[i][1]][1];
+            psidiff[1] = y[l.IDN[i][1]][2] - y[l.IDN[i][1]][3];
 
-            outPsi.val[l.toEOflat(nt, nx)][0] -=  sgn[0] * 1.0 * inPsi.val[l.IUP[i][0]][0] + 0.5 * psisum[0] + 0.5 * psidiff[0];
-            outPsi.val[l.toEOflat(nt, nx)][2] -=  sgn[0] * 1.0 * inPsi.val[l.IUP[i][0]][2] + 0.5 * psisum[1] + 0.5 * psidiff[1];
-            outPsi.val[l.toEOflat(nt, nx)][1] -=  sgn[1] * 1.0 * inPsi.val[l.IDN[i][0]][1] + 0.5 * psisum[0] - 0.5 * psidiff[0];
-            outPsi.val[l.toEOflat(nt, nx)][3] -=  sgn[1] * 1.0 * inPsi.val[l.IDN[i][0]][3] + 0.5 * psisum[1] - 0.5 * psidiff[1];
+            x[j][0] -=  sgn[0] * 1.0 * y[l.IUP[i][0]][0] + 0.5 * psisum[0] + 0.5 * psidiff[0];
+            x[j][2] -=  sgn[0] * 1.0 * y[l.IUP[i][0]][2] + 0.5 * psisum[1] + 0.5 * psidiff[1];
+            x[j][1] -=  sgn[1] * 1.0 * y[l.IDN[i][0]][1] + 0.5 * psisum[0] - 0.5 * psidiff[0];
+            x[j][3] -=  sgn[1] * 1.0 * y[l.IDN[i][0]][3] + 0.5 * psisum[1] - 0.5 * psidiff[1];
 
+
+        }
+                                            
+    }
+}
+
+void DiracOP::applyLTo(std::vector<vec_fc>::iterator vec, std::vector<vec_fc>::iterator res){
+    std::vector<vec_fc> temp(l.vol/2), temp2(l.vol/2);
+    for(int i=0; i<l.vol/2; i++) {temp[i].setZero(); temp2[i].setZero();}
+    
+    D_oo_inv(vec + l.vol/2, temp.begin());
+    D_eo(temp.begin(), temp2.begin());
+    
+    for(int i=0; i<l.vol/2; i++){
+        res[i] = vec[i] + temp2[i];
+        res[l.vol/2+i] = vec[l.vol/2+i];
+    }
+}
+
+void DiracOP::applyRTo(std::vector<vec_fc>::iterator vec, std::vector<vec_fc>::iterator res){
+    std::vector<vec_fc> temp(l.vol/2), temp2(l.vol/2);
+    for(int i=0; i<l.vol/2; i++) {temp[i].setZero(); temp2[i].setZero();}
+    
+    D_oe(vec, temp.begin());
+    D_oo_inv(temp.begin(), temp2.begin());
+
+    for(int i=0; i<l.vol/2; i++){
+        res[i] = vec[i];
+        res[l.vol/2+i] = vec[l.vol/2+i] + temp2[i];
+    }
+}
+
+void DiracOP::applyLinvTo(std::vector<vec_fc>::iterator vec, std::vector<vec_fc>::iterator res){
+    std::vector<vec_fc> temp(l.vol/2), temp2(l.vol/2);
+    for(int i=0; i<l.vol/2; i++) {temp[i].setZero(); temp2[i].setZero();}
+    
+    D_oo_inv(vec + l.vol/2, temp.begin());
+    D_eo(temp.begin(), temp2.begin());
+    
+    for(int i=0; i<l.vol/2; i++){
+        res[i] = vec[i] - temp2[i];
+        res[l.vol/2+i] = vec[l.vol/2+i];
+    }
+}
+
+void DiracOP::applyRinvTo(std::vector<vec_fc>::iterator vec, std::vector<vec_fc>::iterator res){
+    std::vector<vec_fc> temp(l.vol/2), temp2(l.vol/2);
+    for(int i=0; i<l.vol/2; i++) {temp[i].setZero(); temp2[i].setZero();}
+    
+    D_oe(vec, temp.begin());
+    D_oo_inv(temp.begin(), temp2.begin());
+    
+    for(int i=0; i<l.vol/2; i++){
+        res[i] = vec[i];
+        res[l.vol/2+i] = vec[l.vol/2+i] - temp2[i];
+    }
+}
+
+
+void DiracOP::D_ee_single(std::vector<vec_fc_single>::iterator y, std::vector<vec_fc_single>::iterator x, bool const dagger){
+
+    float sigma;
+    std::vector<int> idx(2);
+    int const vol = l.vol/2;
+
+    // Diagonal term
+    for(int i=0; i<vol; i++){
+        idx = l.eoToVec(i);
+        sigma = 0.5 * (Pauli.tau0*mesons->M[idx[0]][idx[1]]).trace().real();
+        x[i] += (float) (2.0 + M + mesons->g*sigma) * y[i];
+        if (dagger)
+            x[i] += buildCompositeOP_single(mesons->g * (mesons->M[idx[0]][idx[1]].cast<std::complex<float>>() - sigma*mat_single::Identity()).adjoint(), gamma5.cast<std::complex<float>>()) * y[i]; // flavour mixing term (just remove diagonal and tensor with gamma5)
+        else
+            x[i] += buildCompositeOP_single(mesons->g * (mesons->M[idx[0]][idx[1]].cast<std::complex<float>>() - sigma*mat_single::Identity()), gamma5.cast<std::complex<float>>()) * y[i]; // flavour mixing term (just remove diagonal and tensor with gamma5)
+
+    }
+
+}
+
+void DiracOP::D_oo_single(std::vector<vec_fc_single>::iterator y, std::vector<vec_fc_single>::iterator x, bool const dagger){
+    float sigma;
+    std::vector<int> idx(2);
+    int const vol = l.vol/2;
+
+    // Diagonal term
+    for(int i=0; i<vol; i++){
+        idx = l.eoToVec(i+vol);
+        sigma = 0.5 * (Pauli.tau0*mesons->M[idx[0]][idx[1]]).trace().real();
+        x[i] += (2.0 + M + mesons->g*sigma) * y[i];
+        if (dagger)
+            x[i] += buildCompositeOP_single(mesons->g * (mesons->M[idx[0]][idx[1]].cast<std::complex<float>>() - sigma*mat_single::Identity()).adjoint(), gamma5.cast<std::complex<float>>()) * y[i]; // flavour mixing term (just remove diagonal and tensor with gamma5)
+        else
+            x[i] += buildCompositeOP_single(mesons->g * (mesons->M[idx[0]][idx[1]].cast<std::complex<float>>() - sigma*mat_single::Identity()), gamma5.cast<std::complex<float>>()) * y[i]; // flavour mixing term (just remove diagonal and tensor with gamma5)
+
+    }
+}
+
+
+void DiracOP::D_eo_single(std::vector<vec_fc_single>::iterator y, std::vector<vec_fc_single>::iterator x, bool const dagger){
+
+    std::vector<int> idx(2);
+    int const vol = l.vol/2;
+
+
+    int const Nt=l.Nt, Nx=l.Nx;
+
+    std::complex<float> sgn[2];
+    int nt, nx;
+    
+    for(int i=0; i<vol; i++){
+
+        idx = l.eoToVec(i);
+        nt = idx[0]; nx = idx[1];
+        sgn[0] = (nt == (Nt-1)) ? -1.0 : 1.0;
+        sgn[1] = (nt == 0) ? -1.0 : 1.0;
+
+        std::complex<float> psisum[2], psidiff[2];
+
+        // maybe use ? : syntax to remove the if (more elegant?)
+        
+        if (dagger) {
+
+            psisum[0] = y[l.IDN[i][1] - vol][0] + y[l.IDN[i][1] - vol][1];
+            psisum[1] = y[l.IDN[i][1] - vol][2] + y[l.IDN[i][1] - vol][3];
+            psidiff[0] = y[l.IUP[i][1] - vol][0] - y[l.IUP[i][1] - vol][1];
+            psidiff[1] = y[l.IUP[i][1] - vol][2] - y[l.IUP[i][1] - vol][3];
+
+            x[l.toEOflat(nt, nx)][0] -=  sgn[1] * (std::complex<float>) 1.0 * y[l.IDN[i][0] - vol][0] + (std::complex<float>) 0.5*psidiff[0] + (std::complex<float>) 0.5*psisum[0];
+            x[l.toEOflat(nt, nx)][2] -=  sgn[1] * (std::complex<float>) 1.0 * y[l.IDN[i][0] - vol][2] + (std::complex<float>) 0.5*psidiff[1] + (std::complex<float>) 0.5*psisum[1];
+            x[l.toEOflat(nt, nx)][1] -=  sgn[0] * (std::complex<float>) 1.0 * y[l.IUP[i][0] - vol][1] - (std::complex<float>) 0.5*psidiff[0] + (std::complex<float>) 0.5*psisum[0];
+            x[l.toEOflat(nt, nx)][3] -=  sgn[0] * (std::complex<float>) 1.0 * y[l.IUP[i][0] - vol][3] - (std::complex<float>) 0.5*psidiff[1] + (std::complex<float>) 0.5*psisum[1];
+
+        } else {
+
+            psisum[0] = y[l.IUP[i][1] - vol][0] + y[l.IUP[i][1] - vol][1];
+            psisum[1] = y[l.IUP[i][1] - vol][2] + y[l.IUP[i][1] - vol][3];
+            psidiff[0] = y[l.IDN[i][1] - vol][0] - y[l.IDN[i][1] - vol][1];
+            psidiff[1] = y[l.IDN[i][1] - vol][2] - y[l.IDN[i][1] - vol][3];
+
+            x[l.toEOflat(nt, nx)][0] -=  sgn[0] * (std::complex<float>) 1.0 * y[l.IUP[i][0] - vol][0] + (std::complex<float>) 0.5 * psisum[0] + (std::complex<float>) 0.5 * psidiff[0];
+            x[l.toEOflat(nt, nx)][2] -=  sgn[0] * (std::complex<float>) 1.0 * y[l.IUP[i][0] - vol][2] + (std::complex<float>) 0.5 * psisum[1] + (std::complex<float>) 0.5 * psidiff[1];
+            x[l.toEOflat(nt, nx)][1] -=  sgn[1] * (std::complex<float>) 1.0 * y[l.IDN[i][0] - vol][1] + (std::complex<float>) 0.5 * psisum[0] - (std::complex<float>) 0.5 * psidiff[0];
+            x[l.toEOflat(nt, nx)][3] -=  sgn[1] * (std::complex<float>) 1.0 * y[l.IDN[i][0] - vol][3] + (std::complex<float>) 0.5 * psisum[1] - (std::complex<float>) 0.5 * psidiff[1];
 
         }
                                             
     }
 
 }
+void DiracOP::D_oe_single(std::vector<vec_fc_single>::iterator y, std::vector<vec_fc_single>::iterator x, bool const dagger){
+    std::vector<int> idx(2);
+    int const vol = l.vol/2;
+
+    // Hopping term
+    int const Nt=l.Nt, Nx=l.Nx;
+
+    float sgn[2];
+    int nt, nx;
+
+    int i;
+    for(int j=0; j<vol; j++){
+
+        i = j+vol; // full index (for lookup tables)
+
+        idx = l.eoToVec(i);
+        nt = idx[0]; nx = idx[1];
+        sgn[0] = (nt == (Nt-1)) ? -1.0 : 1.0;
+        sgn[1] = (nt == 0) ? -1.0 : 1.0;
+
+        std::complex<float> psisum[2], psidiff[2];
+        
+        if (dagger) {
+
+            psisum[0] = y[l.IDN[i][1]][0] + y[l.IDN[i][1]][1];
+            psisum[1] = y[l.IDN[i][1]][2] + y[l.IDN[i][1]][3];
+            psidiff[0] = y[l.IUP[i][1]][0] - y[l.IUP[i][1]][1];
+            psidiff[1] = y[l.IUP[i][1]][2] - y[l.IUP[i][1]][3];
+
+            x[j][0] -=  sgn[1] * (std::complex<float>) 1.0 * y[l.IDN[i][0]][0] + (std::complex<float>) 0.5*psidiff[0] + (std::complex<float>) 0.5*psisum[0];
+            x[j][2] -=  sgn[1] * (std::complex<float>) 1.0 * y[l.IDN[i][0]][2] + (std::complex<float>) 0.5*psidiff[1] + (std::complex<float>) 0.5*psisum[1];
+            x[j][1] -=  sgn[0] * (std::complex<float>) 1.0 * y[l.IUP[i][0]][1] - (std::complex<float>) 0.5*psidiff[0] + (std::complex<float>) 0.5*psisum[0];
+            x[j][3] -=  sgn[0] * (std::complex<float>) 1.0 * y[l.IUP[i][0]][3] - (std::complex<float>) 0.5*psidiff[1] + (std::complex<float>) 0.5*psisum[1];
+
+        } else {
+
+            psisum[0] = y[l.IUP[i][1]][0] + y[l.IUP[i][1]][1];
+            psisum[1] = y[l.IUP[i][1]][2] + y[l.IUP[i][1]][3];
+            psidiff[0] = y[l.IDN[i][1]][0] - y[l.IDN[i][1]][1];
+            psidiff[1] = y[l.IDN[i][1]][2] - y[l.IDN[i][1]][3];
+
+            x[j][0] -=  sgn[0] * (std::complex<float>) 1.0 * y[l.IUP[i][0]][0] + (std::complex<float>) 0.5 * psisum[0] + (std::complex<float>) 0.5 * psidiff[0];
+            x[j][2] -=  sgn[0] * (std::complex<float>) 1.0 * y[l.IUP[i][0]][2] + (std::complex<float>) 0.5 * psisum[1] + (std::complex<float>) 0.5 * psidiff[1];
+            x[j][1] -=  sgn[1] * (std::complex<float>) 1.0 * y[l.IDN[i][0]][1] + (std::complex<float>) 0.5 * psisum[0] - (std::complex<float>) 0.5 * psidiff[0];
+            x[j][3] -=  sgn[1] * (std::complex<float>) 1.0 * y[l.IDN[i][0]][3] + (std::complex<float>) 0.5 * psisum[1] - (std::complex<float>) 0.5 * psidiff[1];
+
+
+        }
+                                            
+    }
+}
+

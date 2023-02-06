@@ -1,7 +1,5 @@
 #pragma once 
 
-#include <complex.h>
-
 // Lattice params
 int constexpr Nt = 128;
 int constexpr Nx = 32;
@@ -23,10 +21,8 @@ double constexpr dt = 0.01;
 double constexpr T = 1.0;
 
 // Others
-//std::complex<double> constexpr im (0.0, 1.0); 
+int constexpr CGmode = 2; // 0: double, 1: EO double, 2: single, 3: EO single, 4: mixed, 5: EO mixed
 
 // Initial field values
 double constexpr sigma = 0.01;
-//double constexpr sigma = 0.0;
 double constexpr pi[3] {0.02, 0.03, 0.04};
-//double constexpr pi[3] {0, 0, 0.0};

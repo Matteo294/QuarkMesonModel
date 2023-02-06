@@ -12,7 +12,6 @@ class SpinorField;
 class O4Mesons;
 class Lattice;
 
-using mat = Eigen::Matrix2cd;
 
 typedef struct PauliMat{
     mat const tau0 {{1, 0}, {0, 1}}; // identity
@@ -26,15 +25,33 @@ class DiracOP {
     public:
         DiracOP(double const M, O4Mesons* mesons, Lattice& l);
         ~DiracOP(){;}
-        SpinorField applyTo(SpinorField const& inPsi, bool const dagger=0);
-        SpinorField applyLDRTo(SpinorField const& inPsi, bool const dagger=0);
-        SpinorField applyRto(SpinorField const& inPsi, bool const dagger=0);
-        SpinorField applyLto(SpinorField const& inPsi, bool const dagger=0);
-        void D_ee(SpinorField const& inPsi, SpinorField& outPsi, bool const dagger=0);
-        void D_oo(SpinorField const& inPsi, SpinorField& outPsi, bool const dagger=0);
-        void D_oo_inv(SpinorField const& inPsi, SpinorField& outPsi, bool const dagger=0);
-        void D_eo(SpinorField const& inPsi, SpinorField& outPsi, bool const dagger=0);
-        void D_oe(SpinorField const& inPsi, SpinorField& outPsi, bool const dagger=0);
+
+        void applyTo(std::vector<vec_fc>::iterator vec, std::vector<vec_fc>::iterator res, bool const dagger=0); // apply full Dirac operator to vector of dimension Nt*Nx
+        void applyTo_single(std::vector<vec_fc_single>::iterator vec, std::vector<vec_fc_single>::iterator res, bool const dagger=0); // apply full Dirac operator to vector of dimension Nt*Nx
+
+
+        //void applyTo(std::vector<vec_fc>::iterator vec, std::vector<vec_fc>::iterator res, bool const dagger=0);
+        
+        void applyDhatTo(std::vector<vec_fc>::iterator vec, std::vector<vec_fc>::iterator res, bool const dagger=0); // apply Dhat = Dee - Deo Doo_inv Doe to a vector of dimension Nt*Nx/2
+        void applyDhatTo_single(std::vector<vec_fc_single>::iterator vec, std::vector<vec_fc_single>::iterator res, bool const dagger);
+
+        void applyLTo(std::vector<vec_fc>::iterator vec, std::vector<vec_fc>::iterator res); // apply L to a vector of dimension Nt*Nx/2
+        void applyRTo(std::vector<vec_fc>::iterator vec, std::vector<vec_fc>::iterator res); // apply R to a vector of dimension Nt*Nx/2
+        void applyLinvTo(std::vector<vec_fc>::iterator vec, std::vector<vec_fc>::iterator res); // apply L_inv to a vector of dimension Nt*Nx/2
+        void applyRinvTo(std::vector<vec_fc>::iterator vec, std::vector<vec_fc>::iterator res); // apply R_inv to a vector of dimension Nt*Nx/2
+
+        // NB in the following functions the result is SUMMED to the vector passed !!!!!!!!!!!!!!!!!
+        void D_ee(std::vector<vec_fc>::iterator y, std::vector<vec_fc>::iterator x, bool const dagger=0);
+        void D_oo(std::vector<vec_fc>::iterator y, std::vector<vec_fc>::iterator x, bool const dagger=0);
+        void D_oo_inv(std::vector<vec_fc>::iterator y, std::vector<vec_fc>::iterator x, bool const dagger=0);
+        void D_eo(std::vector<vec_fc>::iterator y, std::vector<vec_fc>::iterator x, bool const dagger=0);
+        void D_oe(std::vector<vec_fc>::iterator y, std::vector<vec_fc>::iterator x, bool const dagger=0);
+        void D_ee_single(std::vector<vec_fc_single>::iterator y, std::vector<vec_fc_single>::iterator x, bool const dagger=0);
+        void D_oo_single(std::vector<vec_fc_single>::iterator y, std::vector<vec_fc_single>::iterator x, bool const dagger=0);
+        void D_oo_inv_single(std::vector<vec_fc_single>::iterator y, std::vector<vec_fc_single>::iterator x, bool const dagger=0);
+        void D_eo_single(std::vector<vec_fc_single>::iterator y, std::vector<vec_fc_single>::iterator x, bool const dagger=0);
+        void D_oe_single(std::vector<vec_fc_single>::iterator y, std::vector<vec_fc_single>::iterator x, bool const dagger=0);
+
         O4Mesons* mesons;
         double const M;
         PauliMat Pauli;

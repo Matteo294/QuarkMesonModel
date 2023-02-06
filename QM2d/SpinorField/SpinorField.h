@@ -16,14 +16,14 @@ class Lattice;
 
 typedef class SpinorField {
     public: 
-        SpinorField(Lattice& l);
+        SpinorField(int const vol);
         SpinorField(SpinorField const& s);
         ~SpinorField() {;}
         void operator = (SpinorField const&);
         std::vector<vec_fc> val;
-        std::complex<double> dot(SpinorField& s); // dot current spinor with s (computes psi^dagger * s)
-        Lattice& l;
+        std::vector<vec_fc>::iterator oddBegin() {auto it = val.begin(); std::advance(it, vol/2); return it;} // eventually return val.begin() + vol/2
     private:
+        int const vol;
         std::random_device rnddev;
         std::mt19937 rndgen;
         std::normal_distribution<double> dist;
