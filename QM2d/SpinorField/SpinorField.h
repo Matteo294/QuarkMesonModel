@@ -21,7 +21,7 @@ typedef class SpinorField {
         ~SpinorField() {;}
         void operator = (SpinorField const&);
         std::vector<vec_fc> val;
-        std::vector<vec_fc>::iterator oddBegin() {auto it = val.begin(); std::advance(it, vol/2); return it;} // eventually return val.begin() + vol/2
+        spinor_iter oddBegin() {auto it = val.begin(); std::advance(it, vol/2); return it;} // eventually return val.begin() + vol/2
     private:
         int const vol;
         std::random_device rnddev;

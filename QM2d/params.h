@@ -9,6 +9,8 @@ int constexpr vol = 2*Nf*Nx*Nt;
 // CG params
 double constexpr tol = 1e-12;
 int constexpr IterMax = 2000;
+int constexpr CGmode = 0; // 0: double, 1: EO double, 2: single, 3: EO single, 4: mixed, 5: EO mixed
+int constexpr IterMaxSingle = 100; // Useful only in mixed precision CG (see notes)
 
 // Action params
 double constexpr fermion_M = 0.1; // fermions mass
@@ -19,9 +21,6 @@ double constexpr g = 3.4; // Yukawa coupling
 // Langevin params
 double constexpr dt = 0.01;
 double constexpr T = 1.0;
-
-// Others
-int constexpr CGmode = 2; // 0: double, 1: EO double, 2: single, 3: EO single, 4: mixed, 5: EO mixed
 
 // Initial field values
 double constexpr sigma = 0.01;

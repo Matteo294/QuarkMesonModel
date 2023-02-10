@@ -1,6 +1,6 @@
 CXX = g++
 
-CXXFLAGS = -std=c++17 -O2 -I ../../eigen-3.4.0
+CXXFLAGS = -std=c++17 -O3 -I ../../eigen-3.4.0
 
 SOURCES = $(wildcard *.cpp) $(wildcard **/*.cpp)
 

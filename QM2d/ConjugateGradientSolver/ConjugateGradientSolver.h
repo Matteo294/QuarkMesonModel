@@ -15,10 +15,11 @@ class DiracOP;
 class ConjugateGradientSolver{
     public:
         ConjugateGradientSolver(int const IterMax, double const tolerance, DiracOP& Dirac);
-        ~ConjugateGradientSolver(){;}
-        void doubleCG(std::vector<vec_fc>::iterator ybegin, std::vector<vec_fc>::iterator yend, std::vector<vec_fc>::iterator xbegin);
-        void EOdoubleCG(std::vector<vec_fc>::iterator ybegin, std::vector<vec_fc>::iterator yend, std::vector<vec_fc>::iterator xbegin);
-        void singleCG(std::vector<vec_fc_single>::iterator ybegin, std::vector<vec_fc_single>::iterator yend, std::vector<vec_fc_single>::iterator xbegin);
+        ~ConjugateGradientSolver(){}
+        void doubleCG_D(spinor_iter ybegin, spinor_iter yend, spinor_iter xbegin);
+        void doubleCG_Dhat(spinor_iter ybegin, spinor_iter yend, spinor_iter xbegin);
+        //void singleCG(spinor_single_iter ybegin, spinor_single_iter yend, spinor_single_iter xbegin);
+        //void mixedCG(spinor_iter ybegin, spinor_iter yend, spinor_iter xbegin, int const IterMaxSingle, double const toleranceSingle);
     protected:
         double const tolerance;
         int const IterMax;
