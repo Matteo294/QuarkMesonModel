@@ -13,14 +13,9 @@
 #include <chrono>
 
 
-/// !!! check references when cycling through vectors
 // set public-private things
 // change Dee Doo ... so that result is assigned and not modified
 
-// !!!!!!!!!!!!!!!!!!!!!!!!!! start checking if Doo*Dooinv = 1
-
-
-// remove EOdoubleCG and use only doubleCG
 
 using namespace std;
 

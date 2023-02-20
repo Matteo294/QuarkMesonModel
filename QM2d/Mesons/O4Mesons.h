@@ -20,8 +20,6 @@ class O4Mesons {
         O4Mesons(double const m, double const lam, double const g, std::complex<double> const sigma, std::complex<double> const pi[3], Lattice& l);
         ~O4Mesons(){;}
         double norm();
-        //void writeDoubleToSingle(); // copy double into single
-        //void writeSingleToDouble(); // copy single into double
         O4field M;
         O4field_single M_single;
     
