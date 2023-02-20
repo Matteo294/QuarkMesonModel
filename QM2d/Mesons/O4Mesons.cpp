@@ -1,44 +1,34 @@
 #include "O4Mesons.h"
+#include <algorithm>
 
 O4Mesons::O4Mesons(double const m2, double const lam, double const g, Lattice& l) : 
-    M(l.Nt*l.Nx, O4mat::Zero()),
-    M_single(l.Nt*l.Nx, O4mat_single::Zero()),
+    M(l.vol),
+    M_single(l.vol),
     m2(m2),
     lam(lam),
     g{g},
-    l{l}
+    vol{l.vol}
     {;}
 
-O4Mesons::O4Mesons(double const m, double const lam, double const g, double const sigma, double const pi[3], Lattice& l) :
-    M(l.Nt*l.Nx),
-    M_single(l.Nt*l.Nx),
-    l{l},
+O4Mesons::O4Mesons(double const m, double const lam, double const g, std::complex<double> const sigma, std::complex<double> const pi[3], Lattice& l) :
+    M(l.vol),
+    M_single(l.vol),
     m2(m2),
     lam(lam),
+    vol{l.vol},
     g{g}
 {
     for(int i=0; i<l.vol; i++){  
-        M[i] = O4mat {{sigma + im*pi[2], im*(pi[0] - im*pi[1])}, {im*(pi[0] + im*pi[1]), sigma - im*pi[2]}};
-        M_single[i] = M[i].cast<std::complex<float>>();
+        M[i] = O4Mat(sigma, pi);
+        std::complex<float> buf[3] {(std::complex<float>) pi[0], (std::complex<float>) pi[1], (std::complex<float>) pi[2]};
+        M_single[i] = O4Mat_single((std::complex<float>) sigma, buf);
     }
 }
 
 double O4Mesons::norm(){
     std::complex<double> det = 0.0;
-    for(int i=0; i<l.vol; i++){
-        det += sqrt(M[i].determinant());  
+    for(int i=0; i<vol; i++){
+        det += sqrt(M[i].val[0][0]*M[i].val[1][1] - M[i].val[1][0]*M[i].val[0][1]);  // not sure whether sqrt is correct here; probably shoud be outside sum
     }
     return det.real();
-}
-
-void O4Mesons::writeDoubleToSingle(){
-    for(int i=0; i<l.vol; i++){
-            M_single[i] = M[i].cast<std::complex<float>>();
-        }
-}
-
-void O4Mesons::writeSingleToDouble(){
-    for(int i=0; i<l.vol; i++){
-            M[i] = M_single[i].cast<std::complex<double>>();
-        }
 }

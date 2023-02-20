@@ -8,8 +8,8 @@ int constexpr vol = 2*Nf*Nx*Nt;
 
 // CG params
 double constexpr tol = 1e-12;
-int constexpr IterMax = 2000;
-int constexpr CGmode = 0; // 0: double, 1: EO double, 2: single, 3: EO single, 4: mixed, 5: EO mixed
+int constexpr IterMax = 1000;
+int constexpr CGmode = 1; // 0: double, 1: EO double, 2: single, 3: EO single, 4: mixed, 5: EO mixed
 int constexpr IterMaxSingle = 100; // Useful only in mixed precision CG (see notes)
 
 // Action params
@@ -23,5 +23,5 @@ double constexpr dt = 0.01;
 double constexpr T = 1.0;
 
 // Initial field values
-double constexpr sigma = 0.01;
-double constexpr pi[3] {0.02, 0.03, 0.04};
+std::complex<double> constexpr sigma = 0.01;
+std::complex<double> constexpr pi[3] {0.02, 0.03, 0.04};

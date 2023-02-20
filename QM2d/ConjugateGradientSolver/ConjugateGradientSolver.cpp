@@ -7,14 +7,14 @@ ConjugateGradientSolver::ConjugateGradientSolver(int const IterMax, double const
     {;}
 
 
-void ConjugateGradientSolver::doubleCG_D(spinor_iter ybegin, spinor_iter yend, spinor_iter xbegin){
-    const int vol = Dirac.l.vol;
+void ConjugateGradientSolver::doubleCG_D(vecfield_iter ybegin, vecfield_iter yend, vecfield_iter xbegin){
+    const int vol = std::distance(ybegin, yend);
     
-    std::vector<vec_fc> r(vol), p(vol), temp(vol), temp2(vol);
+    vecfield r(vol), p(vol), temp(vol), temp2(vol);
     std::complex<double> alpha;
     double beta, rmodsq;
     
-    for(int i=0; i<vol; i++) xbegin[i].setZero();
+    std::fill(xbegin, xbegin + vol, Spinor());
 
     std::copy(ybegin, yend, r.begin());
     p = r;
@@ -27,12 +27,19 @@ void ConjugateGradientSolver::doubleCG_D(spinor_iter ybegin, spinor_iter yend, s
         Dirac.applyTo(temp2.begin(), temp.begin(), MatrixType::Normal);
 
         alpha = rmodsq / (dotProduct(p.begin(), p.end(), temp.begin())).real(); 
-        for(int i=0; i<vol; i++){
-            xbegin[i] += alpha * p[i];
-            r[i] -= alpha * temp[i]; 
-        }
+        // x += alpha p
+        for(int i=0; i<vol; i++) std::transform(p[i].val.begin(), p[i].val.end(), temp2[i].val.begin(), [alpha](auto& c){return c*alpha;});
+        spinorSum(temp2.begin(), temp2.end(), xbegin, xbegin);
+        // r -= alpha A p
+        for(int i=0; i<vol; i++) std::transform(temp[i].val.begin(), temp[i].val.end(), temp2[i].val.begin(), [alpha](auto& c){return c*alpha;});
+        spinorDiff(r.begin(), r.end(), temp2.begin(), r.begin());
+
         beta = (dotProduct(r.begin(), r.end(), r.begin())).real() / rmodsq;
-        for(int i=0; i<vol; i++) p[i] = r[i] + beta*p[i];
+
+        // p = r - beta p
+        for(int i=0; i<vol; i++) std::transform(p[i].val.begin(), p[i].val.end(), temp2[i].val.begin(), [beta](auto& c){return c*beta;});
+        spinorSum(temp2.begin(), temp2.end(), r.begin(), p.begin());
+
         rmodsq = (dotProduct(r.begin(), r.end(), r.begin())).real();
     }
 
@@ -41,7 +48,50 @@ void ConjugateGradientSolver::doubleCG_D(spinor_iter ybegin, spinor_iter yend, s
 
 }
 
-void ConjugateGradientSolver::doubleCG_Dhat(spinor_iter ybegin, spinor_iter yend, spinor_iter xbegin){
+
+void ConjugateGradientSolver::doubleCG_Dhat(vecfield_iter ybegin, vecfield_iter yend, vecfield_iter xbegin){
+    const int vol = std::distance(ybegin, yend);
+    
+    vecfield r(vol, Spinor()), p(vol, Spinor()), temp(vol, Spinor()), temp2(vol, Spinor());
+    std::complex<double> alpha;
+    double beta, rmodsq;
+    
+    std::fill(xbegin, xbegin + vol, Spinor());
+
+    std::copy(ybegin, yend, r.begin());
+    p = r;
+    rmodsq = (dotProduct(r.begin(), r.end(), r.begin())).real();
+
+    int k;
+    for(k=0; k<IterMax && sqrt(rmodsq) > tolerance; k++){
+
+        Dirac.applyDhatTo(p.begin(), temp2.begin(), MatrixType::Dagger);
+        Dirac.applyDhatTo(temp2.begin(), temp.begin(), MatrixType::Normal);
+
+        alpha = rmodsq / (dotProduct(p.begin(), p.end(), temp.begin())).real(); 
+        for(int i=0; i<vol; i++) std::transform(p[i].val.begin(), p[i].val.end(), temp2[i].val.begin(), [alpha](auto& c){return c*alpha;});
+
+        spinorSum(temp2.begin(), temp2.end(), xbegin, xbegin);
+
+        for(int i=0; i<vol; i++) std::transform(temp[i].val.begin(), temp[i].val.end(), temp2[i].val.begin(), [alpha](auto& c){return c*alpha;});
+
+        spinorDiff(r.begin(), r.end(), temp2.begin(), r.begin());
+
+        beta = (dotProduct(r.begin(), r.end(), r.begin())).real() / rmodsq;
+
+        // p = r - beta p
+        for(int i=0; i<vol; i++) std::transform(p[i].val.begin(), p[i].val.end(), temp2[i].val.begin(), [beta](auto& c){return c*beta;});
+        spinorSum(temp2.begin(), temp2.end(), r.begin(), p.begin());
+
+        rmodsq = (dotProduct(r.begin(), r.end(), r.begin())).real();
+    }
+
+    if (k < IterMax) std::cout << "Convergence reached in " << k-1 << " steps \n";
+    else std::cout << "Max. number of iterations reached (" << IterMax << "), final err: " << rmodsq << "\n";
+
+}
+
+/*void ConjugateGradientSolver::doubleCG_Dhat(vecfield_iter ybegin, vecfield_iter yend, vecfield_iter xbegin){
     const int vol = std::distance(ybegin, yend);
     
     std::vector<vec_fc> r(vol), p(vol), temp(vol), temp2(vol);
@@ -73,9 +123,9 @@ void ConjugateGradientSolver::doubleCG_Dhat(spinor_iter ybegin, spinor_iter yend
     if (k < IterMax) std::cout << "Convergence reached in " << k-1 << " steps \n";
     else std::cout << "Max. number of iterations reached (" << IterMax << "), final err: " << rmodsq << "\n";
 
-}
+}*/
 
-/*void ConjugateGradientSolver::singleCG(spinor_single_iter ybegin, spinor_single_iter yend, spinor_single_iter xbegin){
+/*void ConjugateGradientSolver::singleCG(vecfield_single_iter ybegin, vecfield_single_iter yend, vecfield_single_iter xbegin){
     const int vol = Dirac.l.vol;
     
     std::vector<vec_fc_single> r(vol), p(vol), temp(vol), temp2(vol);
@@ -108,7 +158,7 @@ void ConjugateGradientSolver::doubleCG_Dhat(spinor_iter ybegin, spinor_iter yend
     else std::cout << "Max. number of iterations reached (" << IterMax << "), final err: " << rmodsq << "\n";
 }*/
 
-/*void ConjugateGradientSolver::mixedCG(spinor_iter ybegin, spinor_iter yend, spinor_iter xbegin, int const IterMaxSingle, double const toleranceSingle){
+/*void ConjugateGradientSolver::mixedCG(vecfield_iter ybegin, vecfield_iter yend, vecfield_iter xbegin, int const IterMaxSingle, double const toleranceSingle){
 
     const int vol = Dirac.l.vol;
     std::vector<vec_fc_single> r(vol), p(vol), temp(vol), temp2(vol), w(vol);

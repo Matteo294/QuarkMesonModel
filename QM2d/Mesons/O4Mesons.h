@@ -2,30 +2,30 @@
 
 #include <vector>
 #include <complex>
-#include <eigen3/Eigen/Core>
-#include <eigen3/Eigen/Dense>
 #include "../functions/functions.h"
 #include "../Lattice/Lattice.h"
 
-using O4mat = Eigen::Matrix2cd;
-using O4mat_single = Eigen::Matrix2cf;
+struct Spinor;
 
 class Lattice;
 
-typedef std::vector<O4mat> O4field;
-typedef std::vector<O4mat_single> O4field_single;
+
+
+typedef std::vector<O4Mat> O4field;
+typedef std::vector<O4Mat_single> O4field_single;
 
 class O4Mesons {
     public:
         O4Mesons(double const m, double const lam, double const g, Lattice& l);
-        O4Mesons(double const m, double const lam, double const g, double const sigma, double const pi[3], Lattice& l);
+        O4Mesons(double const m, double const lam, double const g, std::complex<double> const sigma, std::complex<double> const pi[3], Lattice& l);
         ~O4Mesons(){;}
         double norm();
-        void writeDoubleToSingle(); // copy double into single
-        void writeSingleToDouble(); // copy single into double
+        //void writeDoubleToSingle(); // copy double into single
+        //void writeSingleToDouble(); // copy single into double
         O4field M;
         O4field_single M_single;
-        double const m2, lam, g;
-        Lattice& l;
+    
+    double const m2, lam, g;
+    int const vol;
     
 };

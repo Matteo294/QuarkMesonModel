@@ -86,8 +86,8 @@ plt.plot(range(Nt), data['f1c1'])
 plt.title("f=1 c=1")
 plt.xlabel('t')'''
 
-#plt.suptitle("Spinor components of the correlator")
-plt.title("Spinor components of the correlator")
+#plt.suptitle("vecfield components of the correlator")
+plt.title("vecfield components of the correlator")
 plt.tight_layout()
 plt.show()
 
