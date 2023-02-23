@@ -21,7 +21,7 @@ O4Mesons::O4Mesons(double const m, double const lam, double const g, std::comple
     for(int i=0; i<l.vol; i++){  
         M[i] = O4Mat(sigma, pi);
         std::complex<float> buf[3] {(std::complex<float>) pi[0], (std::complex<float>) pi[1], (std::complex<float>) pi[2]};
-        M_single[i] = O4Mat_single((std::complex<float>) sigma, buf);
+        M_single[i] = O4Mat_f((std::complex<float>) sigma, buf);
     }
 }
 
@@ -32,3 +32,4 @@ double O4Mesons::norm(){
     }
     return det.real();
 }
+

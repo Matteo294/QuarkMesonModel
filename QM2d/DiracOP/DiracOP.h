@@ -6,14 +6,8 @@
 #include "../Mesons/O4Mesons.h"
 #include "../functions/functions.h"
 
-class SpinorField;
-class O4Mesons;
-class Lattice;
-struct Spinor;
-struct O4Mat;
-struct O4Mat_single;
 
-class DiracOP {
+typedef class DiracOP {
     public:
         DiracOP(double const M, O4Mesons& mesons, Lattice& l);
         ~DiracOP(){}
@@ -32,19 +26,12 @@ class DiracOP {
         void D_oo(vecfield_iter y, vecfield_iter x, MatrixType const useDagger=MatrixType::Normal);
         void D_eo(vecfield_iter y, vecfield_iter x, MatrixType const useDagger=MatrixType::Normal);
         void D_oe(vecfield_iter y, vecfield_iter x, MatrixType const useDagger=MatrixType::Normal);
-        
-        
-        /*
-        void D_ee_single(vecfield_single_iter y, vecfield_single_iter x, MatrixType const useDagger=MatrixType::Normal);
-        void D_oo_single(vecfield_single_iter y, vecfield_single_iter x, MatrixType const useDagger=MatrixType::Normal);
-        //void D_oo_inv_single(vecfield_single_iter y, vecfield_single_iter x, MatrixType const useDagger=MatrixType::Normal=0);
-        void D_eo_single(vecfield_single_iter y, vecfield_single_iter x, MatrixType const useDagger=MatrixType::Normal);
-        void D_oe_single(vecfield_single_iter y, vecfield_single_iter x, MatrixType const useDagger=MatrixType::Normal);
-        void applyDhatTo_single(vecfield_single_iter vec, vecfield_single_iter res, MatrixType const useDagger=MatrixType::Normal);
-        */
 
-    Lattice& l;
-    O4Mesons& mesons;
-    double const M;
+        void applyN(vecfield_iter inBegin, vecfield_iter inEnd, vecfield_iter outBegin);
+        
+    private:
+        Lattice& l;
+        O4Mesons& mesons;
+        double const M;
 
-};
+} DiracOP;

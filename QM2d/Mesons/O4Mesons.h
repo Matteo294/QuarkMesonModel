@@ -5,16 +5,10 @@
 #include "../functions/functions.h"
 #include "../Lattice/Lattice.h"
 
-struct Spinor;
+using O4field = std::vector<O4Mat<double>>;
+using O4field_single = std::vector<O4Mat<float>>;
 
-class Lattice;
-
-
-
-typedef std::vector<O4Mat> O4field;
-typedef std::vector<O4Mat_single> O4field_single;
-
-class O4Mesons {
+typedef class O4Mesons {
     public:
         O4Mesons(double const m, double const lam, double const g, Lattice& l);
         O4Mesons(double const m, double const lam, double const g, std::complex<double> const sigma, std::complex<double> const pi[3], Lattice& l);
@@ -26,4 +20,4 @@ class O4Mesons {
     double const m2, lam, g;
     int const vol;
     
-};
+} O4Mesons;

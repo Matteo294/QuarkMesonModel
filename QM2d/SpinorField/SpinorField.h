@@ -7,18 +7,14 @@
 #include "../DiracOP/DiracOP.h"
 #include "../Lattice/Lattice.h"
 
-
-
-
-class Lattice;
 typedef class SpinorField {
     public: 
         SpinorField(int const vol);
         SpinorField(SpinorField const& s);
         ~SpinorField() {;}
         void operator = (SpinorField const&);
-        std::vector<Spinor> psi;
-        void setZero(){for (auto& vec : psi){for (auto& val : vec.val) val = 0.0;}}
+        std::vector<Spinor_d> pos;
+        void setZero(){for (auto& vec : pos){for (auto& val : vec.val) val = 0.0;}}
         //vecfield_iter oddBegin() {auto it = psi.begin(); std::advance(it, vol/2); return it;} // eventually return val.begin() + vol/2
     private:
         int const vol;

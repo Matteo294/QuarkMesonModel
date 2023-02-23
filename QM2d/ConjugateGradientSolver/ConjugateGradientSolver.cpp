@@ -14,7 +14,7 @@ void ConjugateGradientSolver::doubleCG_D(vecfield_iter ybegin, vecfield_iter yen
     std::complex<double> alpha;
     double beta, rmodsq;
     
-    std::fill(xbegin, xbegin + vol, Spinor());
+    std::fill(xbegin, xbegin + vol, Spinor_d());
 
     std::copy(ybegin, yend, r.begin());
     p = r;
@@ -52,11 +52,11 @@ void ConjugateGradientSolver::doubleCG_D(vecfield_iter ybegin, vecfield_iter yen
 void ConjugateGradientSolver::doubleCG_Dhat(vecfield_iter ybegin, vecfield_iter yend, vecfield_iter xbegin){
     const int vol = std::distance(ybegin, yend);
     
-    vecfield r(vol, Spinor()), p(vol, Spinor()), temp(vol, Spinor()), temp2(vol, Spinor());
+    vecfield r(vol, Spinor_d()), p(vol, Spinor_d()), temp(vol, Spinor_d()), temp2(vol, Spinor_d());
     std::complex<double> alpha;
     double beta, rmodsq;
     
-    std::fill(xbegin, xbegin + vol, Spinor());
+    std::fill(xbegin, xbegin + vol, Spinor_d());
 
     std::copy(ybegin, yend, r.begin());
     p = r;

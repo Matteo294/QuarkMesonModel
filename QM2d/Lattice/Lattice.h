@@ -2,7 +2,7 @@
 
 #include <vector>
 
-class Lattice {
+typedef class Lattice {
     public:
         Lattice(int const Nt, int const Nx);
         ~Lattice() {;}
@@ -12,4 +12,4 @@ class Lattice {
         unsigned int toEOflat(int const nt, int const nx);
         std::vector<int> eoToVec(int n);
         int const Nt, Nx, vol;
-};
+} Lattice;
