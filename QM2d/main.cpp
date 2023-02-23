@@ -32,8 +32,8 @@ int main(){
     Lattice lattice(Nt, Nx);
     O4Mesons mesons(meson_M2, lam, g, sigma, pi, lattice);
     SpinorField psiField(lattice.Nt*lattice.Nx);
-    DiracOP Dirac(fermion_M, mesons, lattice);
-    ConjugateGradientSolver CG(IterMax, tol, Dirac);
+    DiracOP<vecfield_iter, double> Dirac_d(fermion_M, mesons, lattice);
+    ConjugateGradientSolver<vecfield_iter, double> CGdouble(IterMax, tol, Dirac_d);
 
     psiField.pos[0].val = std::vector<std::complex<double>> {1.0, 1.0, 1.0, 1.0};
 
@@ -50,7 +50,7 @@ int main(){
                 << "pi2=" << pi[1].real() << "\n"
                 << "pi3=" << pi[2].real();
    
-    cout << "\nNote: remember to recompile main.cpp after changing params.h! \n\nStarting CG in mode ";
+    cout << "\nNote: remember to run make clean after changing header files!! \n\nStarting CG in mode ";
 
     vecfield temp1(lattice.vol, Spinor_d()), temp2(lattice.vol/2, Spinor_d()), temp3(lattice.vol, Spinor_d()); // useful variables
     //vecfield buf(lattice.vol, vec_fc_single::Zero()), temp_single(lattice.vol, vec_fc_single::Zero());
@@ -60,59 +60,31 @@ int main(){
     switch (CGmode){
     case 0:
         cout << "double precision, no preconditioning... \n";
-        CG.doubleCG_D(psiField.pos.begin(), psiField.pos.end(), temp1.begin());   
-        Dirac.applyTo(temp1.begin(), psiField.pos.begin(), MatrixType::Dagger);
+        CGdouble.doubleCG_D(psiField.pos.begin(), psiField.pos.end(), temp1.begin());   
+        Dirac_d.applyTo(temp1.begin(), psiField.pos.begin(), MatrixType::Dagger);
         break;
     case 1:
         cout << "double precision, EO preconditioning... \n";
 
-        Dirac.D_oo_inv(psiField.pos.begin() + lattice.vol/2, temp2.begin());
-        Dirac.D_eo(temp2.begin(), temp1.begin());
+        Dirac_d.D_oo_inv(psiField.pos.begin() + lattice.vol/2, temp2.begin());
+        Dirac_d.D_eo(temp2.begin(), temp1.begin());
 
         spinorDiff(psiField.pos.begin(), psiField.pos.begin() + lattice.vol/2, temp1.begin(), temp2.begin());
         
-        CG.doubleCG_Dhat(temp2.begin(), temp2.end(), temp3.begin());
+        CGdouble.doubleCG_Dhat(temp2.begin(), temp2.end(), temp3.begin());
         for(int i=0; i<lattice.vol/2; i++) std::fill(psiField.pos[i].val.begin(), psiField.pos[i].val.begin(), 0.0);
-        Dirac.applyDhatTo(temp3.begin(), psiField.pos.begin(), MatrixType::Dagger);
+        Dirac_d.applyDhatTo(temp3.begin(), psiField.pos.begin(), MatrixType::Dagger);
 
         std::fill(temp1.begin(), temp1.end(), Spinor_d());
-        Dirac.D_oe(psiField.pos.begin(), temp1.begin());
+        Dirac_d.D_oe(psiField.pos.begin(), temp1.begin());
 
         spinorDiff(psiField.pos.begin() + lattice.vol/2, psiField.pos.end(), temp1.begin(), temp3.begin());
 
         for(int i=lattice.vol/2; i<lattice.vol; i++) std::fill(psiField.pos[i].val.begin(), psiField.pos[i].val.end(), 0.0);
-        Dirac.D_oo_inv(temp3.begin(), psiField.pos.begin() + lattice.vol/2);
+        Dirac_d.D_oo_inv(temp3.begin(), psiField.pos.begin() + lattice.vol/2);
 
         break;
-    }
-    /*
-    case 2:
-        cout << "single precision, no preconditioning... \n";
-        for(int i=0; i<lattice.vol; i++) buf[i] = psiField.val[i].cast<std::complex<float>>();
-        mesons.writeDoubleToSingle();
-        CG.singleCG(buf.begin(), buf.end(), temp_single.begin());  
-        for(int i=0; i<lattice.vol; i++) buf[i].setZero();
-        Dirac.applyTo_single(temp_single.begin(), buf.begin(), MatrixType::Dagger);
-        for(int i=0; i<lattice.vol; i++) psiField.val[i] = buf[i].cast<std::complex<double>>();
-        break;
-
-    case 4:
-    // check set to zero
-        cout << "mixed precision, no preconditioning... \n";
-        for(int i=0; i<lattice.vol; i++) buf[i] = psiField.val[i].cast<std::complex<float>>();
-        mesons.writeDoubleToSingle();
-        CG.mixedCG(psiField.val.begin(), psiField.val.end(), temp3.begin(), IterMaxSingle, 1e-3);  
-        for(int i=0; i<lattice.vol; i++) buf[i].setZero();
-        Dirac.applyTo(temp3.begin(), temp1.begin(), 1);
-        for(int i=0; i<lattice.vol; i++) psiField.val[i] = buf[i].cast<std::complex<double>>();
-        break;
-
-    
-    default:
-        cout << "CGmode not valid. Please select value 0, 1 or 2 (3, 4 and 5 not yet implemented)" << endl;
-        break;
-    }*/
-    
+    }   
 
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::cout << "Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
