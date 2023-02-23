@@ -9,7 +9,7 @@
 template <typename Titer, typename Tvar>
 class DiracOP {
     public:
-        DiracOP(double const M, O4Mesons& mesons, Lattice& l);
+        DiracOP(double const M, O4Mesons<Tvar>& mesons, Lattice& l);
         ~DiracOP(){}
         
         void applyTo(Titer vec, Titer res, MatrixType const useDagger=MatrixType::Normal); // apply full Dirac operator to vector of dimension Nt*Nx
@@ -23,11 +23,11 @@ class DiracOP {
         void D_eo(Titer inVec, Titer outVec, MatrixType const useDagger=MatrixType::Normal);
         void D_oe(Titer inVec, Titer outVec, MatrixType const useDagger=MatrixType::Normal);
 
-        void applyN(Titer inBegin, Titer inEnd, Titer outBegin);
+        //void applyN(Titer inBegin, Titer inEnd, Titer outBegin);
         
     private:
         Lattice& l;
-        O4Mesons& mesons;
+        O4Mesons<Tvar>& mesons;
         double const M;
 
 };
@@ -40,20 +40,25 @@ void DiracOP<Titer, Tvar>::D_ee(Titer inVec, Titer outVec, MatrixType const useD
 
     std::complex<Tvar> sigma;
     int const vol = l.vol/2;
+    std::complex<Tvar> constexpr two {2.0, 0.0};
+    std::complex<Tvar> const g = (std::complex<Tvar>)  mesons.g;
+    std::complex<Tvar> const mass = (std::complex<Tvar>) M;
+    std::complex<Tvar> constexpr im {0.0, 1.0};
+    std::complex<Tvar> half {0.5, 0.0};
 
     // Diagonal term
     for(int i=0; i<vol; i++){
-        sigma = 0.5 * (mesons.M[i].val[0][0] + mesons.M[i].val[1][1]);        
+        sigma = half * (mesons.M[i].val[0][0] + mesons.M[i].val[1][1]);        
         if (useDagger == MatrixType::Dagger){
-            outVec[i].val[0] +=  im * mesons.g * ( conj((mesons.M[i].val[0][0] - sigma)) * inVec[i].val[1] +         conj(mesons.M[i].val[1][0])     * inVec[i].val[3] ) + (2.0 + M + mesons.g*conj(sigma)) * inVec[i].val[0];
-            outVec[i].val[1] += -im * mesons.g * ( conj((mesons.M[i].val[0][0] - sigma)) * inVec[i].val[0] +         conj(mesons.M[i].val[1][0])     * inVec[i].val[2] ) + (2.0 + M + mesons.g*conj(sigma)) * inVec[i].val[1];
-            outVec[i].val[2] +=  im * mesons.g * (       conj(mesons.M[i].val[0][1])     * inVec[i].val[1] + conj((mesons.M[i].val[1][1] - sigma))   * inVec[i].val[3] ) + (2.0 + M + mesons.g*conj(sigma)) * inVec[i].val[2];
-            outVec[i].val[3] += -im * mesons.g * (       conj(mesons.M[i].val[0][1])     * inVec[i].val[0] + conj((mesons.M[i].val[1][1] - sigma))   * inVec[i].val[2] ) + (2.0 + M + mesons.g*conj(sigma)) * inVec[i].val[3];
+            outVec[i].val[0] +=  im * g * ( conj((mesons.M[i].val[0][0] - sigma)) * inVec[i].val[1] +         conj(mesons.M[i].val[1][0])     * inVec[i].val[3] ) + (two + mass + g*conj(sigma)) * inVec[i].val[0];
+            outVec[i].val[1] += -im * g * ( conj((mesons.M[i].val[0][0] - sigma)) * inVec[i].val[0] +         conj(mesons.M[i].val[1][0])     * inVec[i].val[2] ) + (two + mass + g*conj(sigma)) * inVec[i].val[1];
+            outVec[i].val[2] +=  im * g * (       conj(mesons.M[i].val[0][1])     * inVec[i].val[1] + conj((mesons.M[i].val[1][1] - sigma))   * inVec[i].val[3] ) + (two + mass + g*conj(sigma)) * inVec[i].val[2];
+            outVec[i].val[3] += -im * g * (       conj(mesons.M[i].val[0][1])     * inVec[i].val[0] + conj((mesons.M[i].val[1][1] - sigma))   * inVec[i].val[2] ) + (two + mass + g*conj(sigma)) * inVec[i].val[3];
         } else {
-            outVec[i].val[0] +=  im * mesons.g * ( (mesons.M[i].val[0][0] - sigma) * inVec[i].val[1] +         mesons.M[i].val[0][1]     * inVec[i].val[3] ) + (2.0 + M + mesons.g*sigma) * inVec[i].val[0];
-            outVec[i].val[1] += -im * mesons.g * ( (mesons.M[i].val[0][0] - sigma) * inVec[i].val[0] +         mesons.M[i].val[0][1]     * inVec[i].val[2] ) + (2.0 + M + mesons.g*sigma) * inVec[i].val[1];
-            outVec[i].val[2] +=  im * mesons.g * (       mesons.M[i].val[1][0]     * inVec[i].val[1] + (mesons.M[i].val[1][1] - sigma)   * inVec[i].val[3] ) + (2.0 + M + mesons.g*sigma) * inVec[i].val[2];
-            outVec[i].val[3] += -im * mesons.g * (       mesons.M[i].val[1][0]     * inVec[i].val[0] + (mesons.M[i].val[1][1] - sigma)   * inVec[i].val[2] ) + (2.0 + M + mesons.g*sigma) * inVec[i].val[3];
+            outVec[i].val[0] +=  im * g * ( (mesons.M[i].val[0][0] - sigma) * inVec[i].val[1] +         mesons.M[i].val[0][1]     * inVec[i].val[3] ) + (two + mass + g*sigma) * inVec[i].val[0];
+            outVec[i].val[1] += -im * g * ( (mesons.M[i].val[0][0] - sigma) * inVec[i].val[0] +         mesons.M[i].val[0][1]     * inVec[i].val[2] ) + (two + mass + g*sigma) * inVec[i].val[1];
+            outVec[i].val[2] +=  im * g * (       mesons.M[i].val[1][0]     * inVec[i].val[1] + (mesons.M[i].val[1][1] - sigma)   * inVec[i].val[3] ) + (two + mass + g*sigma) * inVec[i].val[2];
+            outVec[i].val[3] += -im * g * (       mesons.M[i].val[1][0]     * inVec[i].val[0] + (mesons.M[i].val[1][1] - sigma)   * inVec[i].val[2] ) + (two + mass + g*sigma) * inVec[i].val[3];
         }
 
     }
@@ -61,7 +66,7 @@ void DiracOP<Titer, Tvar>::D_ee(Titer inVec, Titer outVec, MatrixType const useD
 }
 
 template <typename Titer, typename Tvar>
-DiracOP<Titer, Tvar>::DiracOP(double const M, O4Mesons& mesons, Lattice& l) : 
+DiracOP<Titer, Tvar>::DiracOP(double const M, O4Mesons<Tvar>& mesons, Lattice& l) : 
     M{M}, 
     mesons{mesons},
     l{l}
@@ -79,7 +84,7 @@ void DiracOP<Titer, Tvar>::applyTo(Titer vec, Titer res, MatrixType const useDag
 template <typename Titer, typename Tvar>
 void DiracOP<Titer, Tvar>::applyDhatTo(Titer vec, Titer res, MatrixType const useDagger){
     
-    vecfield temp(l.vol/2, Spinor<Tvar>()), temp2(l.vol/2, Spinor<Tvar>());
+    std::vector<Spinor<Tvar>> temp(l.vol/2, Spinor<Tvar>()), temp2(l.vol/2, Spinor<Tvar>());
     std::fill(res, res + l.vol/2, Spinor<Tvar>());
 
 
@@ -96,16 +101,20 @@ void DiracOP<Titer, Tvar>::applyDhatTo(Titer vec, Titer res, MatrixType const us
 template <typename Titer, typename Tvar>
 void DiracOP<Titer, Tvar>::D_oo_inv(Titer inVec, Titer outVec, MatrixType const useDagger){
     std::complex<Tvar> sigma, det;
-    O4Mat<Tvar> Minv;
-
+    MesonsMat<Tvar> Minv;
+    std::complex<Tvar> const g = (std::complex<Tvar>)  mesons.g;
     int const vol = l.vol/2;
+    std::complex<Tvar> constexpr two {2.0, 0.0};
+    std::complex<Tvar> const mass = (std::complex<Tvar>) M;
+    std::complex<Tvar> constexpr im {0.0, 1.0};
+    std::complex<Tvar> half {0.5, 0.0};
 
     for(int i=0; i<vol; i++){
         
-        Minv.val[0][0] = mesons.g*mesons.M[i+l.vol/2].val[1][1] + 2.0 + M;
-        Minv.val[1][1] = mesons.g*mesons.M[i+l.vol/2].val[0][0] + 2.0 + M;
-        Minv.val[0][1] = - mesons.g*mesons.M[i+l.vol/2].val[0][1];
-        Minv.val[1][0] = - mesons.g*mesons.M[i+l.vol/2].val[1][0];
+        Minv.val[0][0] = g*mesons.M[i+l.vol/2].val[1][1] + two + mass;
+        Minv.val[1][1] = g*mesons.M[i+l.vol/2].val[0][0] + two + mass;
+        Minv.val[0][1] = - g*mesons.M[i+l.vol/2].val[0][1];
+        Minv.val[1][0] = - g*mesons.M[i+l.vol/2].val[1][0];
         det = Minv.determinant();
         Minv.val[0][0] /= det;
         Minv.val[0][1] /= det; 
@@ -113,7 +122,7 @@ void DiracOP<Titer, Tvar>::D_oo_inv(Titer inVec, Titer outVec, MatrixType const 
         Minv.val[1][1] /= det; 
 
 
-        sigma = 0.5 * (Minv.val[0][0] + Minv.val[1][1]); // this is actually sigma + m + 2
+        sigma = half * (Minv.val[0][0] + Minv.val[1][1]); // this is actually sigma + m + 2
 
         if (useDagger == MatrixType::Dagger){
             outVec[i].val[0] +=  im * ( conj((Minv.val[0][0] - sigma))    * inVec[i].val[1] +         conj(Minv.val[1][0])     * inVec[i].val[3] ) + sigma * inVec[i].val[0];
@@ -132,23 +141,26 @@ void DiracOP<Titer, Tvar>::D_oo_inv(Titer inVec, Titer outVec, MatrixType const 
 template <typename Titer, typename Tvar>
 void DiracOP<Titer, Tvar>::D_ee_inv(Titer inVec, Titer outVec, MatrixType const useDagger){
     std::complex<Tvar> sigma, det;
-    O4Mat<Tvar> Minv;
-
+    MesonsMat<Tvar> Minv;
+    std::complex<Tvar> const g = (std::complex<Tvar>)  mesons.g;
     int const vol = l.vol/2;
+    std::complex<Tvar> constexpr two {2.0, 0.0};
+    std::complex<Tvar> const mass = (std::complex<Tvar>) M;
+    std::complex<Tvar> constexpr im {0.0, 1.0};
 
     for(int i=0; i<vol; i++){
         
-        Minv.val[0][0] = mesons.g*mesons.M[i].val[1][1] + 2.0 + M;
-        Minv.val[1][1] = mesons.g*mesons.M[i].val[0][0] + 2.0 + M;
-        Minv.val[0][1] = - mesons.g*mesons.M[i].val[0][1];
-        Minv.val[1][0] = - mesons.g*mesons.M[i].val[1][0];
+        Minv.val[0][0] = g*mesons.M[i].val[1][1] + two + mass;
+        Minv.val[1][1] = g*mesons.M[i].val[0][0] + two + mass;
+        Minv.val[0][1] = - g*mesons.M[i].val[0][1];
+        Minv.val[1][0] = - g*mesons.M[i].val[1][0];
         det = Minv.determinant();
         Minv.val[0][0] /= det;
         Minv.val[0][1] /= det; 
         Minv.val[1][0] /= det; 
         Minv.val[1][1] /= det; 
 
-        sigma = 0.5 * (Minv.val[0][0] + Minv.val[1][1]); // this is actually g sigma + m + 2
+        sigma = (std::complex<Tvar>) 0.5 * (Minv.val[0][0] + Minv.val[1][1]); // this is actually g sigma + m + 2
 
         if (useDagger == MatrixType::Dagger){
             outVec[i].val[0] +=  im * ( conj((Minv.val[0][0] - sigma))    * inVec[i].val[1] +         conj(Minv.val[1][0])     * inVec[i].val[3] ) + sigma * inVec[i].val[0];
@@ -170,20 +182,25 @@ void DiracOP<Titer, Tvar>::D_oo(Titer inVec, Titer outVec, MatrixType const useD
     std::complex<Tvar> sigma;
     std::vector<int> idx(2);
     int const vol = l.vol/2;
+    std::complex<Tvar> const g = (std::complex<Tvar>)  mesons.g;
+    std::complex<Tvar> constexpr two {2.0, 0.0};
+    std::complex<Tvar> mass = (std::complex<Tvar>) M;
+    std::complex<Tvar> constexpr im {0.0, 1.0};
+    std::complex<Tvar> half {0.5, 0.0};
 
     // Diagonal term
     for(int i=0; i<vol; i++){
-        sigma = 0.5 * (mesons.M[i+l.vol/2].val[0][0] + mesons.M[i+l.vol/2].val[1][1]);
+        sigma = half * (mesons.M[i+l.vol/2].val[0][0] + mesons.M[i+l.vol/2].val[1][1]);
         if (useDagger == MatrixType::Dagger){
-            outVec[i].val[0] +=  im * mesons.g * ( conj((mesons.M[i+vol].val[0][0] - sigma)) * inVec[i].val[1] +         conj(mesons.M[i+vol].val[1][0])     * inVec[i].val[3] ) + (2.0 + M + mesons.g*conj(sigma)) * inVec[i].val[0];
-            outVec[i].val[1] += -im * mesons.g * ( conj((mesons.M[i+vol].val[0][0] - sigma)) * inVec[i].val[0] +         conj(mesons.M[i+vol].val[1][0])     * inVec[i].val[2] ) + (2.0 + M + mesons.g*conj(sigma)) * inVec[i].val[1];
-            outVec[i].val[2] +=  im * mesons.g * (       conj(mesons.M[i+vol].val[0][1])     * inVec[i].val[1] + conj((mesons.M[i+vol].val[1][1] - sigma))   * inVec[i].val[3] ) + (2.0 + M + mesons.g*conj(sigma)) * inVec[i].val[2];
-            outVec[i].val[3] += -im * mesons.g * (       conj(mesons.M[i+vol].val[0][1])     * inVec[i].val[0] + conj((mesons.M[i+vol].val[1][1] - sigma))   * inVec[i].val[2] ) + (2.0 + M + mesons.g*conj(sigma)) * inVec[i].val[3];
+            outVec[i].val[0] +=  im * g * ( conj((mesons.M[i+vol].val[0][0] - sigma)) * inVec[i].val[1] +         conj(mesons.M[i+vol].val[1][0])     * inVec[i].val[3] ) + (two + mass + g*conj(sigma)) * inVec[i].val[0];
+            outVec[i].val[1] += -im * g * ( conj((mesons.M[i+vol].val[0][0] - sigma)) * inVec[i].val[0] +         conj(mesons.M[i+vol].val[1][0])     * inVec[i].val[2] ) + (two + mass + g*conj(sigma)) * inVec[i].val[1];
+            outVec[i].val[2] +=  im * g * (       conj(mesons.M[i+vol].val[0][1])     * inVec[i].val[1] + conj((mesons.M[i+vol].val[1][1] - sigma))   * inVec[i].val[3] ) + (two + mass + g*conj(sigma)) * inVec[i].val[2];
+            outVec[i].val[3] += -im * g * (       conj(mesons.M[i+vol].val[0][1])     * inVec[i].val[0] + conj((mesons.M[i+vol].val[1][1] - sigma))   * inVec[i].val[2] ) + (two + mass + g*conj(sigma)) * inVec[i].val[3];
         } else{
-            outVec[i].val[0] +=  im * mesons.g * ( (mesons.M[i+vol].val[0][0] - sigma) * inVec[i].val[1] +         mesons.M[i+vol].val[0][1]     * inVec[i].val[3] ) + (2.0 + M + mesons.g*sigma) * inVec[i].val[0];
-            outVec[i].val[1] += -im * mesons.g * ( (mesons.M[i+vol].val[0][0] - sigma) * inVec[i].val[0] +         mesons.M[i+vol].val[0][1]     * inVec[i].val[2] ) + (2.0 + M + mesons.g*sigma) * inVec[i].val[1];
-            outVec[i].val[2] +=  im * mesons.g * (       mesons.M[i+vol].val[1][0]     * inVec[i].val[1] + (mesons.M[i+vol].val[1][1] - sigma)   * inVec[i].val[3] ) + (2.0 + M + mesons.g*sigma) * inVec[i].val[2];
-            outVec[i].val[3] += -im * mesons.g * (       mesons.M[i+vol].val[1][0]     * inVec[i].val[0] + (mesons.M[i+vol].val[1][1] - sigma)   * inVec[i].val[2] ) + (2.0 + M + mesons.g*sigma) * inVec[i].val[3];
+            outVec[i].val[0] +=  im * g * ( (mesons.M[i+vol].val[0][0] - sigma) * inVec[i].val[1] +         mesons.M[i+vol].val[0][1]     * inVec[i].val[3] ) + (two + mass + g*sigma) * inVec[i].val[0];
+            outVec[i].val[1] += -im * g * ( (mesons.M[i+vol].val[0][0] - sigma) * inVec[i].val[0] +         mesons.M[i+vol].val[0][1]     * inVec[i].val[2] ) + (two + mass + g*sigma) * inVec[i].val[1];
+            outVec[i].val[2] +=  im * g * (       mesons.M[i+vol].val[1][0]     * inVec[i].val[1] + (mesons.M[i+vol].val[1][1] - sigma)   * inVec[i].val[3] ) + (two + mass + g*sigma) * inVec[i].val[2];
+            outVec[i].val[3] += -im * g * (       mesons.M[i+vol].val[1][0]     * inVec[i].val[0] + (mesons.M[i+vol].val[1][1] - sigma)   * inVec[i].val[2] ) + (two + mass + g*sigma) * inVec[i].val[3];
         }
 
     }
@@ -209,6 +226,8 @@ void DiracOP<Titer, Tvar>::D_eo(Titer inVec,Titer outVec, MatrixType const useDa
         sgn[1] = (nt == 0) ? -1.0 : 1.0;
 
         std::complex<Tvar> psisum[2], psidiff[2];
+
+        Tvar constexpr half {0.5};
         
         if (useDagger == MatrixType::Dagger) {
 
@@ -217,10 +236,10 @@ void DiracOP<Titer, Tvar>::D_eo(Titer inVec,Titer outVec, MatrixType const useDa
             psidiff[0] = inVec[l.IUP[i][1] - vol].val[0] - inVec[l.IUP[i][1] - vol].val[1];
             psidiff[1] = inVec[l.IUP[i][1] - vol].val[2] - inVec[l.IUP[i][1] - vol].val[3];
 
-            outVec[l.toEOflat(nt, nx)].val[0] -=  sgn[1] * inVec[l.IDN[i][0] - vol].val[0] + 0.5*psidiff[0] + 0.5*psisum[0];
-            outVec[l.toEOflat(nt, nx)].val[2] -=  sgn[1] * inVec[l.IDN[i][0] - vol].val[2] + 0.5*psidiff[1] + 0.5*psisum[1];
-            outVec[l.toEOflat(nt, nx)].val[1] -=  sgn[0] * inVec[l.IUP[i][0] - vol].val[1] - 0.5*psidiff[0] + 0.5*psisum[0];
-            outVec[l.toEOflat(nt, nx)].val[3] -=  sgn[0] * inVec[l.IUP[i][0] - vol].val[3] - 0.5*psidiff[1] + 0.5*psisum[1];
+            outVec[l.toEOflat(nt, nx)].val[0] -=  sgn[1] * inVec[l.IDN[i][0] - vol].val[0] + half*psidiff[0] + half*psisum[0];
+            outVec[l.toEOflat(nt, nx)].val[2] -=  sgn[1] * inVec[l.IDN[i][0] - vol].val[2] + half*psidiff[1] + half*psisum[1];
+            outVec[l.toEOflat(nt, nx)].val[1] -=  sgn[0] * inVec[l.IUP[i][0] - vol].val[1] - half*psidiff[0] + half*psisum[0];
+            outVec[l.toEOflat(nt, nx)].val[3] -=  sgn[0] * inVec[l.IUP[i][0] - vol].val[3] - half*psidiff[1] + half*psisum[1];
 
         } else {
 
@@ -229,10 +248,10 @@ void DiracOP<Titer, Tvar>::D_eo(Titer inVec,Titer outVec, MatrixType const useDa
             psidiff[0] = inVec[l.IDN[i][1] - vol].val[0] - inVec[l.IDN[i][1] - vol].val[1];
             psidiff[1] = inVec[l.IDN[i][1] - vol].val[2] - inVec[l.IDN[i][1] - vol].val[3];
 
-            outVec[l.toEOflat(nt, nx)].val[0] -=  sgn[0] * inVec[l.IUP[i][0] - vol].val[0] + 0.5*psisum[0] + 0.5*psidiff[0];
-            outVec[l.toEOflat(nt, nx)].val[2] -=  sgn[0] * inVec[l.IUP[i][0] - vol].val[2] + 0.5*psisum[1] + 0.5*psidiff[1];
-            outVec[l.toEOflat(nt, nx)].val[1] -=  sgn[1] * inVec[l.IDN[i][0] - vol].val[1] + 0.5*psisum[0] - 0.5*psidiff[0];
-            outVec[l.toEOflat(nt, nx)].val[3] -=  sgn[1] * inVec[l.IDN[i][0] - vol].val[3] + 0.5*psisum[1] - 0.5*psidiff[1];
+            outVec[l.toEOflat(nt, nx)].val[0] -=  sgn[0] * inVec[l.IUP[i][0] - vol].val[0] + half*psisum[0] + half*psidiff[0];
+            outVec[l.toEOflat(nt, nx)].val[2] -=  sgn[0] * inVec[l.IUP[i][0] - vol].val[2] + half*psisum[1] + half*psidiff[1];
+            outVec[l.toEOflat(nt, nx)].val[1] -=  sgn[1] * inVec[l.IDN[i][0] - vol].val[1] + half*psisum[0] - half*psidiff[0];
+            outVec[l.toEOflat(nt, nx)].val[3] -=  sgn[1] * inVec[l.IDN[i][0] - vol].val[3] + half*psisum[1] - half*psidiff[1];
 
         }
                                             
@@ -244,6 +263,7 @@ template <typename Titer, typename Tvar>
 void DiracOP<Titer, Tvar>::D_oe(Titer inVec, Titer outVec, MatrixType const useDagger){
     std::vector<int> idx(2);
     int const vol = l.vol/2;
+    Tvar constexpr half {0.5};
 
     // Hopping term
     int const Nt=l.Nt, Nx=l.Nx;
@@ -270,10 +290,10 @@ void DiracOP<Titer, Tvar>::D_oe(Titer inVec, Titer outVec, MatrixType const useD
             psidiff[0] = inVec[l.IUP[i][1]].val[0] - inVec[l.IUP[i][1]].val[1];
             psidiff[1] = inVec[l.IUP[i][1]].val[2] - inVec[l.IUP[i][1]].val[3];
 
-            outVec[j].val[0] -=  sgn[1] * inVec[l.IDN[i][0]].val[0] + 0.5*(psidiff[0] + psisum[0]);
-            outVec[j].val[2] -=  sgn[1] * inVec[l.IDN[i][0]].val[2] + 0.5*(psidiff[1] + psisum[1]);
-            outVec[j].val[1] -=  sgn[0] * inVec[l.IUP[i][0]].val[1] - 0.5*(psidiff[0] - psisum[0]);
-            outVec[j].val[3] -=  sgn[0] * inVec[l.IUP[i][0]].val[3] - 0.5*(psidiff[1] - psisum[1]);
+            outVec[j].val[0] -=  sgn[1] * inVec[l.IDN[i][0]].val[0] + half*(psidiff[0] + psisum[0]);
+            outVec[j].val[2] -=  sgn[1] * inVec[l.IDN[i][0]].val[2] + half*(psidiff[1] + psisum[1]);
+            outVec[j].val[1] -=  sgn[0] * inVec[l.IUP[i][0]].val[1] - half*(psidiff[0] - psisum[0]);
+            outVec[j].val[3] -=  sgn[0] * inVec[l.IUP[i][0]].val[3] - half*(psidiff[1] - psisum[1]);
 
         } else {
 
@@ -282,10 +302,10 @@ void DiracOP<Titer, Tvar>::D_oe(Titer inVec, Titer outVec, MatrixType const useD
             psidiff[0] = inVec[l.IDN[i][1]].val[0] - inVec[l.IDN[i][1]].val[1];
             psidiff[1] = inVec[l.IDN[i][1]].val[2] - inVec[l.IDN[i][1]].val[3];
 
-            outVec[j].val[0] -=  sgn[0] * inVec[l.IUP[i][0]].val[0] + 0.5*psisum[0] + 0.5*psidiff[0];
-            outVec[j].val[2] -=  sgn[0] * inVec[l.IUP[i][0]].val[2] + 0.5*psisum[1] + 0.5*psidiff[1];
-            outVec[j].val[1] -=  sgn[1] * inVec[l.IDN[i][0]].val[1] + 0.5*psisum[0] - 0.5*psidiff[0];
-            outVec[j].val[3] -=  sgn[1] * inVec[l.IDN[i][0]].val[3] + 0.5*psisum[1] - 0.5*psidiff[1];
+            outVec[j].val[0] -=  sgn[0] * inVec[l.IUP[i][0]].val[0] + half*psisum[0] + half*psidiff[0];
+            outVec[j].val[2] -=  sgn[0] * inVec[l.IUP[i][0]].val[2] + half*psisum[1] + half*psidiff[1];
+            outVec[j].val[1] -=  sgn[1] * inVec[l.IDN[i][0]].val[1] + half*psisum[0] - half*psidiff[0];
+            outVec[j].val[3] -=  sgn[1] * inVec[l.IDN[i][0]].val[3] + half*psisum[1] - half*psidiff[1];
 
 
         }
@@ -293,15 +313,16 @@ void DiracOP<Titer, Tvar>::D_oe(Titer inVec, Titer outVec, MatrixType const useD
     }
 }
 
-template <typename Titer, typename Tvar>
+/*template <typename Titer, typename Tvar>
 void DiracOP<Titer, Tvar>::applyN(Titer inBegin, Titer inEnd, Titer outBegin){
+    Tvar const g = (Tvar)  mesons.g;
     for(; inBegin != inEnd; inBegin++, outBegin++){
-        outBegin->val[0] = mesons.g * (inBegin->val[0] - inBegin->val[1] + (im+1.0) * inBegin->val[3]);
-        outBegin->val[1] = mesons.g * (inBegin->val[0] + inBegin->val[1] - (im+1.0) * inBegin->val[2]);
-        outBegin->val[2] = mesons.g * ((im-1.0) * inBegin->val[1] + inBegin->val[2] + inBegin->val[3]);
-        outBegin->val[3] = mesons.g * ((1.0-im) * inBegin->val[0] - inBegin->val[2] + inBegin->val[3]);
+        outBegin->val[0] = g * (inBegin->val[0] - inBegin->val[1] + (im+1.0) * inBegin->val[3]);
+        outBegin->val[1] = g * (inBegin->val[0] + inBegin->val[1] - (im+1.0) * inBegin->val[2]);
+        outBegin->val[2] = g * ((im-1.0) * inBegin->val[1] + inBegin->val[2] + inBegin->val[3]);
+        outBegin->val[3] = g * ((1.0-im) * inBegin->val[0] - inBegin->val[2] + inBegin->val[3]);
     }
-}
+}*/
 
 
 
