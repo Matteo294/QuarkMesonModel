@@ -12,6 +12,7 @@
 #include "params.h"
 #include <chrono>
 
+// !!!!!!!!!! IUP AND IDN INVERTED !!!!!!!!!!!!!!
 
 // set public-private things
 // move 2 + m into mesons
