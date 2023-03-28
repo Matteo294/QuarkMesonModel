@@ -24,42 +24,37 @@ thrust::complex<double> im {0.0, 1.0};
 using cpdouble = thrust::complex<double>;
 
 template <typename T>
-__host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& D, thrust::complex<double> *M1, thrust::complex<double> *M2, thrust::complex<double> *M3, thrust::complex<double> *M4, int const numBlocks, int const numThreads);
+__host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& D, thrust::complex<double> *M, int const numBlocks, int const numThreads);
 
 __global__ void gpuDotProduct(cpdouble *vecA, cpdouble *vecB, cpdouble *result, int size);
 
-void computeDrift(Spinor<double> *inVec, cpdouble *outVec, DiracOP<double>& D, cpdouble *M, Lattice& lattice);
 
 		
 int main() {
 
-	thrust::complex<double> *M1, *M2, *M3, *M4;
+	thrust::complex<double> *M;
 	Spinor<double> *in, *out, *in_copy;
 	Lattice lattice(Nt, Nx);
 	DiracOP<double> Dirac(fermion_mass, g_coupling, lattice);
 
 	// Allocate two vectors and mesons matrix
-	cudaMallocManaged(&M1, sizeof(thrust::complex<double>) * lattice.vol);
-	cudaMallocManaged(&M2, sizeof(thrust::complex<double>) * lattice.vol);
-	cudaMallocManaged(&M3, sizeof(thrust::complex<double>) * lattice.vol);
-	cudaMallocManaged(&M4, sizeof(thrust::complex<double>) * lattice.vol);
+	cudaMallocManaged(&M, sizeof(thrust::complex<double>) * 4 * lattice.vol);
 	cudaMallocManaged(&in, sizeof(Spinor<double>) * lattice.vol);
 	cudaMallocManaged(&in_copy, sizeof(Spinor<double>) * lattice.vol);
 	cudaMallocManaged(&out, sizeof(Spinor<double>) * lattice.vol);
 	
+	// Set fields values
 	for(int i=0; i<lattice.vol; i++){
-		M1[i] = sigma + im * pi[2];
-		M4[i] = sigma - im * pi[2];
-		M2[i] = im * (pi[0] - im * pi[1]);
-		M3[i] = im * (pi[0] + im * pi[1]);
+		M[i] = sigma + im * pi[2];
+		M[i + 3*lattice.vol] = sigma - im * pi[2];
+		M[i + lattice.vol] = im * (pi[0] - im * pi[1]);
+		M[i + 2*lattice.vol] = im * (pi[0] + im * pi[1]);
 	}
-
-	for(int i=0; i<lattice.vol; i++){in[i].setZero(); out[i].setZero();}
-
-	// set source
+	for(int i=0; i<lattice.vol; i++){in[i].setZero();}
 	for(int i=0; i<lattice.vol; i++){
 		auto idx = lattice.eoToVec(i);
 		in[i].val[0] = 1.0 * exp(im*idx[1]*q+im*idx[0]*p);
+		in[i].val[1] = 1.0 * exp(im*idx[1]*q+im*idx[0]*p);
 		for(int j=0; j<4; j++) in_copy[i].val[j] = in[i].val[j];
 	}
 
@@ -69,15 +64,15 @@ int main() {
 	int nThreads_dot = 0;
 	cudaOccupancyMaxPotentialBlockSize(&nBlocks_dot, &nThreads_dot, gpuDotProduct);
 	cudaDeviceSynchronize();
-	nBlocks_dot = 1;
-	nThreads_dot = 1;
+	//nBlocks_dot = 1;
+	//nThreads_dot = 1;
 
     // Apply Dinv
-	CGsolver_solve_D(in, out, Dirac, M1, M2, M3, M4, nBlocks_dot, nThreads_dot);
+	CGsolver_solve_D(in, out, Dirac, M, nBlocks_dot, nThreads_dot);
 	for(int i=0; i<lattice.vol; i++){in[i].setZero();}
 	MatrixType useDagger = MatrixType::Dagger;
 	// diagArgs should be passed to all the diagonal (in spacetime) functions: Doo, Dee, Dooinv, Deeinv
-	void *diagArgs[] = {(void*)&out, (void*)&in, (void*) &lattice.vol, (void*) &fermion_mass, (void*) &g_coupling, (void*)&useDagger, (void*)&M1, (void*)&M2, (void*)&M3, (void*)&M4};
+	void *diagArgs[] = {(void*)&out, (void*)&in, (void*) &lattice.vol, (void*) &fermion_mass, (void*) &g_coupling, (void*)&useDagger, (void*)&M};
 	// hopping should be passed to all the off-diagonal (in spacetime) functions: Deo, Doe
 	void *hoppingArgs[] = {(void*)&out, (void*) &in, (void*) &lattice.vol, (void*) &useDagger, (void*) &lattice.IUP, (void*) &lattice.IDN};
 	Dirac.applyD(diagArgs, hoppingArgs);
@@ -119,10 +114,7 @@ int main() {
  
 	std::cout << "Last error: " << cudaGetLastError() << ": " << cudaGetErrorString(cudaGetLastError()) << "\n";
 
-	cudaFree(M1);
-	cudaFree(M2);
-	cudaFree(M3);
-	cudaFree(M4);
+	cudaFree(M);
 	cudaFree(in);
 	cudaFree(out);
 	cudaFree(in_copy);
@@ -132,7 +124,7 @@ int main() {
 
 
 template <typename T>
-__host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& D, thrust::complex<double> *M1, thrust::complex<double> *M2, thrust::complex<double> *M3, thrust::complex<double> *M4, int const numBlocks, int const numThreads){	
+__host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& D, thrust::complex<double> *M, int const numBlocks, int const numThreads){	
 	
 	int const vol = D.lattice.vol;
 	int mySize = D.lattice.vol * 4;
@@ -161,14 +153,14 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 	auto dimGrid = dim3(numBlocks, 1, 1);
 	auto dimBlock = dim3(numThreads, 1, 1);
 
-	cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * ((mySize/32/numBlocks) + 1), NULL);
+	cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
 	cudaDeviceSynchronize();
 	rmodsq = dot_res->real();
 	std::cout << *dot_res << " " << r[0].val[0] << "\n";
 
 	MatrixType dag = MatrixType::Normal;
 
-	void *diagArgs[] = {(void*)&p, (void*)&temp2, (void*) &D.lattice.vol, (void*) &fermion_mass, (void*) &g_coupling, (void*)&dag, (void*)&M1, (void*)&M2, (void*)&M3, (void*)&M4};
+	void *diagArgs[] = {(void*)&p, (void*)&temp2, (void*) &D.lattice.vol, (void*) &fermion_mass, (void*) &g_coupling, (void*)&dag, (void*)&M};
 	void *hoppingArgs[] = {(void*)&p, (void*)&temp2, (void*) &D.lattice.vol, (void*)&dag, (void*)&D.lattice.IUP, (void*)&D.lattice.IDN};
 
 	int k;
@@ -193,7 +185,7 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 		D.applyD(diagArgs, hoppingArgs);
 		
 		dotArgs[0] = (void*) &p; dotArgs[1] = (void*) &temp;
-		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * ((mySize/32/numBlocks) + 1), NULL);
+		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
 		cudaDeviceSynchronize();
 		alpha = rmodsq / *dot_res; 
 
@@ -207,7 +199,7 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 		}
 
 		dotArgs[0] = (void*) &r; dotArgs[1] = (void*) &r;
-		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * ((mySize/32/numBlocks) + 1), NULL);
+		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
 		cudaDeviceSynchronize();
 		beta = dot_res->real() / rmodsq;
 
@@ -216,7 +208,7 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 			for(int j=0; j<4; j++) p[i].val[j] = r[i].val[j] + beta*p[i].val[j];
 		}
 
-		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * ((mySize/32/numBlocks) + 1), NULL);
+		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
 		cudaDeviceSynchronize();
 		rmodsq = dot_res->real();
 	}

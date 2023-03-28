@@ -99,15 +99,14 @@ int main() {
 
 	std::cout << Nt << " " << Nx << std::endl;
 	
+	// Set fields values
 	for(int i=0; i<lattice.vol; i++){
-		M1[i] = sigma + im * pi[2];
-		M4[i] = sigma - im * pi[2];
-		M2[i] = im * (pi[0] - im * pi[1]);
-		M3[i] = im * (pi[0] + im * pi[1]);
+		M[i] = sigma + im * pi[2];
+		M[i + 3*lattice.vol] = sigma - im * pi[2];
+		M[i + lattice.vol] = im * (pi[0] - im * pi[1]);
+		M[i + 2*lattice.vol] = im * (pi[0] + im * pi[1]);
 	}
-
-	for(int i=0; i<lattice.vol; i++){in[i].setZero(); out[i].setZero();}
-
+	for(int i=0; i<lattice.vol; i++){in[i].setZero();}
 	// set source
 	in[0].val[0] = 1.0;
 	in[0].val[1] = 1.0;
