@@ -9,5 +9,5 @@ module load gcc/10.2
 mydev=`cat $PBS_GPUFILE | sed s/.*-gpu// `
 export CUDA_VISIBLE_DEVICES=$mydev
 
-cd gpu_code
+cd code/QuarkMesonModel/gpu_code
 exec ./main
