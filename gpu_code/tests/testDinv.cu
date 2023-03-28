@@ -64,15 +64,16 @@ int main() {
 	}
 
 
-	int numBlocks = 0;
-	int numThreads = 0;
-	cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, gpuDotProduct);
+	// Calculate Occupancy
+	int nBlocks_dot = 0;
+	int nThreads_dot = 0;
+	cudaOccupancyMaxPotentialBlockSize(&nBlocks_dot, &nThreads_dot, gpuDotProduct);
 	cudaDeviceSynchronize();
-	numBlocks=1;
-	numThreads=1;
+	nBlocks_dot = 1;
+	nThreads_dot = 1;
 
     // Apply Dinv
-	CGsolver_solve_D(in, out, Dirac, M1, M2, M3, M4, numBlocks, numThreads);
+	CGsolver_solve_D(in, out, Dirac, M1, M2, M3, M4, nBlocks_dot, nThreads_dot);
 	for(int i=0; i<lattice.vol; i++){in[i].setZero();}
 	MatrixType useDagger = MatrixType::Dagger;
 	// diagArgs should be passed to all the diagonal (in spacetime) functions: Doo, Dee, Dooinv, Deeinv

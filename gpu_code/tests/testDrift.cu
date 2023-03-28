@@ -28,14 +28,14 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 
 __global__ void gpuDotProduct(cpdouble *vecA, cpdouble *vecB, cpdouble *result, int size);
 
-void getForce(Spinor<double> *inVec, cpdouble *outVec, DiracOP<double>& D, cpdouble *M, Lattice& lattice);
+void getForce(Spinor<double> *inVec, cpdouble *outVec, DiracOP<double>& D, cpdouble *M, Lattice& lattice, int const nBlocks_dot, int const nThreads_dot, int const nBlocks_drift, int const nThreads_drift);
 __global__ void computeDrift(Spinor<double> *inVec, Spinor<double> *afterCG, cpdouble *outVec, int const vol);
 
 		
 int main() {
 
 	thrust::complex<double> *M;
-	Spinor<double> *in, *in_copy;
+	Spinor<double> *in, *v2;
 	thrust::complex<double> *out;
 	Lattice lattice(Nt, Nx);
 	DiracOP<double> Dirac(fermion_mass, g_coupling, lattice);
@@ -43,30 +43,35 @@ int main() {
 	// Allocate two vectors and mesons matrix
 	cudaMallocManaged(&M, sizeof(thrust::complex<double>) * 4 * lattice.vol);
 	cudaMallocManaged(&in, sizeof(Spinor<double>) * lattice.vol);
-	cudaMallocManaged(&in_copy, sizeof(Spinor<double>) * lattice.vol);
+	cudaMallocManaged(&v2, sizeof(Spinor<double>) * lattice.vol);
 	cudaMallocManaged(&out, sizeof(cpdouble) * 4 * lattice.vol);
 	
+	// Set fields values
 	for(int i=0; i<lattice.vol; i++){
 		M[i] = sigma + im * pi[2];
 		M[i + 3*lattice.vol] = sigma - im * pi[2];
 		M[i + lattice.vol] = im * (pi[0] - im * pi[1]);
 		M[i + 2*lattice.vol] = im * (pi[0] + im * pi[1]);
 	}
-
 	for(int i=0; i<lattice.vol; i++){in[i].setZero();}
-
-	// set source
 	for(int i=0; i<lattice.vol; i++){
 		auto idx = lattice.eoToVec(i);
 		in[i].val[0] = 1.0 * exp(im*idx[1]*q+im*idx[0]*p);
 		in[i].val[1] = 1.0 * exp(im*idx[1]*q+im*idx[0]*p);
 	}
 
-	getForce(in, out, Dirac, M, lattice);
+	// Calculate Occupancy
+	int nBlocks_dot = 0, nBlocks_drift = 0;
+	int nThreads_dot = 0, nThreads_drift = 0;
+	cudaOccupancyMaxPotentialBlockSize(&nBlocks_dot, &nThreads_dot, gpuDotProduct);
+	cudaDeviceSynchronize();
+	cudaOccupancyMaxPotentialBlockSize(&nBlocks_drift, &nThreads_drift, computeDrift);
+	cudaDeviceSynchronize();
 
-	std::ofstream myfile;
-	myfile.open("planewave.csv");
-	myfile << "nt,nx,v1,v2,v3,v4" << std::endl;
+	// Compute force
+	getForce(in, out, Dirac, M, lattice, nBlocks_dot, nThreads_dot, nBlocks_drift, nThreads_drift);
+
+	// Check results
 	int i;
 	int const vol = lattice.vol;
 	thrust::complex<double> v, w = 0.0;
@@ -97,6 +102,7 @@ int main() {
 	cudaFree(M);
 	cudaFree(in);
 	cudaFree(out);
+	cudaFree(v2);
 	
 	return 0;
 }
@@ -234,7 +240,7 @@ __global__ void gpuDotProduct(cpdouble *vecA, cpdouble *vecB, cpdouble *result, 
 	}
 }
 
-void getForce(Spinor<double> *inVec, cpdouble *outVec, DiracOP<double>& D, cpdouble *M, Lattice& lattice){
+void getForce(Spinor<double> *inVec, cpdouble *outVec, DiracOP<double>& D, cpdouble *M, Lattice& lattice, int const nBlocks_dot, int const nThreads_dot, int const nBlocks_drift, int const nThreads_drift){
 	
 	int const vol = lattice.vol;
 	Spinor<double> *afterCG, *buf;
@@ -243,13 +249,7 @@ void getForce(Spinor<double> *inVec, cpdouble *outVec, DiracOP<double>& D, cpdou
 
 	for(int i=0; i<vol; i++){ afterCG[i].setZero(); buf[i].setZero();}
 
-	int numBlocks = 0;
-	int numThreads = 0;
-	cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, gpuDotProduct);
-	numBlocks=1;
-	numThreads=1;
-
-	CGsolver_solve_D(inVec, buf, D, M, numBlocks, numThreads);
+	CGsolver_solve_D(inVec, buf, D, M, nBlocks_dot, nThreads_dot);
 	
 	MatrixType useDagger = MatrixType::Dagger;
 	void *diagArgs[] = {(void*)&buf, (void*)&afterCG, (void*) &vol, (void*) &fermion_mass, (void*) &g_coupling, (void*)&useDagger, (void*)&M};
@@ -258,17 +258,10 @@ void getForce(Spinor<double> *inVec, cpdouble *outVec, DiracOP<double>& D, cpdou
 	D.applyD(diagArgs, hoppingArgs);
 	cudaDeviceSynchronize();
 
-	numBlocks = 0;
-	numThreads = 0;
-	cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, computeDrift);
-	cudaDeviceSynchronize();
-	numBlocks=1;
-	numThreads=1;
-
 	// Set up dot product call
 	void *driftArgs[] = {(void*) &inVec, (void*) &afterCG, (void*) &outVec, (void*) &vol};
-	auto dimGrid = dim3(numBlocks, 1, 1);
-	auto dimBlock = dim3(numThreads, 1, 1);
+	auto dimGrid = dim3(nBlocks_drift, 1, 1);
+	auto dimBlock = dim3(nThreads_drift, 1, 1);
 
 	cudaLaunchCooperativeKernel((void*)&computeDrift, dimGrid, dimBlock, driftArgs, 0, NULL);
 	cudaDeviceSynchronize();
