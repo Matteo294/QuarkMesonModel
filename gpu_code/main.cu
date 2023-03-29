@@ -45,8 +45,6 @@ __host__ void CGsolver_solve_Dhat(Spinor<T> *inVec, Spinor<T> *outVec, MesonsMat
 
 __global__ void gpuDotProduct(cpdouble *vecA, cpdouble *vecB, cpdouble *result, int size);
 
-void computeDrift(Spinor<double> *inVec, cpdouble *outVec, DiracOP<double>& D, cpdouble *M, Lattice& lattice);
-
 void mesonsToM(double *phi, cpdouble *M, int const vol){
 	double *sigma, *pi1, *pi2, *pi3;
 	sigma = phi;
@@ -122,6 +120,9 @@ int main() {
 	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 	CGsolver_solve_D(in, out, Dirac, M, numBlocks, numThreads);
 
+	auto err = cudaGetLastError();
+	std::cout << "Last error: " << err << " --> " << cudaGetErrorString(err) << "\n";
+
 	for(int i=0; i<lattice.vol; i++){in[i].setZero();}
 	useDagger = MatrixType::Dagger;
 	diagArgs[0] = (void*) &out; diagArgs[1] = (void*) &in;
@@ -130,8 +131,6 @@ int main() {
 
 	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 	std::cout << "CG time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " ms" << std::endl;
-
-	std::cout << "Error?: " << cudaGetLastError() << std::endl;
 
 	std::ofstream datafile;
 	datafile.open("data.csv");
@@ -144,8 +143,7 @@ int main() {
 		}
 		datafile << corr.real() << "\n";
 	}
-	
-	//std::cout << "Last error: " << cudaGetLastError() << ": " << cudaGetErrorString(cudaGetLastError()) << "\n";
+
 
 	cudaFree(M);
 	cudaFree(in);
@@ -287,71 +285,6 @@ __global__ void gpuDotProduct(cpdouble *vecA, cpdouble *vecB, cpdouble *result, 
 	}
 }
 
-void computeDrift(Spinor<double> *inVec, cpdouble *outVec, DiracOP<double>& D, cpdouble *M, Lattice& lattice){
-	int const vol = lattice.vol;
-	Spinor<double> *afterCG, *buf;
-	cudaMallocManaged(&afterCG, sizeof(Spinor<double>) * vol);
-	cudaMallocManaged(&buf, sizeof(Spinor<double>) * vol);
-	cpdouble *dot_res;
-	cudaMallocManaged(&dot_res, sizeof(Spinor<double>));
-
-	int numBlocks = 0;
-	int numThreads = 0;
-	cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, gpuDotProduct);
-
-	CGsolver_solve_D(inVec, buf, D, M, numBlocks, numThreads);
-	
-	MatrixType useDagger = MatrixType::Dagger;
-	void *diagArgs[] = {(void*)&buf, (void*)&afterCG, (void*) &vol, (void*) &fermion_mass, (void*) &g_coupling, (void*)&useDagger, (void*)&M};
-	// hopping should be passed to all the off-diagonal (in spacetime) functions: Deo, Doe
-	void *hoppingArgs[] = {(void*)&buf, (void*) &afterCG, (void*) &lattice.vol, (void*) &useDagger, (void*) &lattice.IUP, (void*) &lattice.IDN};
-	D.applyD(diagArgs, hoppingArgs);
-
-	auto dimGrid = dim3(numBlocks, 1, 1);
-	auto dimBlock = dim3(numThreads, 1, 1);
-	int const mySize = 4 * vol;
-	
-   	void *dotArgs[] = {(void*) &afterCG, (void*) &inVec, (void*) &dot_res, (void*) &mySize};
-	for(int i=0; i <vol; i++){
-		// Drift for sigma
-		*dot_res = 0.0;
-		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
-		cudaDeviceSynchronize();
-		outVec[i] = - g_coupling * *dot_res;
-		// Drift for pi1
-		buf[i].val[0] =  im * inVec[i].val[3];
-		buf[i].val[1] = -im * inVec[i].val[2];
-		buf[i].val[2] =  im * inVec[i].val[1];
-		buf[i].val[3] = -im * inVec[i].val[0];
-   		*dot_res = 0.0;
-		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
-		cudaDeviceSynchronize();
-		outVec[i + vol] = -im * g_coupling * *dot_res;
-		// Drift for pi2
-		buf[i].val[0] =  1.0 * inVec[i].val[3];
-		buf[i].val[1] = -1.0 * inVec[i].val[2];
-		buf[i].val[2] = -1.0 * inVec[i].val[1];
-		buf[i].val[3] =  1.0 * inVec[i].val[0];
-   		*dot_res = 0.0;
-		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
-		cudaDeviceSynchronize();
-		outVec[i + 2*vol] = -im * g_coupling * *dot_res ;
-		// Drift for pi3
-		buf[i].val[0] =  im * inVec[i].val[1];
-		buf[i].val[1] = -im * inVec[i].val[0];
-		buf[i].val[2] = -im * inVec[i].val[3];
-		buf[i].val[3] =  im * inVec[i].val[2];
-   		*dot_res = 0.0;
-		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
-		cudaDeviceSynchronize();
-		outVec[i + 3*vol] = -im * g_coupling * *dot_res ;
-	}
-	
-	cudaFree(afterCG);
-	cudaFree(buf);
-	cudaFree(dot_res);
-	 
-}
 
 /*
 template <typename T>
