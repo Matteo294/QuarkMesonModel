@@ -67,8 +67,8 @@ int main() {
 	cudaOccupancyMaxPotentialBlockSize(&nBlocks_dot, &nThreads_dot, gpuDotProduct);
 	cudaDeviceSynchronize();
 	std::cout << nBlocks_dot << '\t' << nThreads_dot << '\n';
-	nBlocks_dot = 1;
-	nThreads_dot = 1;
+	//nBlocks_dot = 1;
+	//nThreads_dot = 1;
 
 	/*int const mySize = 4 * lattice.vol;
 

@@ -12,7 +12,7 @@
 #module load compiler/gnu/10.2
 #module load devel/cuda/11.4
 module load compiler/gnu/10.2
-module load devel/cuda/11.8
+module load devel/cuda/11.4
 
 #without 'exec' here, the signal is not passed to our executable /=
 exec ./main
