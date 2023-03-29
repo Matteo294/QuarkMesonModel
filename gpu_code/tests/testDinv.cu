@@ -55,10 +55,8 @@ int main() {
 	for(int i=0; i<lattice.vol; i++){in[i].setZero(); out[i].setZero();}
 	for(int i=0; i<lattice.vol; i++){
 		auto idx = lattice.eoToVec(i);
-		//in[i].val[0] = 1.0 * exp(im*idx[1]*q+im*idx[0]*p);
-		//in[i].val[1] = 1.0 * exp(im*idx[1]*q+im*idx[0]*p);
-		in[i].val[0] = 0.2 * idx[1] + 0.1*im*idx[0];
-		in[i].val[0] = 0.3 * idx[0] + 0.2*im*idx[1];
+		in[i].val[0] = 0.01*idx[0]*idx[1] * exp(im*idx[1]*q+im*idx[0]*p);
+		in[i].val[1] = 0.01*idx[0]*idx[1] * exp(im*idx[1]*q+im*idx[0]*p);
 		for(int j=0; j<4; j++) in_copy[i].val[j] = in[i].val[j];
 	}
 
