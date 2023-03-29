@@ -16,7 +16,7 @@ namespace cg = cooperative_groups;
 
 using std::conj;
 
-double const q = 4.0 * (double) M_PI / Nx; // 2n
+double const q = 6.0 * (double) M_PI / Nx; // 2n
 double const p = 7.0 * (double) M_PI / Nt; // 2n+1
 
 thrust::complex<double> im {0.0, 1.0};
@@ -32,7 +32,7 @@ __global__ void gpuDotProduct(cpdouble *vecA, cpdouble *vecB, cpdouble *result, 
 		
 int main() {
 
-	thrust::complex<double> *M;
+	thrust::complex<double> *M, *dot_res;
 	Spinor<double> *in, *out, *in_copy;
 	Lattice lattice(Nt, Nx);
 	DiracOP<double> Dirac(fermion_mass, g_coupling, lattice);
@@ -42,6 +42,8 @@ int main() {
 	cudaMallocManaged(&in, sizeof(Spinor<double>) * lattice.vol);
 	cudaMallocManaged(&in_copy, sizeof(Spinor<double>) * lattice.vol);
 	cudaMallocManaged(&out, sizeof(Spinor<double>) * lattice.vol);
+	cudaMallocManaged(&dot_res, sizeof(Spinor<double>) * lattice.vol);
+
 	
 	// Set fields values
 	for(int i=0; i<lattice.vol; i++){
@@ -50,13 +52,13 @@ int main() {
 		M[i + lattice.vol] = im * (pi[0] - im * pi[1]);
 		M[i + 2*lattice.vol] = im * (pi[0] + im * pi[1]);
 	}
-	for(int i=0; i<lattice.vol; i++){in[i].setZero();}
+	for(int i=0; i<lattice.vol; i++){in[i].setZero(); out[i].setZero();}
 	for(int i=0; i<lattice.vol; i++){
 		auto idx = lattice.eoToVec(i);
-//		in[i].val[0] = 1.0 * exp(im*idx[1]*q+im*idx[0]*p);
-//		in[i].val[1] = 1.0 * exp(im*idx[1]*q+im*idx[0]*p);
-		in[i].val[0] = 0.3*idx[1];// * exp(im*idx[1]*q+im*idx[0]*p);
-		in[i].val[1] = 0.2*idx[0] + 0.1*idx[1];// * exp(im*idx[1]*q+im*idx[0]*p);
+		//in[i].val[0] = 1.0 * exp(im*idx[1]*q+im*idx[0]*p);
+		//in[i].val[1] = 1.0 * exp(im*idx[1]*q+im*idx[0]*p);
+		in[i].val[0] = 0.2 * idx[1] + 0.1*im*idx[0];
+		in[i].val[0] = 0.3 * idx[0] + 0.2*im*idx[1];
 		for(int j=0; j<4; j++) in_copy[i].val[j] = in[i].val[j];
 	}
 
@@ -69,6 +71,65 @@ int main() {
 	std::cout << nBlocks_dot << '\t' << nThreads_dot << '\n';
 	nBlocks_dot = 1;
 	nThreads_dot = 1;
+
+	/*int const mySize = 4 * lattice.vol;
+
+	void *dotArgs[] = {(void*) &out, (void*) &out, (void*) &dot_res, (void*) &mySize};
+
+
+
+
+	// ----------------------------------------
+	auto dimGrid = dim3(1, 1, 1);
+	auto dimBlock = dim3(1, 1, 1);
+
+	auto dag = MatrixType::Dagger;
+	void *diagArgs[] = {(void*)&in, (void*)&out, (void*) &Dirac.lattice.vol, (void*) &fermion_mass, (void*) &g_coupling, (void*)&dag, (void*)&M};
+	void *hoppingArgs[] = {(void*)&in, (void*)&out, (void*) &Dirac.lattice.vol, (void*)&dag, (void*)&Dirac.lattice.IUP, (void*)&Dirac.lattice.IDN};
+	Dirac.applyD(diagArgs, hoppingArgs);
+
+	cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
+	cudaDeviceSynchronize();
+	std::cout << *dot_res << std::endl;
+	// --------------------------------------
+
+
+
+
+	// --------------------------------------
+	dimGrid = dim3(1, 1, 1);
+	dimBlock = dim3(128, 1, 1);
+
+	for(int i=0; i<lattice.vol; i++){out[i].setZero();}
+	Dirac.applyD(diagArgs, hoppingArgs);
+
+	cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
+	cudaDeviceSynchronize();
+	std::cout << *dot_res << std::endl;
+	// --------------------------------------
+
+
+
+
+	// -------------------------------------
+	dimGrid = dim3(1, 1, 1);
+	dimBlock = dim3(1024, 1, 1);
+
+	for(int i=0; i<lattice.vol; i++){out[i].setZero();}
+	Dirac.applyD(diagArgs, hoppingArgs);
+
+	cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
+	cudaDeviceSynchronize();
+	std::cout << *dot_res << std::endl;
+	// --------------------------------------
+
+
+
+	*/
+
+
+
+
 
     // Apply Dinv
 	CGsolver_solve_D(in, out, Dirac, M, nBlocks_dot, nThreads_dot);
@@ -113,14 +174,19 @@ int main() {
 	Dirac.applyD(diagArgs, hoppingArgs);
     cudaDeviceSynchronize();
 
+	auto err = cudaGetLastError();
+	std::cout << "Last error: " << err << " --> " << cudaGetErrorString(err) << "\n";
+
 	std::cout << "D Dinv psi = " << out[0].val[0] << "\t psi" << in_copy[0].val[0] << std::endl;
+
+
  
-	std::cout << "Last error: " << cudaGetLastError() << ": " << cudaGetErrorString(cudaGetLastError()) << "\n";
 
 	cudaFree(M);
 	cudaFree(in);
 	cudaFree(out);
 	cudaFree(in_copy);
+	cudaFree(dot_res);
 	
 	return 0;
 }

@@ -216,7 +216,7 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 		dotArgs[0] = (void*) &p; dotArgs[1] = (void*) &temp;
 		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
 		cudaDeviceSynchronize();
-		alpha = rmodsq / *dot_res; 
+		alpha = rmodsq / *dot_res;
 
 		// x = x + alpha p
 		for(int i=0; i<vol; i++){
