@@ -10,6 +10,8 @@ __host__ void DiracOP<T>::applyD(void** diagArgs, void** hoppingArgs){
     int numBlocks = 0;
     int numThreads = 0;
     cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, D_eo<T>);
+	numBlocks=10;
+	numThreads=64;
 
     auto dimGrid = dim3(numBlocks, 1, 1);
     auto dimBlock = dim3(numThreads, 1, 1);
