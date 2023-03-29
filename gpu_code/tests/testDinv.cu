@@ -64,8 +64,8 @@ int main() {
 	int nThreads_dot = 0;
 	cudaOccupancyMaxPotentialBlockSize(&nBlocks_dot, &nThreads_dot, gpuDotProduct);
 	cudaDeviceSynchronize();
-	//nBlocks_dot = 1;
-	//nThreads_dot = 1;
+//	nBlocks_dot = 1;
+//	nThreads_dot = 1;
 
     // Apply Dinv
 	CGsolver_solve_D(in, out, Dirac, M, nBlocks_dot, nThreads_dot);

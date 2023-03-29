@@ -9,21 +9,32 @@ __host__ void DiracOP<T>::applyD(void** diagArgs, void** hoppingArgs){
 
     int numBlocks = 0;
     int numThreads = 0;
-    cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, D_eo<T>);
-	numBlocks=10;
-	numThreads=64;
 
-    auto dimGrid = dim3(numBlocks, 1, 1);
-    auto dimBlock = dim3(numThreads, 1, 1);
 
+	{
+    cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, D_ee<T>);
+    auto dimGrid = dim3(numBlocks, 1, 1);    auto dimBlock = dim3(numThreads, 1, 1);
     cudaLaunchCooperativeKernel((void*)&D_ee<T>, dimGrid, dimBlock, diagArgs, 0, NULL);
     cudaDeviceSynchronize();
+	}
+	{
+    cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, D_ee<T>);
+    auto dimGrid = dim3(numBlocks, 1, 1);    auto dimBlock = dim3(numThreads, 1, 1);
     cudaLaunchCooperativeKernel((void*)&D_oo<T>, dimGrid, dimBlock, diagArgs, 0, NULL);
     cudaDeviceSynchronize();
+	}
+	cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, D_eo<T>);
+	auto dimGrid = dim3(numBlocks, 1, 1);    auto dimBlock = dim3(numThreads, 1, 1);
+	{
     cudaLaunchCooperativeKernel((void*)&D_eo<T>, dimGrid, dimBlock, hoppingArgs, 0, NULL);
     cudaDeviceSynchronize();
+	}
+	{
+    cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, D_oe<T>);
+    auto dimGrid = dim3(numBlocks, 1, 1);    auto dimBlock = dim3(numThreads, 1, 1);
     cudaLaunchCooperativeKernel((void*)&D_oe<T>, dimGrid, dimBlock, hoppingArgs, 0, NULL);
     cudaDeviceSynchronize();
+	}
 
 }
 
