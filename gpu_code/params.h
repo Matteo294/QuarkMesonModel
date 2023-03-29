@@ -4,8 +4,8 @@ int constexpr Nt = 64, Nx = 64;
 
 enum class MatrixType {Normal, Dagger};
 
-double constexpr fermion_mass = 0.5;
-double constexpr g_coupling = 0.1;
+double constexpr fermion_mass = 0.05;
+double constexpr g_coupling = 0.0;
 double constexpr sigma = 0.2;
 double constexpr pi[] = {0.1, 0.2, 0.3};
 

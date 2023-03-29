@@ -9,8 +9,10 @@
 
 #module load devel/cuda/12.0
 #module load compiler/gnu/12.1
+#module load compiler/gnu/10.2
+#module load devel/cuda/11.4
 module load compiler/gnu/10.2
-module load devel/cuda/11.4
+module load devel/cuda/11.8
 
 #without 'exec' here, the signal is not passed to our executable /=
 exec ./main

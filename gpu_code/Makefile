@@ -1,5 +1,6 @@
 #FLAGS= -rdc=true -arch=sm_61 -O2
-FLAGS= -rdc=true -gencode=arch=compute_75,code=sm_75 -gencode=arch=compute_62,code=sm_62 -gencode=arch=compute_70,code=sm_70 -O2
+#FLAGS= -rdc=true -gencode=arch=compute_75,code=sm_75 -gencode=arch=compute_62,code=sm_62 -gencode=arch=compute_70,code=sm_70 -O2
+FLAGS= -rdc=true -gencode=arch=compute_70,code=sm_70 -O2
 
 all: main
 Lattice.o: Lattice.cu Lattice.cuh Makefile

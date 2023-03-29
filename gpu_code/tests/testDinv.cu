@@ -53,8 +53,10 @@ int main() {
 	for(int i=0; i<lattice.vol; i++){in[i].setZero();}
 	for(int i=0; i<lattice.vol; i++){
 		auto idx = lattice.eoToVec(i);
-		in[i].val[0] = 1.0 * exp(im*idx[1]*q+im*idx[0]*p);
-		in[i].val[1] = 1.0 * exp(im*idx[1]*q+im*idx[0]*p);
+//		in[i].val[0] = 1.0 * exp(im*idx[1]*q+im*idx[0]*p);
+//		in[i].val[1] = 1.0 * exp(im*idx[1]*q+im*idx[0]*p);
+		in[i].val[0] = 0.3*idx[1];// * exp(im*idx[1]*q+im*idx[0]*p);
+		in[i].val[1] = 0.2*idx[0] + 0.1*idx[1];// * exp(im*idx[1]*q+im*idx[0]*p);
 		for(int j=0; j<4; j++) in_copy[i].val[j] = in[i].val[j];
 	}
 
@@ -64,8 +66,9 @@ int main() {
 	int nThreads_dot = 0;
 	cudaOccupancyMaxPotentialBlockSize(&nBlocks_dot, &nThreads_dot, gpuDotProduct);
 	cudaDeviceSynchronize();
-//	nBlocks_dot = 1;
-//	nThreads_dot = 1;
+	std::cout << nBlocks_dot << '\t' << nThreads_dot << '\n';
+	nBlocks_dot = 1;
+	nThreads_dot = 1;
 
     // Apply Dinv
 	CGsolver_solve_D(in, out, Dirac, M, nBlocks_dot, nThreads_dot);
@@ -155,6 +158,7 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 
 	cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
 	cudaDeviceSynchronize();
+	std::cout << "dot prod = " << *dot_res << '\n';
 	rmodsq = dot_res->real();
 	std::cout << *dot_res << " " << r[0].val[0] << "\n";
 
@@ -187,6 +191,7 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 		dotArgs[0] = (void*) &p; dotArgs[1] = (void*) &temp;
 		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
 		cudaDeviceSynchronize();
+	std::cout << "pAp prod = " << *dot_res << '\n';
 		alpha = rmodsq / *dot_res; 
 
 		// x = x + alpha p
@@ -201,7 +206,8 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 		dotArgs[0] = (void*) &r; dotArgs[1] = (void*) &r;
 		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
 		cudaDeviceSynchronize();
-		beta = dot_res->real() / rmodsq;
+	std::cout << "dot prod = " << *dot_res << '\n';
+		beta = abs(*dot_res) / rmodsq;
 
 		// p = r - beta p
 		for(int i=0; i<vol; i++){
@@ -210,7 +216,8 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 
 		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
 		cudaDeviceSynchronize();
-		rmodsq = dot_res->real();
+	std::cout << "dot prod = " << *dot_res << "\n\n";
+		rmodsq = abs(*dot_res);
 	}
 
 	if (k < IterMax) std::cout << "Convergence reached in " << k-1 << " steps \n";
