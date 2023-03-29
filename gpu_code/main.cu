@@ -19,12 +19,10 @@ namespace cg = cooperative_groups;
 //#define USE_EO_PRECONDITIONING
 
 using std::conj;
+using cpdouble = thrust::complex<double>;
 
-double const q = 6.0 * (double) M_PI / Nx;
-//double const q = 0.0;
-double const p = 7.0 * (double) M_PI / Nt;
 
-thrust::complex<double> im {0.0, 1.0};
+cpdouble im {0.0, 1.0};
 
 // Q: int4,float4 reading
 // Q: extern ?
@@ -33,17 +31,14 @@ thrust::complex<double> im {0.0, 1.0};
 // !! make CG a global function with dot, Dirac device functions. Moreover, buffers for CG could be allocated once for all.
 // numBlocks, numThreads for Dirac could be determined once for all
 // Note/Question: consider replacing cudaMallocManaged in the constructor with simple allocation and then use MemCpy to fill the buffers. Any significant speedup?
-// Note: implicitly assume that volume is the value given in latt_ptr?
 // remove force nthreads nblocs = 1 and always ask for 32 * size
 // !!!!!!!!!!!!! g_coupling hardcoded!!!!! 
 // make classes to avoid continuous allocation and deallocation
 
 // VERY IMPORTANT NOTE: REMEMBER TO SET THE VECTOR TO ZERO BEFORE APPLYING ANY D_xx OR THE DIRAC OPERATOR !!!!
 
-using cpdouble = thrust::complex<double>;
-
 template <typename T>
-__host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& D, thrust::complex<double> *M1, thrust::complex<double> *M2, thrust::complex<double> *M3, thrust::complex<double> *M4, int const numBlocks, int const numThreads);
+__host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& D, cpdouble *M, int const numBlocks, int const numThreads);
 
 /*template <typename T>
 __host__ void CGsolver_solve_Dhat(Spinor<T> *inVec, Spinor<T> *outVec, MesonsMat<T> *M, DiracOP<T> &D);*/
@@ -84,16 +79,13 @@ void MtoMesons(cpdouble *M, double *phi, int const vol){
 		
 int main() {
 
-	thrust::complex<double> *M1, *M2, *M3, *M4;
+	cpdouble *M;
 	Spinor<double> *in, *out;
 	Lattice lattice(Nt, Nx);
 	DiracOP<double> Dirac(fermion_mass, g_coupling, lattice);
 
 	// Allocate two vectors and mesons matrix
-	cudaMallocManaged(&M1, sizeof(thrust::complex<double>) * lattice.vol);
-	cudaMallocManaged(&M2, sizeof(thrust::complex<double>) * lattice.vol);
-	cudaMallocManaged(&M3, sizeof(thrust::complex<double>) * lattice.vol);
-	cudaMallocManaged(&M4, sizeof(thrust::complex<double>) * lattice.vol);
+	cudaMallocManaged(&M, sizeof(cpdouble) * 4 * lattice.vol);
 	cudaMallocManaged(&in, sizeof(Spinor<double>) * lattice.vol);
 	cudaMallocManaged(&out, sizeof(Spinor<double>) * lattice.vol);
 
@@ -115,7 +107,7 @@ int main() {
 
 	MatrixType useDagger = MatrixType::Normal;
 	// diagArgs should be passed to all the diagonal (in spacetime) functions: Doo, Dee, Dooinv, Deeinv
-	void *diagArgs[] = {(void*)&in, (void*)&out, (void*) &lattice.vol, (void*) &fermion_mass, (void*) &g_coupling, (void*)&useDagger, (void*)&M1, (void*)&M2, (void*)&M3, (void*)&M4};
+	void *diagArgs[] = {(void*)&in, (void*)&out, (void*) &lattice.vol, (void*) &fermion_mass, (void*) &g_coupling, (void*)&useDagger, (void*)&M};
 	// hopping should be passed to all the off-diagonal (in spacetime) functions: Deo, Doe
 	void *hoppingArgs[] = {(void*)&in, (void*) &out, (void*) &lattice.vol, (void*) &useDagger, (void*) &lattice.IUP, (void*) &lattice.IDN}; 
 	
@@ -124,11 +116,11 @@ int main() {
 	cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, gpuDotProduct);
 	cudaDeviceSynchronize();
 
-	numBlocks = 1;
-	numThreads = 1;
+	//numBlocks = 1;
+	//numThreads = 1;
 
 	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-	CGsolver_solve_D(in, out, Dirac, M1, M2, M3, M4, numBlocks, numThreads);
+	CGsolver_solve_D(in, out, Dirac, M, numBlocks, numThreads);
 
 	for(int i=0; i<lattice.vol; i++){in[i].setZero();}
 	useDagger = MatrixType::Dagger;
@@ -139,12 +131,12 @@ int main() {
 	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 	std::cout << "CG time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " ms" << std::endl;
 
-	std::cout << "Error?: " << cudaGetErrorString(cudaGetLastError()) << std::endl;
+	std::cout << "Error?: " << cudaGetLastError() << std::endl;
 
 	std::ofstream datafile;
 	datafile.open("data.csv");
 	datafile << "f0c0,f0c1,f1c0,f1c1" << "\n";
-	thrust::complex<double> corr = 0.0;
+	cpdouble corr = 0.0;
 	for(int nt=0; nt<Nt; nt++){
 		corr = 0.0;
 		for(int nx=0; nx<Nx; nx++){
@@ -153,12 +145,9 @@ int main() {
 		datafile << corr.real() << "\n";
 	}
 	
-	std::cout << "Last error: " << cudaGetLastError() << ": " << cudaGetErrorString(cudaGetLastError()) << "\n";
+	//std::cout << "Last error: " << cudaGetLastError() << ": " << cudaGetErrorString(cudaGetLastError()) << "\n";
 
-	cudaFree(M1);
-	cudaFree(M2);
-	cudaFree(M3);
-	cudaFree(M4);
+	cudaFree(M);
 	cudaFree(in);
 	cudaFree(out);
 	
@@ -167,7 +156,7 @@ int main() {
 
 
 template <typename T>
-__host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& D, thrust::complex<double> *M1, thrust::complex<double> *M2, thrust::complex<double> *M3, thrust::complex<double> *M4, int const numBlocks, int const numThreads){	
+__host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& D, cpdouble *M, int const numBlocks, int const numThreads){	
 	
 	int const vol = D.lattice.vol;
 	int mySize = D.lattice.vol * 4;
@@ -196,13 +185,13 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 	auto dimGrid = dim3(numBlocks, 1, 1);
 	auto dimBlock = dim3(numThreads, 1, 1);
 
-	cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * ((mySize/32/numBlocks) + 1), NULL);
+	cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
 	cudaDeviceSynchronize();
 	rmodsq = dot_res->real();
 
 	MatrixType dag = MatrixType::Normal;
 
-	void *diagArgs[] = {(void*)&p, (void*)&temp2, (void*) &D.lattice.vol, (void*) &fermion_mass, (void*) &g_coupling, (void*)&dag, (void*)&M1, (void*)&M2, (void*)&M3, (void*)&M4};
+	void *diagArgs[] = {(void*)&p, (void*)&temp2, (void*) &D.lattice.vol, (void*) &fermion_mass, (void*) &g_coupling, (void*)&dag, (void*)&M};
 	void *hoppingArgs[] = {(void*)&p, (void*)&temp2, (void*) &D.lattice.vol, (void*)&dag, (void*)&D.lattice.IUP, (void*)&D.lattice.IDN};
 
 	int k;
@@ -227,7 +216,7 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 		D.applyD(diagArgs, hoppingArgs);
 		
 		dotArgs[0] = (void*) &p; dotArgs[1] = (void*) &temp;
-		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * ((mySize/32/numBlocks) + 1), NULL);
+		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
 		cudaDeviceSynchronize();
 		alpha = rmodsq / *dot_res; 
 
@@ -241,7 +230,7 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 		}
 
 		dotArgs[0] = (void*) &r; dotArgs[1] = (void*) &r;
-		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * ((mySize/32/numBlocks) + 1), NULL);
+		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
 		cudaDeviceSynchronize();
 		beta = dot_res->real() / rmodsq;
 
@@ -250,7 +239,7 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 			for(int j=0; j<4; j++) p[i].val[j] = r[i].val[j] + beta*p[i].val[j];
 		}
 
-		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * ((mySize/32/numBlocks) + 1), NULL);
+		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
 		cudaDeviceSynchronize();
 		rmodsq = dot_res->real();
 	}
@@ -305,20 +294,15 @@ void computeDrift(Spinor<double> *inVec, cpdouble *outVec, DiracOP<double>& D, c
 	cudaMallocManaged(&buf, sizeof(Spinor<double>) * vol);
 	cpdouble *dot_res;
 	cudaMallocManaged(&dot_res, sizeof(Spinor<double>));
-	cpdouble *M1, *M2, *M3, *M4;
-	M1 = M;
-	M2 = M+vol;
-	M3 = M2+vol;
-	M4 = M3+vol;
 
 	int numBlocks = 0;
 	int numThreads = 0;
 	cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, gpuDotProduct);
 
-	CGsolver_solve_D(inVec, buf, D, M, M + vol, M + 2*vol, M + 3*vol, numBlocks, numThreads);
+	CGsolver_solve_D(inVec, buf, D, M, numBlocks, numThreads);
 	
 	MatrixType useDagger = MatrixType::Dagger;
-	void *diagArgs[] = {(void*)&buf, (void*)&afterCG, (void*) &vol, (void*) &fermion_mass, (void*) &g_coupling, (void*)&useDagger, (void*)&M1, (void*)&M2, (void*)&M3, (void*)&M4};
+	void *diagArgs[] = {(void*)&buf, (void*)&afterCG, (void*) &vol, (void*) &fermion_mass, (void*) &g_coupling, (void*)&useDagger, (void*)&M};
 	// hopping should be passed to all the off-diagonal (in spacetime) functions: Deo, Doe
 	void *hoppingArgs[] = {(void*)&buf, (void*) &afterCG, (void*) &lattice.vol, (void*) &useDagger, (void*) &lattice.IUP, (void*) &lattice.IDN};
 	D.applyD(diagArgs, hoppingArgs);
@@ -331,7 +315,7 @@ void computeDrift(Spinor<double> *inVec, cpdouble *outVec, DiracOP<double>& D, c
 	for(int i=0; i <vol; i++){
 		// Drift for sigma
 		*dot_res = 0.0;
-		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * ((mySize/32/numBlocks) + 1), NULL);
+		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
 		cudaDeviceSynchronize();
 		outVec[i] = - g_coupling * *dot_res;
 		// Drift for pi1
@@ -340,7 +324,7 @@ void computeDrift(Spinor<double> *inVec, cpdouble *outVec, DiracOP<double>& D, c
 		buf[i].val[2] =  im * inVec[i].val[1];
 		buf[i].val[3] = -im * inVec[i].val[0];
    		*dot_res = 0.0;
-		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * ((mySize/32/numBlocks) + 1), NULL);
+		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
 		cudaDeviceSynchronize();
 		outVec[i + vol] = -im * g_coupling * *dot_res;
 		// Drift for pi2
@@ -349,7 +333,7 @@ void computeDrift(Spinor<double> *inVec, cpdouble *outVec, DiracOP<double>& D, c
 		buf[i].val[2] = -1.0 * inVec[i].val[1];
 		buf[i].val[3] =  1.0 * inVec[i].val[0];
    		*dot_res = 0.0;
-		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * ((mySize/32/numBlocks) + 1), NULL);
+		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
 		cudaDeviceSynchronize();
 		outVec[i + 2*vol] = -im * g_coupling * *dot_res ;
 		// Drift for pi3
@@ -358,7 +342,7 @@ void computeDrift(Spinor<double> *inVec, cpdouble *outVec, DiracOP<double>& D, c
 		buf[i].val[2] = -im * inVec[i].val[3];
 		buf[i].val[3] =  im * inVec[i].val[2];
    		*dot_res = 0.0;
-		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * ((mySize/32/numBlocks) + 1), NULL);
+		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
 		cudaDeviceSynchronize();
 		outVec[i + 3*vol] = -im * g_coupling * *dot_res ;
 	}

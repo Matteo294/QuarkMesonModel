@@ -10,8 +10,6 @@ __host__ void DiracOP<T>::applyD(void** diagArgs, void** hoppingArgs){
     int numBlocks = 0;
     int numThreads = 0;
     cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, D_eo<T>);
-    numBlocks = 1;
-    numThreads = 1;
 
     auto dimGrid = dim3(numBlocks, 1, 1);
     auto dimBlock = dim3(numThreads, 1, 1);
@@ -40,9 +38,9 @@ __global__ void D_oo(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, T const
     thrust::complex<T> half {0.5, 0.0};
 
     thrust::complex<T> *M1 = M;
-    thrust::complex<T> *M2 = M + vol;
-    thrust::complex<T> *M3 = M + 2*vol;
-    thrust::complex<T> *M4 = M + 3*vol;
+    thrust::complex<T> *M2 = &M[vol];
+    thrust::complex<T> *M3 = &M[2*vol];
+    thrust::complex<T> *M4 = &M[3*vol];
 
     for (int i = grid.thread_rank() + vol/2; i < vol; i += grid.size()) {
         sigma = half * (M1[i] + M4[i]);
@@ -73,9 +71,9 @@ __global__ void D_ee(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, T const
     thrust::complex<T> half {0.5, 0.0};
 
     thrust::complex<T> *M1 = M;
-    thrust::complex<T> *M2 = M + vol;
-    thrust::complex<T> *M3 = M + 2*vol;
-    thrust::complex<T> *M4 = M + 3*vol;
+    thrust::complex<T> *M2 = &M[vol];
+    thrust::complex<T> *M3 = &M[2*vol];
+    thrust::complex<T> *M4 = &M[3*vol];
 
     for (int i = grid.thread_rank(); i < vol/2; i += grid.size()) {
     // Diagonal term
@@ -108,9 +106,9 @@ __global__ void D_ee_inv(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, T c
     thrust::complex<T> const im {0.0, 1.0};
 
     thrust::complex<T> *M1 = M;
-    thrust::complex<T> *M2 = M + vol;
-    thrust::complex<T> *M3 = M + 2*vol;
-    thrust::complex<T> *M4 = M + 3*vol;
+    thrust::complex<T> *M2 = &M[vol];
+    thrust::complex<T> *M3 = &M[2*vol];
+    thrust::complex<T> *M4 = &M[3*vol];
 
     for (int i = grid.thread_rank(); i < vol/2; i += grid.size()) {
 
@@ -283,9 +281,9 @@ __global__ void D_oo_inv(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, T c
     thrust::complex<T> half {0.5, 0.0};
 
     thrust::complex<T> *M1 = M;
-    thrust::complex<T> *M2 = M + vol;
-    thrust::complex<T> *M3 = M + 2*vol;
-    thrust::complex<T> *M4 = M + 3*vol;
+    thrust::complex<T> *M2 = &M[vol];
+    thrust::complex<T> *M3 = &M[2*vol];
+    thrust::complex<T> *M4 = &M[3*vol];
 
     for (int i = grid.thread_rank() + vol/2; i < vol; i += grid.size()) {
 
