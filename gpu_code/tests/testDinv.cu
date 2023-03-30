@@ -32,6 +32,8 @@ __global__ void gpuDotProduct(cpdouble *vecA, cpdouble *vecB, cpdouble *result, 
 		
 int main() {
 
+	srand(time(NULL));
+
 	thrust::complex<double> *M, *dot_res;
 	Spinor<double> *in, *out, *in_copy;
 	Lattice lattice(Nt, Nx);
@@ -55,8 +57,11 @@ int main() {
 	for(int i=0; i<lattice.vol; i++){in[i].setZero(); out[i].setZero();}
 	for(int i=0; i<lattice.vol; i++){
 		auto idx = lattice.eoToVec(i);
-		in[i].val[0] = exp(im*idx[1]*q+im*idx[0]*p);
-		in[i].val[1] = exp(im*idx[1]*q+im*idx[0]*p);
+		//in[i].val[0] = exp(im*idx[1]*q+im*idx[0]*p);
+		//in[i].val[1] = exp(im*idx[1]*q+im*idx[0]*p);
+		in[i].val[0] = (double) rand()/RAND_MAX + im * (double) rand()/RAND_MAX ;
+		in[i].val[1] = (double) rand()/RAND_MAX + im * (double) rand()/RAND_MAX ;
+		cout << in[i].val[0];
 		for(int j=0; j<4; j++) in_copy[i].val[j] = in[i].val[j];
 	}
 
