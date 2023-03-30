@@ -1,6 +1,6 @@
 #pragma once
 
-int constexpr Nt = 6, Nx = 60;
+int constexpr Nt = 64, Nx = 64;
 
 enum class MatrixType {Normal, Dagger};
 

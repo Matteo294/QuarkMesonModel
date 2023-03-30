@@ -55,8 +55,8 @@ int main() {
 	for(int i=0; i<lattice.vol; i++){in[i].setZero(); out[i].setZero();}
 	for(int i=0; i<lattice.vol; i++){
 		auto idx = lattice.eoToVec(i);
-		in[i].val[0] = 0.01*idx[0]*idx[1] * exp(im*idx[1]*q+im*idx[0]*p);
-		in[i].val[1] = 0.01*idx[0]*idx[1] * exp(im*idx[1]*q+im*idx[0]*p);
+		in[i].val[0] = exp(im*idx[1]*q+im*idx[0]*p);
+		in[i].val[1] = exp(im*idx[1]*q+im*idx[0]*p);
 		for(int j=0; j<4; j++) in_copy[i].val[j] = in[i].val[j];
 	}
 
@@ -67,66 +67,8 @@ int main() {
 	cudaOccupancyMaxPotentialBlockSize(&nBlocks_dot, &nThreads_dot, gpuDotProduct);
 	cudaDeviceSynchronize();
 	std::cout << nBlocks_dot << '\t' << nThreads_dot << '\n';
-	nBlocks_dot = 1;
-	nThreads_dot = 1;
-
-	/*int const mySize = 4 * lattice.vol;
-
-	void *dotArgs[] = {(void*) &out, (void*) &out, (void*) &dot_res, (void*) &mySize};
-
-
-
-
-	// ----------------------------------------
-	auto dimGrid = dim3(1, 1, 1);
-	auto dimBlock = dim3(1, 1, 1);
-
-	auto dag = MatrixType::Dagger;
-	void *diagArgs[] = {(void*)&in, (void*)&out, (void*) &Dirac.lattice.vol, (void*) &fermion_mass, (void*) &g_coupling, (void*)&dag, (void*)&M};
-	void *hoppingArgs[] = {(void*)&in, (void*)&out, (void*) &Dirac.lattice.vol, (void*)&dag, (void*)&Dirac.lattice.IUP, (void*)&Dirac.lattice.IDN};
-	Dirac.applyD(diagArgs, hoppingArgs);
-
-	cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
-	cudaDeviceSynchronize();
-	std::cout << *dot_res << std::endl;
-	// --------------------------------------
-
-
-
-
-	// --------------------------------------
-	dimGrid = dim3(1, 1, 1);
-	dimBlock = dim3(128, 1, 1);
-
-	for(int i=0; i<lattice.vol; i++){out[i].setZero();}
-	Dirac.applyD(diagArgs, hoppingArgs);
-
-	cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
-	cudaDeviceSynchronize();
-	std::cout << *dot_res << std::endl;
-	// --------------------------------------
-
-
-
-
-	// -------------------------------------
-	dimGrid = dim3(1, 1, 1);
-	dimBlock = dim3(1024, 1, 1);
-
-	for(int i=0; i<lattice.vol; i++){out[i].setZero();}
-	Dirac.applyD(diagArgs, hoppingArgs);
-
-	cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
-	cudaDeviceSynchronize();
-	std::cout << *dot_res << std::endl;
-	// --------------------------------------
-
-
-
-	*/
-
-
-
+	//nBlocks_dot = 1;
+	//nThreads_dot = 1;
 
 
     // Apply Dinv
@@ -220,6 +162,7 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 	auto dimGrid = dim3(numBlocks, 1, 1);
 	auto dimBlock = dim3(numThreads, 1, 1);
 
+	*dot_res = 0.0;
 	cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
 	cudaDeviceSynchronize();
 	std::cout << "dot prod = " << *dot_res << '\n';
@@ -253,6 +196,8 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 		D.applyD(diagArgs, hoppingArgs);
 		
 		dotArgs[0] = (void*) &p; dotArgs[1] = (void*) &temp;
+
+		*dot_res = 0.0;
 		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
 		cudaDeviceSynchronize();
 	std::cout << "pAp prod = " << *dot_res << '\n';
@@ -268,6 +213,7 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 		}
 
 		dotArgs[0] = (void*) &r; dotArgs[1] = (void*) &r;
+		*dot_res = 0.0;
 		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
 		cudaDeviceSynchronize();
 	std::cout << "dot prod = " << *dot_res << '\n';
@@ -278,6 +224,7 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 			for(int j=0; j<4; j++) p[i].val[j] = r[i].val[j] + beta*p[i].val[j];
 		}
 
+		*dot_res = 0.0;
 		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
 		cudaDeviceSynchronize();
 	std::cout << "dot prod = " << *dot_res << "\n\n";
@@ -298,7 +245,7 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 __global__ void gpuDotProduct(cpdouble *vecA, cpdouble *vecB, cpdouble *result, int size) {
 	cg::thread_block cta = cg::this_thread_block();
 	cg::grid_group grid = cg::this_grid();
-	*result = 0.0;
+	//*result = 0.0;
 	extern __shared__ cpdouble tmp[];
 
 	cpdouble temp_sum = 0.0;
