@@ -67,8 +67,8 @@ int main() {
 	cudaOccupancyMaxPotentialBlockSize(&nBlocks_dot, &nThreads_dot, gpuDotProduct);
 	cudaDeviceSynchronize();
 	std::cout << nBlocks_dot << '\t' << nThreads_dot << '\n';
-	//nBlocks_dot = 1;
-	//nThreads_dot = 1;
+	nBlocks_dot = 1;
+	nThreads_dot = 1;
 
 	/*int const mySize = 4 * lattice.vol;
 
@@ -140,7 +140,7 @@ int main() {
 	Dirac.applyD(diagArgs, hoppingArgs);
     cudaDeviceSynchronize();
 
-	std::ofstream myfile;
+	/*std::ofstream myfile;
 	myfile.open("planewave.csv");
 	myfile << "nt,nx,v1,v2,v3,v4" << std::endl;
 	int i;
@@ -163,7 +163,7 @@ int main() {
 						<< "2nd component \t --> \t measured: " << in[i].val[1] << "\t\t expected :" << w << "\n\n";
 
 		}
-	}
+	}*/
 
 	for(int i=0; i<lattice.vol; i++){out[i].setZero();}
 	useDagger = MatrixType::Normal;
