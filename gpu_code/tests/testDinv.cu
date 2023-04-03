@@ -61,7 +61,7 @@ int main() {
 		//in[i].val[1] = exp(im*idx[1]*q+im*idx[0]*p);
 		in[i].val[0] = (double) rand()/RAND_MAX + im * (double) rand()/RAND_MAX ;
 		in[i].val[1] = (double) rand()/RAND_MAX + im * (double) rand()/RAND_MAX ;
-		std::cout << in[i].val[0];
+		//std::cout << in[i].val[0];
 		for(int j=0; j<4; j++) in_copy[i].val[j] = in[i].val[j];
 	}
 
