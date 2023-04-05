@@ -295,6 +295,73 @@ __global__ void gpuDotProduct(cpdouble *vecA, cpdouble *vecB, cpdouble *result, 
 	}
 }
 
+void getForce(Spinor<double> *inVec, cpdouble *outVec, DiracOP<double>& D, cpdouble *M, Lattice& lattice, int const nBlocks_dot, int const nThreads_dot, int const nBlocks_drift, int const nThreads_drift){
+	
+	int const vol = lattice.vol;
+	Spinor<double> *afterCG, *buf;
+	cudaMallocManaged(&afterCG, sizeof(Spinor<double>) * vol);
+	cudaMallocManaged(&buf, sizeof(Spinor<double>) * vol);
+
+	for(int i=0; i<vol; i++){ afterCG[i].setZero(); buf[i].setZero();}
+
+	CGsolver_solve_D(inVec, buf, D, M, nBlocks_dot, nThreads_dot);
+	
+	MatrixType useDagger = MatrixType::Dagger;
+	void *diagArgs[] = {(void*)&buf, (void*)&afterCG, (void*) &vol, (void*) &fermion_mass, (void*) &g_coupling, (void*)&useDagger, (void*)&M};
+	// hopping should be passed to all the off-diagonal (in spacetime) functions: Deo, Doe
+	void *hoppingArgs[] = {(void*)&buf, (void*) &afterCG, (void*) &lattice.vol, (void*) &useDagger, (void*) &lattice.IUP, (void*) &lattice.IDN};
+	D.applyD(diagArgs, hoppingArgs);
+	cudaDeviceSynchronize();
+
+	// Set up dot product call
+	void *driftArgs[] = {(void*) &inVec, (void*) &afterCG, (void*) &outVec, (void*) &vol};
+	auto dimGrid = dim3(nBlocks_drift, 1, 1);
+	auto dimBlock = dim3(nThreads_drift, 1, 1);
+
+	cudaLaunchCooperativeKernel((void*)&computeDrift, dimGrid, dimBlock, driftArgs, 0, NULL);
+	cudaDeviceSynchronize();
+	
+	cudaFree(afterCG);
+	cudaFree(buf);
+	 
+}
+
+__global__ void computeDrift(Spinor<double> *inVec, Spinor<double> *afterCG, cpdouble *outVec, int const vol){
+
+	cg::thread_block cta = cg::this_thread_block();
+	cg::grid_group grid = cg::this_grid();
+
+	thrust::complex<double> im (0.0, 1.0);
+	double const g_coupling = 0.1;
+
+	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
+		// Drift for sigma
+		outVec[i] = g_coupling * (	      conj(afterCG[i].val[0])*inVec[i].val[0]
+										+ conj(afterCG[i].val[1])*inVec[i].val[1] 
+										- conj(afterCG[i].val[2])*inVec[i].val[2] 
+										+ conj(afterCG[i].val[3])*inVec[i].val[3]);
+
+		// Drift for pi1
+		outVec[i + vol] = im * g_coupling * (	- conj(afterCG[i].val[0])*inVec[i].val[3]
+											 	+ conj(afterCG[i].val[1])*inVec[i].val[2] 
+												+ conj(afterCG[i].val[2])*inVec[i].val[1] 
+												+ conj(afterCG[i].val[3])*inVec[i].val[0]);
+
+		// Drift for pi2
+		outVec[i + 2*vol] = im * g_coupling * (	  im * conj(afterCG[i].val[0])*inVec[i].val[3] 
+												- im * conj(afterCG[i].val[1])*inVec[i].val[2] 
+												- im * conj(afterCG[i].val[2])*inVec[i].val[1] 
+												+ im * conj(afterCG[i].val[3])*inVec[i].val[0]);
+
+		// Drift for pi3
+		outVec[i + 3*vol] = im * g_coupling * (	- conj(afterCG[i].val[0])*inVec[i].val[1]
+												+ conj(afterCG[i].val[1])*inVec[i].val[0]
+												+ conj(afterCG[i].val[2])*inVec[i].val[3]
+												- conj(afterCG[i].val[3])*inVec[i].val[2]);
+
+	}
+
+}
 
 /*
 template <typename T>

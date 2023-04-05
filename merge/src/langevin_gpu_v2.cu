@@ -20,7 +20,7 @@ __device__ void PotentialAndMass(myType *ivec, myType *ovec, int size) {
 		}
 		for (int j = 0; j < nVectorComponents; ++j) {
 			auto const myVal = ivec[j * size + i];
-			ovec[j * size + i] = myVal * (m2 + myLambda * interaction);
+			ovec[j * size + i] += myVal * (m2 + myLambda * interaction);
 		}
 	}
 }
@@ -62,7 +62,8 @@ __device__ void gpuSpMV(int *I, int *J, myType *val, int num_rows,
 }
 
 __global__ void Run(myType *eps, myType ExportTime, myType *field,
-		myType *drift, myType *noise, int size, int *I, int *J, myType *vals, myType *maxDrift) {
+		myType *drift, myType *noise, int size, int *I, int *J, myType *vals, myType *maxDrift,
+		myType *fermionic_contribution) {
 
 	cg::grid_group grid = cg::this_grid();
 	cg::thread_block cta = cg::this_thread_block();
@@ -73,6 +74,7 @@ __global__ void Run(myType *eps, myType ExportTime, myType *field,
 		PotentialAndMass(field, drift, size);
 //		cg::sync(grid);	// BIG difference between synchronising grid and cta...
 		gpuSpMV(I, J, vals, size, field, drift);
+		
 		if (threadIdx.x == 0 && blockIdx.x == 0) maxDrift[0] = 0.0;
 		cg::sync(grid);
 		gpuMaxAbsReduce(drift, maxDrift, size);
@@ -84,3 +86,4 @@ __global__ void Run(myType *eps, myType ExportTime, myType *field,
 /*		if (threadIdx.x == 0 && blockIdx.x == 0)*/ *eps = myEps;	// all threads writing?
 //	}
 }
+

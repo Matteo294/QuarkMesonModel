@@ -10,6 +10,7 @@
 #include <fstream>
 #include <iostream>
 #include <algorithm>
+#include <random>
 
 #include <cooperative_groups.h>
 
@@ -31,15 +32,23 @@ __constant__ myType m2;
 __constant__ myType lambda;
 
 using std::conj;
-using cpdouble = thrust::complex<double>;
 
-cpdouble im {0.0, 1.0};
+thrust::complex<double> im {0.0, 1.0};
 
 
 template <typename T>
-__host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& D, cpdouble *M, int const numBlocks, int const numThreads);
+__host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& D, thrust::complex<double> *M, int const numBlocks, int const numThreads);
 
-__global__ void gpuDotProduct(cpdouble *vecA, cpdouble *vecB, cpdouble *result, int size);
+__global__ void gpuDotProduct(thrust::complex<double> *vecA, thrust::complex<double> *vecB, thrust::complex<double> *result, int size);
+
+__host__ __device__ int EOtoNormal(int n, Lattice& l);
+__host__ __device__ int NormalToEO(int n, Lattice& l);
+
+
+void getForce(thrust::complex<double> *outVec, DiracOP<double>& D, thrust::complex<double> *M, Lattice& lattice, int const nBlocks_dot, int const nThreads_dot, int const nBlocks_drift, int const nThreads_drift);
+
+__global__ void computeDrift(Spinor<double> *inVec, Spinor<double> *afterCG, thrust::complex<double> *outVec, int const vol, Lattice lattice);
+
 
 
 double FindKappa(double const m2, double const lambda0) {
@@ -65,14 +74,22 @@ int main(int argc, char** argv) {
 
 
 	// --------------------------------------------------------------
-	cpdouble *M;
+	thrust::complex<double> *M, *fermionic_contribution;
 	Spinor<double> *in, *out;
 	Lattice lattice(Nt, Nx);
 	DiracOP<double> Dirac(fermion_mass, g_coupling, lattice);
 	// Allocate two vectors and mesons matrix
-	cudaMallocManaged(&M, sizeof(cpdouble) * 4 * lattice.vol);
+	cudaMallocManaged(&M, sizeof(thrust::complex<double>) * 4 * lattice.vol);
 	cudaMallocManaged(&in, sizeof(Spinor<double>) * lattice.vol);
 	cudaMallocManaged(&out, sizeof(Spinor<double>) * lattice.vol);
+	cudaMallocManaged(&fermionic_contribution, sizeof(thrust::complex<double>) * 4 * lattice.vol);
+
+	int nBlocks_dot = 0, nBlocks_drift = 0;
+	int nThreads_dot = 0, nThreads_drift = 0;
+	cudaOccupancyMaxPotentialBlockSize(&nBlocks_dot, &nThreads_dot, gpuDotProduct);
+	cudaDeviceSynchronize();
+	cudaOccupancyMaxPotentialBlockSize(&nBlocks_drift, &nThreads_drift, computeDrift);
+	cudaDeviceSynchronize();
 
 	MatrixType useDagger = MatrixType::Normal;
 	// diagArgs should be passed to all the diagonal (in spacetime) functions: Doo, Dee, Dooinv, Deeinv
@@ -85,13 +102,12 @@ int main(int argc, char** argv) {
 	cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, gpuDotProduct);
 	cudaDeviceSynchronize();
 
-	std::ofstream datafile;
+	std::ofstream datafile, tracefile;
 	datafile.open("data.csv");
 	datafile << "f0c0,f0c1,f1c0,f1c1" << "\n";
+	tracefile.open("traces.csv");
+	tracefile << "tr,sigma" << "\n";
 	// --------------------------------------------------------------
-
-
-
 
 
 	if constexpr(nDim > 3)
@@ -242,7 +258,8 @@ int main(int argc, char** argv) {
 		(void*)&(lap.I),
 		(void*)&(lap.J),
 		(void*)&(lap.cval),
-		(void*)&maxDrift};
+		(void*)&maxDrift,
+		(void*)&fermionic_contribution};
 
 
 	std::cout << std::endl;		// force a flush so we can see something on the screen before
@@ -311,17 +328,39 @@ int main(int argc, char** argv) {
 	std::vector<myType> hostLattice(N*nVectorComponents);
 	elapsedLangevinTime = nMeasurements * ExportTime;
 	auto timeSliceFile = std::ofstream(timeSliceFileName);
+
+	thrust::complex<double> tr; // trace D^-1
+	std::vector<thrust::complex<double>> traces;
+
 	auto timerStart = std::chrono::high_resolution_clock::now();
 	while (elapsedLangevinTime < MaxLangevinTime) {
 		myType t = 0.0;
 		while (t < ExportTime) {
 			cn();
+			
+			// ------------------------------------------------------------------------------------------------
+			for(int i=0; i<lattice.vol; i++){
+				M[EOtoNormal(i, lattice)] = ivec[i] + im * ivec[3*lattice.vol+i];
+				M[EOtoNormal(i + 3*lattice.vol, lattice)] = ivec[i] - im * ivec[3*lattice.vol+i];
+				M[EOtoNormal(i + lattice.vol, lattice)] = im * (ivec[lattice.vol+i] - im * ivec[2*lattice.vol+i]);
+				M[EOtoNormal(i + 2*lattice.vol, lattice)] = im * (ivec[lattice.vol+i] + im * ivec[2*lattice.vol+i]);
+				fermionic_contribution[i] = 0.0;
+				fermionic_contribution[i + lattice.vol] = 0.0;
+				fermionic_contribution[i + 2 * lattice.vol] = 0.0;
+				fermionic_contribution[i + 3 * lattice.vol] = 0.0;
+			}
+			getForce(fermionic_contribution, Dirac, M, lattice, nBlocks_dot, nThreads_dot, nBlocks_drift, nThreads_drift);
+			std::cout << "force: " << fermionic_contribution[0] << " " << fermionic_contribution[lattice.vol] << " " << fermionic_contribution[2*lattice.vol] << " " << fermionic_contribution[3*lattice.vol] << "\n";
+			for(int i=0; i<4*lattice.vol; i++){drift[i] = -fermionic_contribution[i].real();}
+			// ------------------------------------------------------------------------------------------------
+			
 			kli.Run(kAll, kli_sMem);
 			cudaDeviceSynchronize();
 			cudaMemcpy(h_eps, eps, sizeof(myType), cudaMemcpyDeviceToHost);
 			cudaDeviceSynchronize();
 			t += *h_eps;
 		}
+		
 		elapsedLangevinTime += t;
 
 //		cudaMemPrefetchAsync(ivec.data(), N*nVectorComponents, cudaCpuDeviceId);
@@ -329,27 +368,19 @@ int main(int argc, char** argv) {
 				kMagnetisation, kli_sMem, NULL);
 		cudaDeviceSynchronize();
 
+
 		kTimeSlices.Run(timeSlicesArgs, kli_sMem);
 		cudaDeviceSynchronize();
-
-
 
 
 		// -----------------------------------------------------------------------------
 		// Set fields values
 		for(int i=0; i<lattice.vol; i++){
-			//M[i] = sigma + im * pi[2];
-			//M[i + 3*lattice.vol] = sigma - im * pi[2];
-			//M[i + lattice.vol] = im * (pi[0] - im * pi[1]);
-			
-			
-			M[i] = ivec[i] + im * ivec[3*lattice.vol+i];
-			M[i + 3*lattice.vol] = ivec[i] - im * ivec[3*lattice.vol+i];
-			M[i + lattice.vol] = im * (ivec[lattice.vol+i] - im * ivec[2*lattice.vol+i]);
-			M[i + 2*lattice.vol] = im * (ivec[lattice.vol+i] + im * ivec[2*lattice.vol+i]);
-
+			M[EOtoNormal(i, lattice)] = ivec[i] + im * ivec[3*lattice.vol+i];
+			M[EOtoNormal(i + 3*lattice.vol, lattice)] = ivec[i] - im * ivec[3*lattice.vol+i];
+			M[EOtoNormal(i + lattice.vol, lattice)] = im * (ivec[lattice.vol+i] - im * ivec[2*lattice.vol+i]);
+			M[EOtoNormal(i + 2*lattice.vol, lattice)] = im * (ivec[lattice.vol+i] + im * ivec[2*lattice.vol+i]);
 		}
-		
 		for(int i=0; i<lattice.vol; i++){in[i].setZero(); out[i].setZero();}
 		// set source
 		in[0].val[0] = 1.0;
@@ -369,7 +400,7 @@ int main(int argc, char** argv) {
 		Dirac.applyD(diagArgs, hoppingArgs);
 
 
-		cpdouble corr = 0.0;
+		thrust::complex<double> corr = 0.0;
 		for(int nt=0; nt<Nt; nt++){
 			corr = 0.0;
 			for(int nx=0; nx<Nx; nx++){
@@ -400,6 +431,11 @@ int main(int argc, char** argv) {
 			sum2 += e*e;
 		}
 		std::cout << std::sqrt(sum2) / N << std::endl;
+
+		tr = 0.0;
+		for(int i=0; i<lattice.vol; i++) tr += fermionic_contribution[i];
+		tr /= g_coupling;
+		tracefile << tr/(lattice.Nt*lattice.Nx) << "," << avg[0] / N << "\n";
 
 		nMeasurements++;
 		
@@ -449,6 +485,7 @@ int main(int argc, char** argv) {
 	cudaFree(M);
 	cudaFree(in);
 	cudaFree(out);
+	cudaFree(&fermionic_contribution);
 	// ---------------------------------
 
 	return 0;
@@ -463,13 +500,13 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 	Spinor<T> *r, *p, *temp, *temp2; // allocate space ?? 
 	thrust::complex<T> alpha; // allocate space ??
 	T beta, rmodsq;
-	cpdouble *dot_res;
+	thrust::complex<double> *dot_res;
 
 	cudaMallocManaged(&r, sizeof(Spinor<T>) * vol);
 	cudaMallocManaged(&p, sizeof(Spinor<T>) * vol);
 	cudaMallocManaged(&temp, sizeof(Spinor<T>) * vol);
 	cudaMallocManaged(&temp2, sizeof(Spinor<T>) * vol);
-	cudaMallocManaged(&dot_res, sizeof(cpdouble));
+	cudaMallocManaged(&dot_res, sizeof(thrust::complex<double>));
 
 	for(int i=0; i<vol; i++) {
 		outVec[i] = Spinor<T> ();
@@ -485,11 +522,9 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 	auto dimBlock = dim3(numThreads, 1, 1);
 
 	*dot_res = 0.0;
-	cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
+	cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(thrust::complex<double>) * (32), NULL);
 	cudaDeviceSynchronize();
-	std::cout << "dot prod = " << *dot_res << '\n';
 	rmodsq = dot_res->real();
-	std::cout << *dot_res << " " << r[0].val[0] << "\n";
 
 	MatrixType dag = MatrixType::Normal;
 
@@ -520,9 +555,8 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 		dotArgs[0] = (void*) &p; dotArgs[1] = (void*) &temp;
 
 		*dot_res = 0.0;
-		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
+		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(thrust::complex<double>) * (32), NULL);
 		cudaDeviceSynchronize();
-	std::cout << "pAp prod = " << *dot_res << '\n';
 		alpha = rmodsq / *dot_res; 
 
 		// x = x + alpha p
@@ -536,9 +570,8 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 
 		dotArgs[0] = (void*) &r; dotArgs[1] = (void*) &r;
 		*dot_res = 0.0;
-		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
+		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(thrust::complex<double>) * (32), NULL);
 		cudaDeviceSynchronize();
-	std::cout << "dot prod = " << *dot_res << '\n';
 		beta = abs(*dot_res) / rmodsq;
 
 		// p = r - beta p
@@ -547,14 +580,13 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 		}
 
 		*dot_res = 0.0;
-		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(cpdouble) * (32), NULL);
+		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid, dimBlock, dotArgs, sizeof(thrust::complex<double>) * (32), NULL);
 		cudaDeviceSynchronize();
-	std::cout << "dot prod = " << *dot_res << "\n\n";
 		rmodsq = abs(*dot_res);
 	}
 
-	if (k < IterMax) std::cout << "Convergence reached in " << k-1 << " steps \n";
-	else std::cout << "Max. number of iterations reached (" << IterMax << "), final err: " << sqrt(rmodsq) << "\n";
+	//if (k < IterMax) std::cout << "Convergence reached in " << k-1 << " steps \n";
+	//else std::cout << "Max. number of iterations reached (" << IterMax << "), final err: " << sqrt(rmodsq) << "\n";
 
 	cudaFree(r);
 	cudaFree(p);
@@ -564,20 +596,20 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 }
 
 
-__global__ void gpuDotProduct(cpdouble *vecA, cpdouble *vecB, cpdouble *result, int size) {
+__global__ void gpuDotProduct(thrust::complex<double> *vecA, thrust::complex<double> *vecB, thrust::complex<double> *result, int size) {
 	cg::thread_block cta = cg::this_thread_block();
 	cg::grid_group grid = cg::this_grid();
 	//*result = 0.0;
-	extern __shared__ cpdouble tmp[];
+	extern __shared__ thrust::complex<double> tmp[];
 
-	cpdouble temp_sum = 0.0;
+	thrust::complex<double> temp_sum = 0.0;
 	for (int i = grid.thread_rank(); i < size; i += grid.size()) {
 		temp_sum += conj(vecA[i]) * vecB[i];
 	}
 
 	cg::thread_block_tile<32> tile32 = cg::tiled_partition<32>(cta);
 
-	temp_sum = cg::reduce(tile32, temp_sum, cg::plus<cpdouble>());
+	temp_sum = cg::reduce(tile32, temp_sum, cg::plus<thrust::complex<double>>());
 
 	if (tile32.thread_rank() == 0) {
 		tmp[tile32.meta_group_rank()] = temp_sum;
@@ -587,11 +619,100 @@ __global__ void gpuDotProduct(cpdouble *vecA, cpdouble *vecB, cpdouble *result, 
 
 	if (tile32.meta_group_rank() == 0) {
 		temp_sum = tile32.thread_rank() < tile32.meta_group_size() ? tmp[tile32.thread_rank()] : 0.0;
-		temp_sum = cg::reduce(tile32, temp_sum, cg::plus<cpdouble>());
+		temp_sum = cg::reduce(tile32, temp_sum, cg::plus<thrust::complex<double>>());
 
 		if (tile32.thread_rank() == 0) {
 		atomicAdd(reinterpret_cast<double*>(result), temp_sum.real());
 		atomicAdd(reinterpret_cast<double*>(result)+1, temp_sum.imag());
 		}
 	}
+}
+
+
+void getForce(thrust::complex<double> *outVec, DiracOP<double>& D, thrust::complex<double> *M, Lattice& lattice, int const nBlocks_dot, int const nThreads_dot, int const nBlocks_drift, int const nThreads_drift){
+	
+	int const vol = lattice.vol;
+	Spinor<double> *afterCG, *buf, *vec;
+	cudaMallocManaged(&afterCG, sizeof(Spinor<double>) * vol);
+	cudaMallocManaged(&buf, sizeof(Spinor<double>) * vol);
+	cudaMallocManaged(&vec, sizeof(Spinor<double>) * vol);
+
+	std::random_device rd; 
+	std::mt19937 gen(rd()); 
+	std::normal_distribution<float> dist(0, 1.0); 
+	for(int i=0; i<vol; i++){ 
+		afterCG[i].setZero(); 
+		buf[i].setZero();
+		for(int j=0; j<4; j++) vec[i].val[j] = dist(gen);
+	}
+
+	CGsolver_solve_D(vec, buf, D, M, nBlocks_dot, nThreads_dot);
+	
+	MatrixType useDagger = MatrixType::Dagger;
+	void *diagArgs[] = {(void*)&buf, (void*)&afterCG, (void*) &vol, (void*) &fermion_mass, (void*) &g_coupling, (void*)&useDagger, (void*)&M};
+	// hopping should be passed to all the off-diagonal (in spacetime) functions: Deo, Doe
+	void *hoppingArgs[] = {(void*)&buf, (void*) &afterCG, (void*) &lattice.vol, (void*) &useDagger, (void*) &lattice.IUP, (void*) &lattice.IDN};
+	D.applyD(diagArgs, hoppingArgs);
+	cudaDeviceSynchronize();
+
+	// Set up dot product call
+	void *driftArgs[] = {(void*) &vec, (void*) &afterCG, (void*) &outVec, (void*) &vol, (void*) &lattice};
+	auto dimGrid = dim3(nBlocks_drift, 1, 1);
+	auto dimBlock = dim3(nThreads_drift, 1, 1);
+
+	cudaLaunchCooperativeKernel((void*)&computeDrift, dimGrid, dimBlock, driftArgs, 0, NULL);
+	cudaDeviceSynchronize();
+	
+	cudaFree(afterCG);
+	cudaFree(buf);
+	cudaFree(vec);
+	 
+}
+
+__global__ void computeDrift(Spinor<double> *inVec, Spinor<double> *afterCG, thrust::complex<double> *outVec, int const vol, Lattice lattice){
+
+	cg::thread_block cta = cg::this_thread_block();
+	cg::grid_group grid = cg::this_grid();
+
+	thrust::complex<double> im (0.0, 1.0);
+	double const g_coupling = 0.1;
+
+	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
+		// Drift for sigma
+		outVec[EOtoNormal(i, lattice)] = g_coupling * (	      conj(afterCG[i].val[0])*inVec[i].val[0]
+										+ conj(afterCG[i].val[1])*inVec[i].val[1] 
+										+ conj(afterCG[i].val[2])*inVec[i].val[2] 
+										+ conj(afterCG[i].val[3])*inVec[i].val[3]);
+
+		// Drift for pi1
+		outVec[EOtoNormal(i + vol, lattice)] = g_coupling * (	- conj(afterCG[i].val[0])*inVec[i].val[3]
+											 	+ conj(afterCG[i].val[1])*inVec[i].val[2] 
+												- conj(afterCG[i].val[2])*inVec[i].val[1] 
+												+ conj(afterCG[i].val[3])*inVec[i].val[0]);
+
+		// Drift for pi2
+		outVec[EOtoNormal(i + 2*vol, lattice)] = g_coupling * (	  im * conj(afterCG[i].val[0])*inVec[i].val[3] 
+												- im * conj(afterCG[i].val[1])*inVec[i].val[2] 
+												- im * conj(afterCG[i].val[2])*inVec[i].val[1] 
+												+ im * conj(afterCG[i].val[3])*inVec[i].val[0]);
+
+		// Drift for pi3
+		outVec[EOtoNormal(i + 3*vol, lattice)] = g_coupling * (	- conj(afterCG[i].val[0])*inVec[i].val[1]
+												+ conj(afterCG[i].val[1])*inVec[i].val[0]
+												+ conj(afterCG[i].val[2])*inVec[i].val[3]
+												- conj(afterCG[i].val[3])*inVec[i].val[2]);
+
+	}
+
+}
+
+__host__ __device__ int EOtoNormal(int n, Lattice& l){
+	my2dArray idx = l.eoToVec(n);
+	return idx[1] + l.Nx*idx[0];
+}
+
+__host__ __device__  int NormalToEO(int n, Lattice& l){
+	int nt = n / l.Nx;
+	int nx = n % Nx;
+	return l.toEOflat(nt, nx);
 }

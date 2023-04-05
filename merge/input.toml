@@ -1,6 +1,6 @@
 [physics]
 useMass = true
-mass = 0.8
+mass = 1.0
 g = 0.5
 kappa = 0.26
 lambda = 0.02
