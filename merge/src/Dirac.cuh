@@ -24,9 +24,9 @@ class DiracOP {
 		//__host__ void applyDhat(Spinor<T> *inVec, Spinor<T> *outVec, MesonsMat<T> *M, MatrixType const useDagger);	   
 
 		Lattice& lattice;
+		T const fermion_mass;
 	private:
 		Spinor<T> *temp, *temp2;
-		T const fermion_mass;
 		T const g_coupling;
 
 };

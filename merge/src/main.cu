@@ -11,6 +11,7 @@
 #include <iostream>
 #include <algorithm>
 #include <random>
+#include <string>
 
 #include <cooperative_groups.h>
 
@@ -47,7 +48,7 @@ __host__ __device__ int NormalToEO(int n, Lattice& l);
 
 void getForce(thrust::complex<double> *outVec, DiracOP<double>& D, thrust::complex<double> *M, Lattice& lattice, int const nBlocks_dot, int const nThreads_dot, int const nBlocks_drift, int const nThreads_drift);
 
-__global__ void computeDrift(Spinor<double> *inVec, Spinor<double> *afterCG, thrust::complex<double> *outVec, int const vol, Lattice lattice);
+__global__ void computeDrift(Spinor<double> *inVec, Spinor<double> *afterCG, thrust::complex<double> *outVec, int const vol);
 
 
 
@@ -74,6 +75,8 @@ int main(int argc, char** argv) {
 
 
 	// --------------------------------------------------------------
+	double const fermion_mass = std::stod(argv[2]);
+	
 	thrust::complex<double> *M, *fermionic_contribution;
 	Spinor<double> *in, *out;
 	Lattice lattice(Nt, Nx);
@@ -105,7 +108,9 @@ int main(int argc, char** argv) {
 	std::ofstream datafile, tracefile;
 	datafile.open("data.csv");
 	datafile << "f0c0,f0c1,f1c0,f1c1" << "\n";
-	tracefile.open("traces.csv");
+	std::string fname;
+	fname.append("traces"); fname.append(argv[2]); fname.append(".csv");
+	tracefile.open(fname);
 	tracefile << "tr,sigma" << "\n";
 	// --------------------------------------------------------------
 
@@ -340,10 +345,10 @@ int main(int argc, char** argv) {
 			
 			// ------------------------------------------------------------------------------------------------
 			for(int i=0; i<lattice.vol; i++){
-				M[EOtoNormal(i, lattice)] = ivec[i] + im * ivec[3*lattice.vol+i];
-				M[EOtoNormal(i + 3*lattice.vol, lattice)] = ivec[i] - im * ivec[3*lattice.vol+i];
-				M[EOtoNormal(i + lattice.vol, lattice)] = im * (ivec[lattice.vol+i] - im * ivec[2*lattice.vol+i]);
-				M[EOtoNormal(i + 2*lattice.vol, lattice)] = im * (ivec[lattice.vol+i] + im * ivec[2*lattice.vol+i]);
+				M[NormalToEO(i, lattice)] = ivec[i] + im * ivec[3*lattice.vol+i];
+				M[NormalToEO(i + 3*lattice.vol, lattice)] = ivec[i] - im * ivec[3*lattice.vol+i];
+				M[NormalToEO(i + lattice.vol, lattice)] = im * (ivec[lattice.vol+i] - im * ivec[2*lattice.vol+i]);
+				M[NormalToEO(i + 2*lattice.vol, lattice)] = im * (ivec[lattice.vol+i] + im * ivec[2*lattice.vol+i]);
 				fermionic_contribution[i] = 0.0;
 				fermionic_contribution[i + lattice.vol] = 0.0;
 				fermionic_contribution[i + 2 * lattice.vol] = 0.0;
@@ -351,7 +356,7 @@ int main(int argc, char** argv) {
 			}
 			getForce(fermionic_contribution, Dirac, M, lattice, nBlocks_dot, nThreads_dot, nBlocks_drift, nThreads_drift);
 			std::cout << "force: " << fermionic_contribution[0] << " " << fermionic_contribution[lattice.vol] << " " << fermionic_contribution[2*lattice.vol] << " " << fermionic_contribution[3*lattice.vol] << "\n";
-			for(int i=0; i<4*lattice.vol; i++){drift[i] = -fermionic_contribution[i].real();}
+			for(int i=0; i<4*lattice.vol; i++){drift[i] = fermionic_contribution[i].real();}
 			// ------------------------------------------------------------------------------------------------
 			
 			kli.Run(kAll, kli_sMem);
@@ -376,10 +381,10 @@ int main(int argc, char** argv) {
 		// -----------------------------------------------------------------------------
 		// Set fields values
 		for(int i=0; i<lattice.vol; i++){
-			M[EOtoNormal(i, lattice)] = ivec[i] + im * ivec[3*lattice.vol+i];
-			M[EOtoNormal(i + 3*lattice.vol, lattice)] = ivec[i] - im * ivec[3*lattice.vol+i];
-			M[EOtoNormal(i + lattice.vol, lattice)] = im * (ivec[lattice.vol+i] - im * ivec[2*lattice.vol+i]);
-			M[EOtoNormal(i + 2*lattice.vol, lattice)] = im * (ivec[lattice.vol+i] + im * ivec[2*lattice.vol+i]);
+			M[NormalToEO(i, lattice)] = ivec[i] + im * ivec[3*lattice.vol+i];
+			M[NormalToEO(i + 3*lattice.vol, lattice)] = ivec[i] - im * ivec[3*lattice.vol+i];
+			M[NormalToEO(i + lattice.vol, lattice)] = im * (ivec[lattice.vol+i] - im * ivec[2*lattice.vol+i]);
+			M[NormalToEO(i + 2*lattice.vol, lattice)] = im * (ivec[lattice.vol+i] + im * ivec[2*lattice.vol+i]);
 		}
 		for(int i=0; i<lattice.vol; i++){in[i].setZero(); out[i].setZero();}
 		// set source
@@ -435,7 +440,8 @@ int main(int argc, char** argv) {
 		tr = 0.0;
 		for(int i=0; i<lattice.vol; i++) tr += fermionic_contribution[i];
 		tr /= g_coupling;
-		tracefile << tr/(lattice.Nt*lattice.Nx) << "," << avg[0] / N << "\n";
+		tracefile << tr.real()/(lattice.Nt*lattice.Nx) << "," << avg[0] /(lattice.Nt*lattice.Nx) << "\n";
+		std::cout << "Trace: " << tr.real()/(lattice.Nt*lattice.Nx) << "\n";
 
 		nMeasurements++;
 		
@@ -460,6 +466,7 @@ int main(int argc, char** argv) {
 		hdf.CreateGroup(ss.str());
 		hdf.WriteData(ss.str(), "fields", hostLattice);
 		hdf.Close();
+		std::cout << "\n";
 	}
 	auto timerStop  = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(timerStop - timerStart);
@@ -528,7 +535,7 @@ __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& 
 
 	MatrixType dag = MatrixType::Normal;
 
-	void *diagArgs[] = {(void*)&p, (void*)&temp2, (void*) &D.lattice.vol, (void*) &fermion_mass, (void*) &g_coupling, (void*)&dag, (void*)&M};
+	void *diagArgs[] = {(void*)&p, (void*)&temp2, (void*) &D.lattice.vol, (void*) &D.fermion_mass, (void*) &g_coupling, (void*)&dag, (void*)&M};
 	void *hoppingArgs[] = {(void*)&p, (void*)&temp2, (void*) &D.lattice.vol, (void*)&dag, (void*)&D.lattice.IUP, (void*)&D.lattice.IDN};
 
 	int k;
@@ -633,9 +640,11 @@ void getForce(thrust::complex<double> *outVec, DiracOP<double>& D, thrust::compl
 	
 	int const vol = lattice.vol;
 	Spinor<double> *afterCG, *buf, *vec;
+	thrust::complex<double> *eobuf;
 	cudaMallocManaged(&afterCG, sizeof(Spinor<double>) * vol);
 	cudaMallocManaged(&buf, sizeof(Spinor<double>) * vol);
 	cudaMallocManaged(&vec, sizeof(Spinor<double>) * vol);
+	cudaMallocManaged(&eobuf, sizeof(thrust::complex<double>) * 4 * vol);
 
 	std::random_device rd; 
 	std::mt19937 gen(rd()); 
@@ -649,27 +658,30 @@ void getForce(thrust::complex<double> *outVec, DiracOP<double>& D, thrust::compl
 	CGsolver_solve_D(vec, buf, D, M, nBlocks_dot, nThreads_dot);
 	
 	MatrixType useDagger = MatrixType::Dagger;
-	void *diagArgs[] = {(void*)&buf, (void*)&afterCG, (void*) &vol, (void*) &fermion_mass, (void*) &g_coupling, (void*)&useDagger, (void*)&M};
+	void *diagArgs[] = {(void*)&buf, (void*)&afterCG, (void*) &vol, (void*) &D.fermion_mass, (void*) &g_coupling, (void*)&useDagger, (void*)&M};
 	// hopping should be passed to all the off-diagonal (in spacetime) functions: Deo, Doe
 	void *hoppingArgs[] = {(void*)&buf, (void*) &afterCG, (void*) &lattice.vol, (void*) &useDagger, (void*) &lattice.IUP, (void*) &lattice.IDN};
 	D.applyD(diagArgs, hoppingArgs);
 	cudaDeviceSynchronize();
 
 	// Set up dot product call
-	void *driftArgs[] = {(void*) &vec, (void*) &afterCG, (void*) &outVec, (void*) &vol, (void*) &lattice};
+	void *driftArgs[] = {(void*) &vec, (void*) &afterCG, (void*) &eobuf, (void*) &vol};
 	auto dimGrid = dim3(nBlocks_drift, 1, 1);
 	auto dimBlock = dim3(nThreads_drift, 1, 1);
 
 	cudaLaunchCooperativeKernel((void*)&computeDrift, dimGrid, dimBlock, driftArgs, 0, NULL);
 	cudaDeviceSynchronize();
 	
+	for(int i=0; i<4*vol; i++) outVec[i] = eobuf[NormalToEO(i, lattice)];
+
 	cudaFree(afterCG);
 	cudaFree(buf);
 	cudaFree(vec);
+	cudaFree(eobuf);
 	 
 }
 
-__global__ void computeDrift(Spinor<double> *inVec, Spinor<double> *afterCG, thrust::complex<double> *outVec, int const vol, Lattice lattice){
+__global__ void computeDrift(Spinor<double> *inVec, Spinor<double> *afterCG, thrust::complex<double> *outVec, int const vol){
 
 	cg::thread_block cta = cg::this_thread_block();
 	cg::grid_group grid = cg::this_grid();
@@ -679,25 +691,25 @@ __global__ void computeDrift(Spinor<double> *inVec, Spinor<double> *afterCG, thr
 
 	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
 		// Drift for sigma
-		outVec[EOtoNormal(i, lattice)] = g_coupling * (	      conj(afterCG[i].val[0])*inVec[i].val[0]
+		outVec[i] = g_coupling * (	      conj(afterCG[i].val[0])*inVec[i].val[0]
 										+ conj(afterCG[i].val[1])*inVec[i].val[1] 
 										+ conj(afterCG[i].val[2])*inVec[i].val[2] 
 										+ conj(afterCG[i].val[3])*inVec[i].val[3]);
 
 		// Drift for pi1
-		outVec[EOtoNormal(i + vol, lattice)] = g_coupling * (	- conj(afterCG[i].val[0])*inVec[i].val[3]
+		outVec[i + vol] = g_coupling * (	- conj(afterCG[i].val[0])*inVec[i].val[3]
 											 	+ conj(afterCG[i].val[1])*inVec[i].val[2] 
 												- conj(afterCG[i].val[2])*inVec[i].val[1] 
 												+ conj(afterCG[i].val[3])*inVec[i].val[0]);
 
 		// Drift for pi2
-		outVec[EOtoNormal(i + 2*vol, lattice)] = g_coupling * (	  im * conj(afterCG[i].val[0])*inVec[i].val[3] 
+		outVec[i + 2*vol] = g_coupling * (	  im * conj(afterCG[i].val[0])*inVec[i].val[3] 
 												- im * conj(afterCG[i].val[1])*inVec[i].val[2] 
 												- im * conj(afterCG[i].val[2])*inVec[i].val[1] 
 												+ im * conj(afterCG[i].val[3])*inVec[i].val[0]);
 
 		// Drift for pi3
-		outVec[EOtoNormal(i + 3*vol, lattice)] = g_coupling * (	- conj(afterCG[i].val[0])*inVec[i].val[1]
+		outVec[i + 3*vol] = g_coupling * (	- conj(afterCG[i].val[0])*inVec[i].val[1]
 												+ conj(afterCG[i].val[1])*inVec[i].val[0]
 												+ conj(afterCG[i].val[2])*inVec[i].val[3]
 												- conj(afterCG[i].val[3])*inVec[i].val[2]);
