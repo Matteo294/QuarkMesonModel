@@ -5,8 +5,8 @@
 #include <cassert>
 
 
-int constexpr Nt = 32;
-int constexpr Nx = 128;
+int constexpr Nt = 4;
+int constexpr Nx = 256;
 
 enum class MatrixType {Normal, Dagger};
 
@@ -32,7 +32,7 @@ using dimArray = std::array<int, nDim>;
 //dimArray constexpr Sizes = {128, 128};//, 12, 12};
 //dimArray constexpr Sizes = {256, 256};//, 12, 12};
 
-dimArray constexpr Sizes = {32, 128};
+dimArray constexpr Sizes = {4, 256};
 
 /*
 int constexpr nDim = 4;

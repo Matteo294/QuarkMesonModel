@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --ntasks=1
-#SBATCH --time=02:00:00
+#SBATCH --time=10:00:00
 #SBATCH --mem=1000mb
 #SBATCH -J test
 #SBATCH --partition=gpu_8		# dev_gpu4, gpu_4, or gpu_8
@@ -12,5 +12,5 @@ module load devel/cuda/11.4
 module load lib/hdf5/1.12.0-gnu-8.3
 
 #without 'exec' here, the signal is not passed to our executable /=
-exec ./out input.toml 0.1
+exec ./out input.toml 1.0
 

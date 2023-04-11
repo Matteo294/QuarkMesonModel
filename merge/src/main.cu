@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
 	std::string fname;
 	fname.append("traces"); fname.append(argv[2]); fname.append(".csv");
 	tracefile.open(fname);
-	tracefile << "tr,sigma" << "\n";
+	tracefile << "tr,sigma,pi1,pi2,pi3" << "\n";
 	// --------------------------------------------------------------
 
 
@@ -281,6 +281,24 @@ int main(int argc, char** argv) {
 		myType t = 0.0;
 		while (t < ExportTime) {
 			cn();
+
+			// ------------------------------------------------------------------------------------------------
+			for(int i=0; i<lattice.vol; i++){
+				M[NormalToEO(i, lattice)] = ivec[i] + im * ivec[3*lattice.vol+i];
+				M[NormalToEO(i + 3*lattice.vol, lattice)] = ivec[i] - im * ivec[3*lattice.vol+i];
+				M[NormalToEO(i + lattice.vol, lattice)] = im * (ivec[lattice.vol+i] - im * ivec[2*lattice.vol+i]);
+				M[NormalToEO(i + 2*lattice.vol, lattice)] = im * (ivec[lattice.vol+i] + im * ivec[2*lattice.vol+i]);
+				fermionic_contribution[i] = 0.0;
+				fermionic_contribution[i + lattice.vol] = 0.0;
+				fermionic_contribution[i + 2 * lattice.vol] = 0.0;
+				fermionic_contribution[i + 3 * lattice.vol] = 0.0;
+			}
+			getForce(fermionic_contribution, Dirac, M, lattice, nBlocks_dot, nThreads_dot, nBlocks_drift, nThreads_drift);
+			std::cout << "force: " << fermionic_contribution[0] << " " << fermionic_contribution[lattice.vol] << " " << fermionic_contribution[2*lattice.vol] << " " << fermionic_contribution[3*lattice.vol] << "\n";
+			for(int i=0; i<4*lattice.vol; i++){drift[i] = fermionic_contribution[i].real();}
+			// ------------------------------------------------------------------------------------------------
+
+
 			kli.Run(kAll, kli_sMem);
 			cudaDeviceSynchronize();
 			cudaMemcpy(h_eps, eps, sizeof(myType), cudaMemcpyDeviceToHost);
@@ -309,6 +327,24 @@ int main(int argc, char** argv) {
 		myType t = 0.0;
 		while (t < ExportTime) {
 			cn();
+
+			// ------------------------------------------------------------------------------------------------
+			for(int i=0; i<lattice.vol; i++){
+				M[NormalToEO(i, lattice)] = ivec[i] + im * ivec[3*lattice.vol+i];
+				M[NormalToEO(i + 3*lattice.vol, lattice)] = ivec[i] - im * ivec[3*lattice.vol+i];
+				M[NormalToEO(i + lattice.vol, lattice)] = im * (ivec[lattice.vol+i] - im * ivec[2*lattice.vol+i]);
+				M[NormalToEO(i + 2*lattice.vol, lattice)] = im * (ivec[lattice.vol+i] + im * ivec[2*lattice.vol+i]);
+				fermionic_contribution[i] = 0.0;
+				fermionic_contribution[i + lattice.vol] = 0.0;
+				fermionic_contribution[i + 2 * lattice.vol] = 0.0;
+				fermionic_contribution[i + 3 * lattice.vol] = 0.0;
+			}
+			getForce(fermionic_contribution, Dirac, M, lattice, nBlocks_dot, nThreads_dot, nBlocks_drift, nThreads_drift);
+			std::cout << "force: " << fermionic_contribution[0] << " " << fermionic_contribution[lattice.vol] << " " << fermionic_contribution[2*lattice.vol] << " " << fermionic_contribution[3*lattice.vol] << "\n";
+			for(int i=0; i<4*lattice.vol; i++){drift[i] = fermionic_contribution[i].real();}
+			// ------------------------------------------------------------------------------------------------
+
+			
 			kli.Run(kAll, kli_sMem);
 			cudaDeviceSynchronize();
 			cudaMemcpy(h_eps, eps, sizeof(myType), cudaMemcpyDeviceToHost);
@@ -440,7 +476,11 @@ int main(int argc, char** argv) {
 		tr = 0.0;
 		for(int i=0; i<lattice.vol; i++) tr += fermionic_contribution[i];
 		tr /= g_coupling;
-		tracefile << tr.real()/(lattice.Nt*lattice.Nx) << "," << avg[0] /(lattice.Nt*lattice.Nx) << "\n";
+		tracefile 	<< 	tr.real()/(lattice.Nt*lattice.Nx) 	<< ","
+					<< 	avg[0] / (lattice.Nt*lattice.Nx) 	<< ","
+					<< 	avg[1] / (lattice.Nt*lattice.Nx) 	<< "," 
+					<< 	avg[2] / (lattice.Nt*lattice.Nx) 	<< ","
+					<< 	avg[3] / (lattice.Nt*lattice.Nx) 	<< "\n";
 		std::cout << "Trace: " << tr.real()/(lattice.Nt*lattice.Nx) << "\n";
 
 		nMeasurements++;
