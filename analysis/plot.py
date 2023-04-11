@@ -1,7 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt 
 
-# Mass plot
+# Mass plot classical
 mq0 = 	 [5.0,		2.0, 		1.0,		0.5,		0.2]
 mq = 	 [1.7917594,	1.08306,	0.6639, 	0.35921,	0.16518]		
 mq_dev = [1e-17,	1e-5,		0.0001,    	1e-5,		1e-5]
@@ -10,6 +10,35 @@ plt.errorbar([np.log(1+m) for m in mq0], mq, yerr=mq_dev, fmt='.-', markersize=1
 plt.xlabel("mq0")
 plt.ylabel("mq")
 plt.show()
+
+# Mass analysis
+mq0 = [1.0, 0.8, 0.6, 0.4]
+sigma = [0.1308, 0.1391, 0.1483, 0.1574]
+pi1 = [0.0669, 0.0712, 0.0763, 0.0807]
+pi2 = [0.0006, 0.0010, 0.0013, 0.0014]
+pi3 = [0.0002, 0.0003, 1.3e-5, 0.0002]
+
+plt.subplot(2,1,1)
+plt.plot(mq0, sigma, '.-')
+plt.xlabel("mq0")
+plt.ylabel("sigma")
+
+plt.subplot(2,1,2)
+plt.plot(mq0, pi1, '.-', label='pi1')
+plt.plot(mq0, pi2, '.-', label='pi2')
+plt.plot(mq0, pi3, '.-', label='pi3')
+plt.xlabel("mq0")
+plt.legend()
+plt.show()
+
+
+
+plt.show()
+
+del sigma
+del pi1
+del pi2
+del pi3
 
 
 # Condensate plot
