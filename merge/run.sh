@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --ntasks=1
-#SBATCH --time=10:00:00
+#SBATCH --time=20:00:00
 #SBATCH --mem=1000mb
 #SBATCH -J test
 #SBATCH --partition=gpu_8		# dev_gpu4, gpu_4, or gpu_8

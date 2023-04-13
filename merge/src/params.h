@@ -5,12 +5,12 @@
 #include <cassert>
 
 
-int constexpr Nt = 4;
-int constexpr Nx = 256;
+int constexpr Nt = 8;
+int constexpr Nx = 64;
 
 enum class MatrixType {Normal, Dagger};
 
-double constexpr g_coupling = 1.0;
+double constexpr g_coupling = 0.3;
 double constexpr sigma = 0.2;
 double constexpr pi[] = {0.1, 0.2, 0.3};
 
@@ -32,7 +32,7 @@ using dimArray = std::array<int, nDim>;
 //dimArray constexpr Sizes = {128, 128};//, 12, 12};
 //dimArray constexpr Sizes = {256, 256};//, 12, 12};
 
-dimArray constexpr Sizes = {4, 256};
+dimArray constexpr Sizes = {8, 64};
 
 /*
 int constexpr nDim = 4;

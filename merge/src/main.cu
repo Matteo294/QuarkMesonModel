@@ -27,6 +27,7 @@
 #include "Dirac.cuh"
 #include "Spinor.cuh"
 #include "Lattice.cuh"
+#include "CGsolver.cuh"
 
 __constant__ myType epsBar;
 __constant__ myType m2;
@@ -37,16 +38,16 @@ using std::conj;
 thrust::complex<double> im {0.0, 1.0};
 
 
-template <typename T>
+/*template <typename T>
 __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& D, thrust::complex<double> *M, int const numBlocks, int const numThreads);
 
-__global__ void gpuDotProduct(thrust::complex<double> *vecA, thrust::complex<double> *vecB, thrust::complex<double> *result, int size);
+__global__ void gpuDotProduct(thrust::complex<double> *vecA, thrust::complex<double> *vecB, thrust::complex<double> *result, int size);*/
 
 __host__ __device__ int EOtoNormal(int n, Lattice& l);
 __host__ __device__ int NormalToEO(int n, Lattice& l);
 
 
-void getForce(thrust::complex<double> *outVec, DiracOP<double>& D, thrust::complex<double> *M, Lattice& lattice, int const nBlocks_dot, int const nThreads_dot, int const nBlocks_drift, int const nThreads_drift);
+void getForce(thrust::complex<double> *outVec, DiracOP<double>& D, thrust::complex<double> *M,  CGsolver& CG, Lattice& lattice, int const nBlocks_dot, int const nThreads_dot, int const nBlocks_drift, int const nThreads_drift);
 
 __global__ void computeDrift(Spinor<double> *inVec, Spinor<double> *afterCG, thrust::complex<double> *outVec, int const vol);
 
@@ -81,6 +82,8 @@ int main(int argc, char** argv) {
 	Spinor<double> *in, *out;
 	Lattice lattice(Nt, Nx);
 	DiracOP<double> Dirac(fermion_mass, g_coupling, lattice);
+	CGsolver CG(lattice.vol);
+
 	// Allocate two vectors and mesons matrix
 	cudaMallocManaged(&M, sizeof(thrust::complex<double>) * 4 * lattice.vol);
 	cudaMallocManaged(&in, sizeof(Spinor<double>) * lattice.vol);
@@ -111,7 +114,7 @@ int main(int argc, char** argv) {
 	std::string fname;
 	fname.append("traces"); fname.append(argv[2]); fname.append(".csv");
 	tracefile.open(fname);
-	tracefile << "tr,sigma,pi1,pi2,pi3" << "\n";
+	tracefile << "tr,trp1,trp2,trp3,sigma,pi1,pi2,pi3" << "\n";
 	// --------------------------------------------------------------
 
 
@@ -293,8 +296,8 @@ int main(int argc, char** argv) {
 				fermionic_contribution[i + 2 * lattice.vol] = 0.0;
 				fermionic_contribution[i + 3 * lattice.vol] = 0.0;
 			}
-			getForce(fermionic_contribution, Dirac, M, lattice, nBlocks_dot, nThreads_dot, nBlocks_drift, nThreads_drift);
-			std::cout << "force: " << fermionic_contribution[0] << " " << fermionic_contribution[lattice.vol] << " " << fermionic_contribution[2*lattice.vol] << " " << fermionic_contribution[3*lattice.vol] << "\n";
+			getForce(fermionic_contribution, Dirac, M, CG, lattice, nBlocks_dot, nThreads_dot, nBlocks_drift, nThreads_drift);
+			//std::cout << "force: " << fermionic_contribution[0] << " " << fermionic_contribution[lattice.vol] << " " << fermionic_contribution[2*lattice.vol] << " " << fermionic_contribution[3*lattice.vol] << "\n";
 			for(int i=0; i<4*lattice.vol; i++){drift[i] = fermionic_contribution[i].real();}
 			// ------------------------------------------------------------------------------------------------
 
@@ -339,8 +342,8 @@ int main(int argc, char** argv) {
 				fermionic_contribution[i + 2 * lattice.vol] = 0.0;
 				fermionic_contribution[i + 3 * lattice.vol] = 0.0;
 			}
-			getForce(fermionic_contribution, Dirac, M, lattice, nBlocks_dot, nThreads_dot, nBlocks_drift, nThreads_drift);
-			std::cout << "force: " << fermionic_contribution[0] << " " << fermionic_contribution[lattice.vol] << " " << fermionic_contribution[2*lattice.vol] << " " << fermionic_contribution[3*lattice.vol] << "\n";
+			getForce(fermionic_contribution, Dirac, M, CG, lattice, nBlocks_dot, nThreads_dot, nBlocks_drift, nThreads_drift);
+			//std::cout << "force: " << fermionic_contribution[0] << " " << fermionic_contribution[lattice.vol] << " " << fermionic_contribution[2*lattice.vol] << " " << fermionic_contribution[3*lattice.vol] << "\n";
 			for(int i=0; i<4*lattice.vol; i++){drift[i] = fermionic_contribution[i].real();}
 			// ------------------------------------------------------------------------------------------------
 
@@ -370,7 +373,7 @@ int main(int argc, char** argv) {
 	elapsedLangevinTime = nMeasurements * ExportTime;
 	auto timeSliceFile = std::ofstream(timeSliceFileName);
 
-	thrust::complex<double> tr; // trace D^-1
+	thrust::complex<double> tr[4]; // trace D^-1
 	std::vector<thrust::complex<double>> traces;
 
 	auto timerStart = std::chrono::high_resolution_clock::now();
@@ -390,8 +393,8 @@ int main(int argc, char** argv) {
 				fermionic_contribution[i + 2 * lattice.vol] = 0.0;
 				fermionic_contribution[i + 3 * lattice.vol] = 0.0;
 			}
-			getForce(fermionic_contribution, Dirac, M, lattice, nBlocks_dot, nThreads_dot, nBlocks_drift, nThreads_drift);
-			std::cout << "force: " << fermionic_contribution[0] << " " << fermionic_contribution[lattice.vol] << " " << fermionic_contribution[2*lattice.vol] << " " << fermionic_contribution[3*lattice.vol] << "\n";
+			getForce(fermionic_contribution, Dirac, M, CG, lattice, nBlocks_dot, nThreads_dot, nBlocks_drift, nThreads_drift);
+			//std::cout << "force: " << fermionic_contribution[0] << " " << fermionic_contribution[lattice.vol] << " " << fermionic_contribution[2*lattice.vol] << " " << fermionic_contribution[3*lattice.vol] << "\n";
 			for(int i=0; i<4*lattice.vol; i++){drift[i] = fermionic_contribution[i].real();}
 			// ------------------------------------------------------------------------------------------------
 			
@@ -432,7 +435,7 @@ int main(int argc, char** argv) {
 		useDagger = MatrixType::Normal;
 		diagArgs[0] = (void*) &in; diagArgs[1] = (void*) &out;
 		hoppingArgs[0] = (void*) &in; hoppingArgs[1] = (void*) &out;
-		CGsolver_solve_D(in, out, Dirac, M, numBlocks, numThreads);
+		CG.solve(in, out, Dirac, M, lattice.vol);
 
 		for(int i=0; i<lattice.vol; i++){in[i].setZero();}
 		useDagger = MatrixType::Dagger;
@@ -473,15 +476,24 @@ int main(int argc, char** argv) {
 		}
 		std::cout << std::sqrt(sum2) / N << std::endl;
 
-		tr = 0.0;
-		for(int i=0; i<lattice.vol; i++) tr += fermionic_contribution[i];
-		tr /= g_coupling;
-		tracefile 	<< 	tr.real()/(lattice.Nt*lattice.Nx) 	<< ","
-					<< 	avg[0] / (lattice.Nt*lattice.Nx) 	<< ","
-					<< 	avg[1] / (lattice.Nt*lattice.Nx) 	<< "," 
-					<< 	avg[2] / (lattice.Nt*lattice.Nx) 	<< ","
-					<< 	avg[3] / (lattice.Nt*lattice.Nx) 	<< "\n";
-		std::cout << "Trace: " << tr.real()/(lattice.Nt*lattice.Nx) << "\n";
+		for(int i=0; i<4; i++) tr[i] = 0.0;
+		for(int i=0; i<4*lattice.vol; i++) tr[(int) i/lattice.vol] += fermionic_contribution[i];
+		tr[0] /= g_coupling;
+		tr[1] /= g_coupling;
+		tr[2] /= g_coupling;
+		tr[3] /= g_coupling;
+		tracefile 	<< 	tr[0].real()/(lattice.Nt*lattice.Nx) 	<< ","
+					<< 	tr[1].real()/(lattice.Nt*lattice.Nx) 	<< ","
+					<< 	tr[2].real()/(lattice.Nt*lattice.Nx) 	<< ","
+					<< 	tr[3].real()/(lattice.Nt*lattice.Nx) 	<< ","
+					<< 	avg[0] / (lattice.Nt*lattice.Nx) 		<< ","
+					<< 	avg[1] / (lattice.Nt*lattice.Nx) 		<< "," 
+					<< 	avg[2] / (lattice.Nt*lattice.Nx) 		<< ","
+					<< 	avg[3] / (lattice.Nt*lattice.Nx) 		<< "\n";
+		std::cout << "Traces: " 	<< tr[0].real()/(lattice.Nt*lattice.Nx) << "\t" 
+								<< tr[1].real()/(lattice.Nt*lattice.Nx) << "\t" 
+								<< tr[2].real()/(lattice.Nt*lattice.Nx) << "\t"
+								<< tr[3].real()/(lattice.Nt*lattice.Nx) << "\n";
 
 		nMeasurements++;
 		
@@ -538,6 +550,7 @@ int main(int argc, char** argv) {
 	return 0;
 }
 
+/*
 template <typename T>
 __host__ void CGsolver_solve_D(Spinor<T> *inVec, Spinor<T> *outVec, DiracOP<T>& D, thrust::complex<double> *M, int const numBlocks, int const numThreads){	
 	
@@ -673,10 +686,10 @@ __global__ void gpuDotProduct(thrust::complex<double> *vecA, thrust::complex<dou
 		atomicAdd(reinterpret_cast<double*>(result)+1, temp_sum.imag());
 		}
 	}
-}
+}*/
 
 
-void getForce(thrust::complex<double> *outVec, DiracOP<double>& D, thrust::complex<double> *M, Lattice& lattice, int const nBlocks_dot, int const nThreads_dot, int const nBlocks_drift, int const nThreads_drift){
+void getForce(thrust::complex<double> *outVec, DiracOP<double>& D, thrust::complex<double> *M, CGsolver& CG, Lattice& lattice, int const nBlocks_dot, int const nThreads_dot, int const nBlocks_drift, int const nThreads_drift){
 	
 	int const vol = lattice.vol;
 	Spinor<double> *afterCG, *buf, *vec;
@@ -695,7 +708,7 @@ void getForce(thrust::complex<double> *outVec, DiracOP<double>& D, thrust::compl
 		for(int j=0; j<4; j++) vec[i].val[j] = dist(gen);
 	}
 
-	CGsolver_solve_D(vec, buf, D, M, nBlocks_dot, nThreads_dot);
+	CG.solve(vec, buf, D, M, lattice.vol);
 	
 	MatrixType useDagger = MatrixType::Dagger;
 	void *diagArgs[] = {(void*)&buf, (void*)&afterCG, (void*) &vol, (void*) &D.fermion_mass, (void*) &g_coupling, (void*)&useDagger, (void*)&M};
@@ -727,7 +740,7 @@ __global__ void computeDrift(Spinor<double> *inVec, Spinor<double> *afterCG, thr
 	cg::grid_group grid = cg::this_grid();
 
 	thrust::complex<double> im (0.0, 1.0);
-	double const g_coupling = 0.1;
+	double const g_coupling = 0.3;
 
 	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
 		// Drift for sigma
@@ -737,13 +750,13 @@ __global__ void computeDrift(Spinor<double> *inVec, Spinor<double> *afterCG, thr
 										+ conj(afterCG[i].val[3])*inVec[i].val[3]);
 
 		// Drift for pi1
-		outVec[i + vol] = g_coupling * (	- conj(afterCG[i].val[0])*inVec[i].val[3]
+		outVec[i + vol] = g_coupling * (		- conj(afterCG[i].val[0])*inVec[i].val[3]
 											 	+ conj(afterCG[i].val[1])*inVec[i].val[2] 
 												- conj(afterCG[i].val[2])*inVec[i].val[1] 
 												+ conj(afterCG[i].val[3])*inVec[i].val[0]);
 
 		// Drift for pi2
-		outVec[i + 2*vol] = g_coupling * (	  im * conj(afterCG[i].val[0])*inVec[i].val[3] 
+		outVec[i + 2*vol] = g_coupling * (	  	  im * conj(afterCG[i].val[0])*inVec[i].val[3] 
 												- im * conj(afterCG[i].val[1])*inVec[i].val[2] 
 												- im * conj(afterCG[i].val[2])*inVec[i].val[1] 
 												+ im * conj(afterCG[i].val[3])*inVec[i].val[0]);
