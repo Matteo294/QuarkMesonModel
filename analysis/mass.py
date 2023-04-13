@@ -24,7 +24,7 @@ def fitToSinh(ydata, startidx, endidx):
 
     fitparams = fit(fitfuncSinh, xvals, yvals, p0=[np.log(1+2.0), 1.0], maxfev=int(1e5))
     #print("Mass: ", abs(fitparams[0][0]))
-    #print("Expected: ", expectedM(m0, g, sigma, pi))
+    #print("Expected: ", expectedM(0.1, 1.0, -0.15927687234042556, [0, 0, 0]))
     
     return abs(fitparams[0][0])
 
