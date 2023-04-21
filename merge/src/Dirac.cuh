@@ -16,30 +16,35 @@ namespace cg = cooperative_groups;
 template <typename T>
 class DiracOP {
 	public:
-		__host__ DiracOP(T const f_mass, T const g, Lattice& l) : fermion_mass{f_mass}, g_coupling{g}, lattice{l}
-		{cudaMallocManaged(&temp, sizeof(Spinor<T>) * lattice.vol/2); cudaMallocManaged(&temp2, sizeof(Spinor<T>) * lattice.vol/2);}
+		__host__ DiracOP();
 		__host__ ~DiracOP(){cudaFree(temp); cudaFree(temp2);}
-		__host__ void applyD(void** diagArgs, void** hoppingArgs);
-		
-		//__host__ void applyDhat(Spinor<T> *inVec, Spinor<T> *outVec, MesonsMat<T> *M, MatrixType const useDagger);	   
-
-		Lattice& lattice;
-		T const fermion_mass;
+		__host__  void applyD();
+		__host__ __device__ void setInVec(Spinor<T> *v){inVec = v;}
+		__host__ __device__ void setOutVec(Spinor<T> *v){outVec = v;}
+		__host__ __device__ void setDagger(MatrixType const Mtype){useDagger = Mtype;}
+		__host__ __device__ void setM(thrust::complex<T> *mesonsMat){M = mesonsMat;}
 	private:
 		Spinor<T> *temp, *temp2;
-		T const g_coupling;
+		thrust::complex<T> *M;
+		dim3 dimGrid_Dee, dimGrid_Doo, dimGrid_Doe, dimGrid_Deo;
+		dim3 dimBlock_Dee, dimBlock_Doo, dimBlock_Doe, dimBlock_Deo;
+		MatrixType useDagger;
+		void *diagArgs[4]; // arguments for Dee, Doo, Deeinv, Dooinv
+		void *hoppingArgs[5]; // arguments for Deo, Doe
+		Spinor<T> *inVec, *outVec;
+		LookUpTable IUP, IDN;
 
 };
 
 template <typename T>
-__global__ void D_oo_inv(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, T const fermion_mass, T const g_coupling, MatrixType const useDagger, thrust::complex<T> *M);
+__global__ void D_oo_inv(Spinor<T> *inVec, Spinor<T> *outVec, MatrixType const useDagger, thrust::complex<T> *M);
 template <typename T>
-__global__ void D_ee_inv(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, T const fermion_mass, T const g_coupling, MatrixType const useDagger, thrust::complex<T> *M);
+__global__ void D_ee_inv(Spinor<T> *inVec, Spinor<T> *outVec, MatrixType const useDagger, thrust::complex<T> *M);
 template <typename T>
-__global__ void D_ee(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, T const fermion_mass, T const g_coupling, MatrixType const useDagger, thrust::complex<T> *M);
+__global__ void D_ee(Spinor<T> *inVec, Spinor<T> *outVec, MatrixType const useDagger, thrust::complex<T> *M);
 template <typename T>
-__global__ void D_oo(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, T const fermion_mass, T const g_coupling, MatrixType const useDagger, thrust::complex<T> *M);
+__global__ void D_oo(Spinor<T> *inVec, Spinor<T> *outVec, MatrixType const useDagger, thrust::complex<T> *M);
 template <typename T>
-__global__ void D_eo(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN);
+__global__ void D_eo(Spinor<T> *inVec, Spinor<T> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN);
 template <typename T>
-__global__ void D_oe(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN);
+__global__ void D_oe(Spinor<T> *inVec, Spinor<T> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN);

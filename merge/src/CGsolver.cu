@@ -1,6 +1,6 @@
 #include "CGsolver.cuh"
 
-CGsolver::CGsolver(int const vol){
+CGsolver::CGsolver(){
     cudaMallocManaged(&r, sizeof(Spinor<double>) * vol);
 	cudaMallocManaged(&p, sizeof(Spinor<double>) * vol);
 	cudaMallocManaged(&temp, sizeof(Spinor<double>) * vol);
@@ -15,12 +15,12 @@ CGsolver::CGsolver(int const vol){
 	dimGrid_dot = dim3(numBlocks, 1, 1);
 	dimBlock_dot = dim3(numThreads, 1, 1);
 
-	numBlocks = 0;
+	/*numBlocks = 0;
 	numThreads = 0;
 	cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, setSpinorToZero);
 	cudaDeviceSynchronize();
 	dimGrid_setZero = dim3(numBlocks, 1, 1);
-	dimBlock_setZero = dim3(numThreads, 1, 1);
+	dimBlock_setZero = dim3(numThreads, 1, 1);*/
 
 	
 }
@@ -34,31 +34,28 @@ CGsolver::~CGsolver(){
 	cudaFree(sol);
 }
 
-__global__ void setSpinorToZero(Spinor<double> *s, int const vol){
-	cg::thread_block cta = cg::this_thread_block();
-	cg::grid_group grid = cg::this_grid();
-
-	thrust::complex<double> im (0.0, 1.0);
-
-	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
-		for(int j=0; j<4; j++) s[i].val[j] = 0.0;
-	}
-}
 
 
-void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<double>& D, thrust::complex<double> *M, int const vol){
+
+void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<double>& D, thrust::complex<double> *M){
 	//cudaMemcpy(inVec, r, vol * sizeof(Spinor<double>), cudaMemcpyHostToDevice);
 	thrust::complex<double> alpha; // allocate space ??
 	double beta, rmodsq;
 
 
-	MatrixType dag = MatrixType::Normal;
 	int const mySize = 4 * vol;
 
 	void *dotArgs[] = {(void*) &r, (void*) &r, (void*) &dot_res, (void*) &mySize};
-	void *setZeroArgs[] = {(void*) temp, (void*) &vol};
-	void *diagArgs[] = {(void*)&p, (void*)&temp2, (void*) &D.lattice.vol, (void*) &D.fermion_mass, (void*) &g_coupling, (void*)&dag, (void*)&M};
-	void *hoppingArgs[] = {(void*)&p, (void*)&temp2, (void*) &D.lattice.vol, (void*)&dag, (void*)&D.lattice.IUP, (void*)&D.lattice.IDN};
+	// set up set spinor to zero
+	int nBlocks_zero = 0;
+	int nThreads_zero = 0;
+	cudaOccupancyMaxPotentialBlockSize(&nBlocks_zero, &nThreads_zero, setZeroGPU);
+	cudaDeviceSynchronize();
+	int const spinor_vol = 4*vol;
+	void *setZeroArgs[] = {(void*)temp, (void*) &spinor_vol};
+
+	D.setInVec(p);
+	D.setOutVec(temp2);
 
 	for(int i=0; i<vol; i++) {
 		outVec[i] = Spinor<double> ();
@@ -71,11 +68,14 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
 	}
 
 	setZeroArgs[0] = (void*) &temp;
-	cudaLaunchCooperativeKernel((void*)&setSpinorToZero, dimGrid_setZero, dimBlock_setZero, setZeroArgs, 0, NULL);
+	cudaLaunchCooperativeKernel((void*)&setZeroGPU, dim3(nBlocks_zero, 1, 1), dim3(nThreads_zero, 1, 1), setZeroArgs, 0, NULL);
+	cudaDeviceSynchronize();
 	setZeroArgs[0] = (void*) &temp2;
-	cudaLaunchCooperativeKernel((void*)&setSpinorToZero, dimGrid_setZero, dimBlock_setZero, setZeroArgs, 0, NULL);
+	cudaLaunchCooperativeKernel((void*)&setZeroGPU, dim3(nBlocks_zero, 1, 1), dim3(nThreads_zero, 1, 1), setZeroArgs, 0, NULL);
+	cudaDeviceSynchronize();
 	setZeroArgs[0] = (void*) &sol;
-	cudaLaunchCooperativeKernel((void*)&setSpinorToZero, dimGrid_setZero, dimBlock_setZero, setZeroArgs, 0, NULL);
+	cudaLaunchCooperativeKernel((void*)&setZeroGPU, dim3(nBlocks_zero, 1, 1), dim3(nThreads_zero, 1, 1), setZeroArgs, 0, NULL);
+	cudaDeviceSynchronize();
 
 
 	*dot_res = 0.0;
@@ -93,20 +93,22 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
 
 		// Set buffers to zero to store the result fo the Dirac operator applied to p
 		setZeroArgs[0] = (void*) &temp;
-		cudaLaunchCooperativeKernel((void*)&setSpinorToZero, dimGrid_setZero, dimBlock_setZero, setZeroArgs, 0, NULL);
-		setZeroArgs[0] = (void*) &temp2;
-		cudaLaunchCooperativeKernel((void*)&setSpinorToZero, dimGrid_setZero, dimBlock_setZero, setZeroArgs, 0, NULL);
+		cudaLaunchCooperativeKernel((void*)&setZeroGPU, dim3(nBlocks_zero, 1, 1), dim3(nThreads_zero, 1, 1), setZeroArgs, 0, NULL);
+		cudaDeviceSynchronize();
+		setZeroArgs[0] = (void*) &temp;
+		cudaLaunchCooperativeKernel((void*)&setZeroGPU, dim3(nBlocks_zero, 1, 1), dim3(nThreads_zero, 1, 1), setZeroArgs, 0, NULL);
+		cudaDeviceSynchronize();
 
 		// Apply D dagger
-		dag = MatrixType::Dagger;
-		diagArgs[0] = (void*) &p; diagArgs[1] = (void*) &temp2;
-		hoppingArgs[0] = (void*) &p; hoppingArgs[1] = (void*) &temp2;
-		D.applyD(diagArgs, hoppingArgs);
+		D.setDagger(MatrixType::Dagger);
+		D.setInVec(p);
+		D.setOutVec(temp2);
+		D.applyD();
 		// Apply D
-		dag = MatrixType::Normal;
-		diagArgs[0] = (void*) &temp2; diagArgs[1] = (void*) &temp;
-		hoppingArgs[0] = (void*) &temp2; hoppingArgs[1] = (void*) &temp;
-		D.applyD(diagArgs, hoppingArgs);
+		D.setDagger(MatrixType::Normal);
+		D.setInVec(temp2);
+		D.setOutVec(temp);
+		D.applyD();
 		
 		dotArgs[0] = (void*) &p; dotArgs[1] = (void*) &temp;
 

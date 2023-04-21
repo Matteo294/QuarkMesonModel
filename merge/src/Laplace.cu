@@ -77,7 +77,7 @@ void Laplace::func2() {
 			auto const cooP = ShiftCoord(coo, dir, Direction::Positive);
 			auto const cooM = ShiftCoord(coo, dir, Direction::Negative);
 
-			int const cP = CoordToIndex(cooP);
+			int const cP = CoordToIndex(cooP); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			int const cM = CoordToIndex(cooM);
 			*tmp_it = cP; ++tmp_it;
 			*tmp_it = cM; ++tmp_it;

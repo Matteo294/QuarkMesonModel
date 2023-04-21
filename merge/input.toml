@@ -8,10 +8,10 @@ cutFraction = 1.0
 
 [langevin]
 averageEpsilon = 0.02
-MaxLangevinTime = 800.0
+MaxLangevinTime = 1000.0
 ExportTime = 1.0
-burnCount = 1
-MeasureDriftCount = 10
+burnCount = 2
+MeasureDriftCount = 0
 
 [io]
 configFileName = "test.hdf"

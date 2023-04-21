@@ -137,3 +137,13 @@ __global__ void gpuMagnetisation(myType *vecA, myType *result, int size) {
 		}
 	}
 }
+
+
+// --------------------------- MATTEO ---------------------------
+__global__ void setZeroGPU(thrust::complex<double> *v, int const vol){
+	cg::thread_block cta = cg::this_thread_block();
+	cg::grid_group grid = cg::this_grid();
+	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
+		for(int j=0; j<4; j++) v[i] = 0.0;
+	}
+}

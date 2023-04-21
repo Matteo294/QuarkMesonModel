@@ -4,15 +4,10 @@
 #include <cstdio>
 #include <cassert>
 
-
-int constexpr Nt = 8;
-int constexpr Nx = 64;
-
 enum class MatrixType {Normal, Dagger};
 
-double constexpr g_coupling = 0.3;
-double constexpr sigma = 0.2;
-double constexpr pi[] = {0.1, 0.2, 0.3};
+double constexpr yukawa_coupling = 0.3;
+double constexpr fermion_mass = 0.5;
 
 double constexpr tolerance = 1e-12;
 int constexpr IterMax = 1000;
@@ -32,7 +27,8 @@ using dimArray = std::array<int, nDim>;
 //dimArray constexpr Sizes = {128, 128};//, 12, 12};
 //dimArray constexpr Sizes = {256, 256};//, 12, 12};
 
-dimArray constexpr Sizes = {8, 64};
+dimArray constexpr Sizes = {64, 256};
+int const vol = Sizes[0]*Sizes[1];
 
 /*
 int constexpr nDim = 4;

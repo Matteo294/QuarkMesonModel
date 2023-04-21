@@ -1,52 +1,93 @@
 #include "Dirac.cuh"
 
+extern __constant__ double yukawa_coupling_gpu;
+extern __constant__ double fermion_mass_gpu;
 
 template class DiracOP<double>;
 
+template <typename T>
+__host__ DiracOP<T>::DiracOP() : inVec(nullptr), outVec(nullptr), M(nullptr)
+	{
+        cudaMallocManaged(&temp, sizeof(Spinor<T>) * vol/2); 
+        cudaMallocManaged(&temp2, sizeof(Spinor<T>) * vol/2);
+        
+		int numBlocks = 0;
+        int numThreads = 0;
+        cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, D_ee<T>);
+        dimGrid_Dee = dim3(numBlocks, 1, 1);    
+        dimBlock_Dee = dim3(numThreads, 1, 1);      
+
+        numBlocks = 0;
+        numThreads = 0;
+        cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, D_oo<T>);
+        dimGrid_Doo = dim3(numBlocks, 1, 1);    
+        dimBlock_Doo = dim3(numThreads, 1, 1);
+        
+        numBlocks = 0;
+        numThreads = 0;
+        cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, D_eo<T>);
+        dimGrid_Deo = dim3(numBlocks, 1, 1);    
+        dimBlock_Deo = dim3(numThreads, 1, 1);
+        
+        numBlocks = 0;
+        numThreads = 0;
+        cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, D_oe<T>);
+        dimGrid_Doe = dim3(numBlocks, 1, 1);    
+        dimBlock_Doe = dim3(numThreads, 1, 1);
+	
+		auto idx = eoToVec(0);
+		for(int i=0; i<vol; i++){
+			idx = eoToVec(i);
+			IUP.at[i][0] = toEOflat(PBC(idx[0]+1, Sizes[0]), idx[1]);
+			IUP.at[i][1] = toEOflat(idx[0], PBC(idx[1]+1, Sizes[1]));
+			IDN.at[i][0] = toEOflat(PBC(idx[0]-1, Sizes[0]), idx[1]);
+			IDN.at[i][1] = toEOflat(idx[0], PBC(idx[1]-1, Sizes[1]));
+		}
+
+        /*diagArgs = {(void*)&inVec, (void*)&outVec, (void*)&useDagger, (void*)&M};
+		hoppingArgs = {(void*)&inVec, (void*) &outVec, (void*) &useDagger, (void*) &IUP.at, (void*) &IDN.at};*/
+		diagArgs[0] = (void*)&inVec;
+		diagArgs[1] = (void*)&outVec;
+		diagArgs[2] = (void*)&useDagger;
+		diagArgs[3] = (void*)&M;
+		hoppingArgs[0] = (void*)&inVec;
+		hoppingArgs[1] = (void*)&outVec;
+		hoppingArgs[2] = (void*)&useDagger;
+		hoppingArgs[3] = (void*)&IUP.at;
+		hoppingArgs[4] = (void*)&IDN.at;
+        
+    }
+
 
 template <typename T>
-__host__ void DiracOP<T>::applyD(void** diagArgs, void** hoppingArgs){
+__host__ void DiracOP<T>::applyD(){
 
-    int numBlocks = 0;
-    int numThreads = 0;
+    for(int i=0; i<vol; i++) outVec[i].setZero(); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+    cudaLaunchCooperativeKernel((void*)&D_ee<T>, dimGrid_Dee, dimBlock_Dee, diagArgs, 0, NULL);
+    cudaDeviceSynchronize();
 
-	{
-    cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, D_ee<T>);
-    auto dimGrid = dim3(numBlocks, 1, 1);    auto dimBlock = dim3(numThreads, 1, 1);
-    cudaLaunchCooperativeKernel((void*)&D_ee<T>, dimGrid, dimBlock, diagArgs, 0, NULL);
+    cudaLaunchCooperativeKernel((void*)&D_oo<T>, dimGrid_Doo, dimBlock_Doo, diagArgs, 0, NULL);
     cudaDeviceSynchronize();
-	}
-	{
-    cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, D_ee<T>);
-    auto dimGrid = dim3(numBlocks, 1, 1);    auto dimBlock = dim3(numThreads, 1, 1);
-    cudaLaunchCooperativeKernel((void*)&D_oo<T>, dimGrid, dimBlock, diagArgs, 0, NULL);
+
+   	cudaLaunchCooperativeKernel((void*)&D_eo<T>, dimGrid_Deo, dimBlock_Deo, hoppingArgs, 0, NULL);
     cudaDeviceSynchronize();
-	}
-	cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, D_eo<T>);
-	auto dimGrid = dim3(numBlocks, 1, 1);    auto dimBlock = dim3(numThreads, 1, 1);
-	{
-    cudaLaunchCooperativeKernel((void*)&D_eo<T>, dimGrid, dimBlock, hoppingArgs, 0, NULL);
+
+    cudaLaunchCooperativeKernel((void*)&D_oe<T>, dimGrid_Doe, dimBlock_Doe, hoppingArgs, 0, NULL);
     cudaDeviceSynchronize();
-	}
-	{
-    cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, D_oe<T>);
-    auto dimGrid = dim3(numBlocks, 1, 1);    auto dimBlock = dim3(numThreads, 1, 1);
-    cudaLaunchCooperativeKernel((void*)&D_oe<T>, dimGrid, dimBlock, hoppingArgs, 0, NULL);
-    cudaDeviceSynchronize();
-	}
 
 }
 
 template <typename T>
-__global__ void D_oo(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, T const fermion_mass, T const g_coupling, MatrixType const useDagger, thrust::complex<T> *M){
+__global__ void D_oo(Spinor<T> *inVec, Spinor<T> *outVec, MatrixType const useDagger, thrust::complex<T> *M){
 
     auto grid = cg::this_grid();
 
+
     thrust::complex<T> sigma;
-    thrust::complex<T> const g = static_cast<thrust::complex<T>> (g_coupling);
+    thrust::complex<T> const g = static_cast<thrust::complex<T>> (yukawa_coupling_gpu);
     thrust::complex<T> const two {2.0, 0.0};
-    thrust::complex<T> mass = static_cast<thrust::complex<T>> (fermion_mass);
+    thrust::complex<T> mass = static_cast<thrust::complex<T>> (fermion_mass_gpu);
     thrust::complex<T> const im {0.0, 1.0};
     thrust::complex<T> half {0.5, 0.0};
 
@@ -72,14 +113,14 @@ __global__ void D_oo(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, T const
 }
 
 template <typename T>
-__global__ void D_ee(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, T const fermion_mass, T const g_coupling, MatrixType const useDagger, thrust::complex<T> *M){
+__global__ void D_ee(Spinor<T> *inVec, Spinor<T> *outVec, MatrixType const useDagger, thrust::complex<T> *M){
 
     auto grid = cg::this_grid();
 
     thrust::complex<T> sigma;
     thrust::complex<T> const two {2.0, 0.0};
-    thrust::complex<T> const g = static_cast<thrust::complex<T>> (g_coupling);
-    thrust::complex<T> const mass = static_cast<thrust::complex<T>> (fermion_mass);
+    thrust::complex<T> const g = static_cast<thrust::complex<T>> (yukawa_coupling_gpu);
+    thrust::complex<T> const mass = static_cast<thrust::complex<T>> (fermion_mass_gpu);
     thrust::complex<T> const im {0.0, 1.0};
     thrust::complex<T> half {0.5, 0.0};
 
@@ -88,8 +129,12 @@ __global__ void D_ee(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, T const
     thrust::complex<T> *M3 = &M[2*vol];
     thrust::complex<T> *M4 = &M[3*vol];
 
+    //printf("%d, %f, %f + i%f \n\n", vol, fermion_mass_gpu, M[0].real(), M[0].imag());
+
+
     for (int i = grid.thread_rank(); i < vol/2; i += grid.size()) {
-    // Diagonal term
+    
+
 
     sigma = half * (M1[i] + M4[i]);        
     if (useDagger == MatrixType::Dagger){
@@ -109,13 +154,14 @@ __global__ void D_ee(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, T const
 
 
 template <typename T>
-__global__ void D_ee_inv(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, T const fermion_mass, T const g_coupling, MatrixType const useDagger, thrust::complex<T> *M){
+__global__ void D_ee_inv(Spinor<T> *inVec, Spinor<T> *outVec, MatrixType const useDagger, thrust::complex<T> *M){
         auto grid = cg::this_grid();
+
     thrust::complex<T> sigma, det;
     thrust::complex<T> Minv[4];
-    thrust::complex<T> const g = static_cast<thrust::complex<T>> (g_coupling)  ;
+    thrust::complex<T> const g = static_cast<thrust::complex<T>> (yukawa_coupling_gpu)  ;
     thrust::complex<T> const two {2.0, 0.0};
-    thrust::complex<T> const mass = static_cast<thrust::complex<T>> (fermion_mass);
+    thrust::complex<T> const mass = static_cast<thrust::complex<T>> (fermion_mass_gpu);
     thrust::complex<T> const im {0.0, 1.0};
 
     thrust::complex<T> *M1 = M;
@@ -153,7 +199,7 @@ __global__ void D_ee_inv(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, T c
 
 
 template <typename T>
-__global__ void D_eo(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN){
+__global__ void D_eo(Spinor<T> *inVec, Spinor<T> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN){
 
     auto grid = cg::this_grid();
 
@@ -167,16 +213,16 @@ __global__ void D_eo(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, MatrixT
 {
     int n = i;
     int alpha = 0;
-    if (n >= Nt*Nx/2) {
+    if (n >= Sizes[0]*Sizes[1]/2) {
         alpha = 1;
-        n -= Nt*Nx/2;
+        n -= Sizes[0]*Sizes[1]/2;
     }
-    idx[0] = n / (Nx/2);
-    if (idx[0] % 2) idx[1] = 2*((n % (Nx/2))) + (1-alpha);
-    else idx[1] = 2*((n % (Nx/2))) + alpha; 
+    idx[0] = n / (Sizes[1]/2);
+    if (idx[0] % 2) idx[1] = 2*((n % (Sizes[1]/2))) + (1-alpha);
+    else idx[1] = 2*((n % (Sizes[1]/2))) + alpha; 
 }
     nt = idx[0];
-    sgn[0] = (nt == (Nt-1)) ? -1.0 : 1.0;
+    sgn[0] = (nt == (Sizes[0]-1)) ? -1.0 : 1.0;
     sgn[1] = (nt == 0) ? -1.0 : 1.0;
 
     thrust::complex<T> psisum[2], psidiff[2];
@@ -216,7 +262,7 @@ __global__ void D_eo(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, MatrixT
 
 
 template <typename T>
-__global__ void D_oe(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN){
+__global__ void D_oe(Spinor<T> *inVec, Spinor<T> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN){
 
     auto grid = cg::this_grid();
 
@@ -232,18 +278,18 @@ __global__ void D_oe(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, MatrixT
 {
     int n = i;
     int alpha = 0;
-    if (n >= Nt*Nx/2) {
+    if (n >= Sizes[0]*Sizes[1]/2) {
         alpha = 1;
-        n -= Nt*Nx/2;
+        n -= Sizes[0]*Sizes[1]/2;
     }
-    idx[0] = n / (Nx/2);
-    if (idx[0] % 2) idx[1] = 2*((n % (Nx/2))) + (1-alpha);
-    else idx[1] = 2*((n % (Nx/2))) + alpha; 
+    idx[0] = n / (Sizes[1]/2);
+    if (idx[0] % 2) idx[1] = 2*((n % (Sizes[1]/2))) + (1-alpha);
+    else idx[1] = 2*((n % (Sizes[1]/2))) + alpha; 
 }
 
         nt = idx[0];
 
-        sgn[0] = (nt == (Nt-1)) ? -1.0 : 1.0;
+        sgn[0] = (nt == (Sizes[0]-1)) ? -1.0 : 1.0;
         sgn[1] = (nt == 0) ? -1.0 : 1.0;
 
         thrust::complex<T> psisum[2], psidiff[2];
@@ -281,15 +327,15 @@ __global__ void D_oe(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, MatrixT
 
 
 template <typename T>
-__global__ void D_oo_inv(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, T const fermion_mass, T const g_coupling, MatrixType const useDagger, thrust::complex<T> *M){
+__global__ void D_oo_inv(Spinor<T> *inVec, Spinor<T> *outVec, MatrixType const useDagger, thrust::complex<T> *M){
 
         auto grid = cg::this_grid();
 
     thrust::complex<T> sigma, det;
     thrust::complex<T> Minv[4];
-    thrust::complex<T> const g = static_cast<thrust::complex<T>> (g_coupling);
+    thrust::complex<T> const g = static_cast<thrust::complex<T>> (yukawa_coupling_gpu);
     thrust::complex<T> const two {2.0, 0.0};
-    thrust::complex<T> const mass = static_cast<thrust::complex<T>> (fermion_mass);
+    thrust::complex<T> const mass = static_cast<thrust::complex<T>> (fermion_mass_gpu);
     thrust::complex<T> const im {0.0, 1.0};
     thrust::complex<T> half {0.5, 0.0};
 
@@ -330,39 +376,3 @@ __global__ void D_oo_inv(Spinor<T> *inVec, Spinor<T> *outVec, int const vol, T c
 
 
 
-/*template <typename T>
-void DiracOP<T>::applyDhat(Spinor<T> *inVec, Spinor<T> *outVec, MesonsMat<T> *M, MatrixType const useDagger){
-    
-    auto dimGrid = dim3(NBLOCKS, 1, 1);
-    auto dimBlock = dim3(THREADS_PER_BLOCK, 1, 1);
-
-    // check in all functions call whether we are working on the correct part of the array
-
-    // control if we are cycling in the correct part!!!!!!!!!!!!!!
-    for(int i=0; i<lattice.vol; i++) {
-        outVec[i].setZero();
-        temp[i].setZero();
-        temp2[i].setZero();
-    }
-
-    // for the useDagger consider inverting the order of the product
-
-    D_ee_wrap(inVec, outVec, M, useDagger);
-    cudaDeviceSynchronize();
-
-    D_oe_wrap(inVec, temp, M, useDagger);
-    cudaDeviceSynchronize();
-
-    D_oo_inv_wrap(temp, temp2, M, useDagger);
-    cudaDeviceSynchronize();
-
-    for(int i=0; i<lattice.vol; i++) {
-        temp[i].setZero(); 
-    }
-
-    D_eo_wrap(temp2, temp, M, useDagger);
-    cudaDeviceSynchronize();
-
-    for(int i=0; i<lattice.vol/2; i++) { for (int j=0; j<4; j++) outVec[i].val[j] -= temp[i].val[j]; }
-
-}*/
