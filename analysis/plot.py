@@ -1,5 +1,11 @@
 import numpy as np
 from matplotlib import pyplot as plt 
+import matplotlib
+
+font = {'family' : 'normal',
+        'size'   : 18}
+
+matplotlib.rc('font', **font)
 
 # Mass plot classical
 mq0 = 	 [5.0,		2.0, 		1.0,		0.5,		0.2]
@@ -80,6 +86,7 @@ plt.legend(fontsize=18)
 plt.xlabel(r"$s=\frac{\Lambda'}{\Lambda}$", fontsize=22)
 #plt.ylabel(r'$- \ \frac{\left\langle\sigma\right\rangle}{\left\langle\bar\psi \psi\right\rangle}$', fontsize=22, rotation=0, labelpad=40)
 plt.tight_layout()
+plt.ylim([1.55, 1.65])
 plt.savefig("niceplots/sigma.pdf")
 plt.show()
 
@@ -91,6 +98,7 @@ plt.legend(fontsize=18)
 plt.xlabel(r"$s=\frac{\Lambda'}{\Lambda}$", fontsize=22)
 #plt.ylabel(r'$- \ \frac{\left\langle\sigma\right\rangle}{\left\langle\bar\psi \psi\right\rangle}$', fontsize=22, rotation=0, labelpad=40)
 plt.tight_layout()
+plt.ylim([0.86, 0.91])
 plt.savefig("niceplots/pi1.pdf")
 plt.show()
 
@@ -102,6 +110,7 @@ plt.legend(fontsize=18)
 plt.xlabel(r"$s=\frac{\Lambda'}{\Lambda}$", fontsize=22)
 #plt.ylabel(r'$- \ \frac{\left\langle\sigma\right\rangle}{\left\langle\bar\psi \psi\right\rangle}$', fontsize=22, rotation=0, labelpad=40)
 plt.tight_layout()
+plt.ylim([0.16, 0.19])
 plt.savefig("niceplots/pi2.pdf")
 plt.show()
 
@@ -113,5 +122,6 @@ plt.legend(fontsize=18)
 plt.xlabel(r"$s=\frac{\Lambda'}{\Lambda}$", fontsize=22)
 #plt.ylabel(r'$- \ \frac{\left\langle\sigma\right\rangle}{\left\langle\bar\psi \psi\right\rangle}$', fontsize=22, rotation=0, labelpad=40)
 plt.tight_layout()
+plt.ylim([0.0, 0.04])
 plt.savefig("niceplots/pi3.pdf")
 plt.show()
