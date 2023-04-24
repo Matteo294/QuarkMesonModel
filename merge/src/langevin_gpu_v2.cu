@@ -62,8 +62,7 @@ __device__ void gpuSpMV(int *I, int *J, myType *val, int num_rows,
 }
 
 __global__ void Run(myType *eps, myType ExportTime, myType *field,
-		myType *drift, myType *noise, int size, int *I, int *J, myType *vals, myType *maxDrift,
-		myType *fermionic_contribution) {
+		myType *drift, myType *noise, int size, int *I, int *J, myType *vals, myType *maxDrift) {
 
 	cg::grid_group grid = cg::this_grid();
 	cg::thread_block cta = cg::this_thread_block();

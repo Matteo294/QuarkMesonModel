@@ -16,3 +16,5 @@ __global__ void gpuMagnetisation(myType *vecA, myType *result, int size);
 
 // Matteo
 __global__ void setZeroGPU(thrust::complex<double> *v, int const vol);
+__global__ void copyVec(thrust::complex<double> *v1,thrust::complex<double> *v2, int const vol); // copy v2 into v1
+__global__ void copyVec_re(double *v1, double *v2, int const vol); // copy v2 into v1

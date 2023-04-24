@@ -4,6 +4,7 @@
 #include <algorithm>
 
 #include "params.h"
+#include "Lattice.cuh"
 
 class Laplace {
 public:
@@ -11,6 +12,7 @@ public:
 	~Laplace();
 
 	void func2();
+	void func2_eo();
 
 	int * const I;
 	int * const J;

@@ -16,5 +16,4 @@
 #include "Lattice.cuh"
 
 __global__ void Run(myType *eps, myType ExportTime, myType *field,
-		myType *drift, myType *noise, int size, int *I, int *J, myType *vals, myType *maxDrift,
-		myType *fermionic_contribution);
+		myType *drift, myType *noise, int size, int *I, int *J, myType *vals, myType *maxDrift);

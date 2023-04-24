@@ -23,3 +23,5 @@ struct LookUpTable{
 __host__ __device__ unsigned int PBC(int const n, int const N);
 __host__ __device__ unsigned int toEOflat(int const nt, int const nx);
 __host__ __device__ my2dArray eoToVec(int n);
+__host__ __device__ int EOtoNormal(int n);
+__host__ __device__ int NormalToEO(int n);

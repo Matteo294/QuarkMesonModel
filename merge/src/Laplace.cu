@@ -98,3 +98,45 @@ void Laplace::func2() {
 	std::copy(col_indices.cbegin(), col_indices.cend(), J);
 	std::copy(vals.cbegin(), vals.cend(), cval);
 }
+
+void Laplace::func2_eo() {
+	std::array<int, nElements> tmp_col_indices;
+
+	auto row_it = row_indices.begin();
+	*row_it = 0; ++row_it;
+
+	auto col_it = col_indices.begin();
+	auto val_it = vals.begin();
+
+	for (int r = 0; r < N; ++r, ++row_it) {
+		auto tmp_it = tmp_col_indices.begin();
+
+		auto const coo = IndexToCoords(r);
+
+		*tmp_it = r;  ++tmp_it;
+		for (int dir = 0; dir < nDim; ++dir) {
+			auto const cooP = ShiftCoord(coo, dir, Direction::Positive);
+			auto const cooM = ShiftCoord(coo, dir, Direction::Negative);
+
+			int const cP = CoordToIndex(cooP); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			int const cM = CoordToIndex(cooM);
+			*tmp_it = cP; ++tmp_it;
+			*tmp_it = cM; ++tmp_it;
+		}
+
+		std::sort(tmp_col_indices.begin(), tmp_col_indices.end());
+
+		auto tmp_cit = tmp_col_indices.cbegin();
+		for (; tmp_cit != tmp_col_indices.cend(); ++tmp_cit, ++col_it, ++val_it) {
+			*val_it = (*tmp_cit != r ? 1.0 : -2.0*nDim);
+			*col_it = *tmp_cit;
+		}
+
+		*row_it = nElements * NormalToEO(r+1);
+	}
+
+	std::copy(row_indices.cbegin(), row_indices.cend(), I);
+	std::copy(col_indices.cbegin(), col_indices.cend(), J);
+	std::copy(vals.cbegin(), vals.cend(), cval);
+}
+

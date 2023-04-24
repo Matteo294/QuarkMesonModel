@@ -32,3 +32,14 @@ __host__ __device__ my2dArray eoToVec(int n){
 	else idx[1] = 2*((n % (Sizes[1]/2))) + alpha; 
 	return idx;
 }
+
+__host__ __device__ int EOtoNormal(int n){
+	my2dArray idx = eoToVec(n);
+	return idx[1] + Sizes[1]*idx[0];
+}
+
+__host__ __device__  int NormalToEO(int n){
+	int nt = n / Sizes[1];
+	int nx = n % Sizes[1];
+	return toEOflat(nt, nx);
+}
