@@ -87,15 +87,11 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
 	int k;
 	for(k=0; k<IterMax && sqrt(rmodsq) > tolerance; k++){
 
-		for(int i=0; i<vol; i++){
-			for(int j=0; j<4; j++) temp[i].val[j] = 2.0 * p[i].val[j];
-		}
-
 		// Set buffers to zero to store the result fo the Dirac operator applied to p
 		setZeroArgs[0] = (void*) &temp;
 		cudaLaunchCooperativeKernel((void*)&setZeroGPU, dim3(nBlocks_zero, 1, 1), dim3(nThreads_zero, 1, 1), setZeroArgs, 0, NULL);
 		cudaDeviceSynchronize();
-		setZeroArgs[0] = (void*) &temp;
+		setZeroArgs[0] = (void*) &temp2;
 		cudaLaunchCooperativeKernel((void*)&setZeroGPU, dim3(nBlocks_zero, 1, 1), dim3(nThreads_zero, 1, 1), setZeroArgs, 0, NULL);
 		cudaDeviceSynchronize();
 

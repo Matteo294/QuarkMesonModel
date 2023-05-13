@@ -37,8 +37,6 @@ __constant__ double fermion_mass_gpu;
 
 using std::conj;
 
-thrust::complex<double> im {0.0, 1.0};
-
 void getForce(double *outVec, DiracOP<double>& D, thrust::complex<double> *M,  CGsolver& CG, dim3 dimGrid_drift, dim3 dimBlock_drift, std::mt19937 *gen, std::normal_distribution<float> *dist);
 
 __global__ void computeDrift(Spinor<double> *inVec, Spinor<double> *afterCG, thrust::complex<double> *outVec, int const vol);
@@ -609,7 +607,15 @@ void getForce(double *outVec, DiracOP<double>& D, thrust::complex<double> *M, CG
 	cudaLaunchCooperativeKernel((void*)&computeDrift, dimGrid_drift, dimBlock_drift, driftArgs, 0, NULL);
 	cudaDeviceSynchronize();
 	
-	for(int i=0; i<4*vol; i++) outVec[i] = eobuf[NormalToEO(i)].real();
+	int eo_i;
+	for(int i=0; i<vol; i++){
+		eo_i = NormalToEO(i);
+		outVec[i] = eobuf[eo_i].real();
+		outVec[i + vol] = eobuf[eo_i + vol].real();
+		outVec[i + 2*vol] = eobuf[eo_i + 2*vol].real();
+		outVec[i + 3*vol] = eobuf[eo_i + 3*vol].real();
+
+	}
 
 	cudaFree(afterCG);
 	cudaFree(buf);
@@ -658,13 +664,17 @@ __global__ void copyMesonsToM(double* phi, thrust::complex<double>* M){
 	cg::thread_block cta = cg::this_thread_block();
 	cg::grid_group grid = cg::this_grid();
 
-	thrust::complex<double> im (0.0, 1.0);
+	thrust::complex<double> const im {0.0, 1.0};
 
+
+	int eo_i;
 	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
-		M[NormalToEO(i)] = phi[i] + im * phi[3*vol+i];
-		M[NormalToEO(i + 3*vol)] = phi[i] - im * phi[3*vol+i];
-		M[NormalToEO(i + vol)] = im * (phi[vol+i] - im * phi[2*vol+i]);
-		M[NormalToEO(i + 2*vol)] = im * (phi[vol+i] + im * phi[2*vol+i]);	
-	}
+		eo_i = NormalToEO(i);
+		M[eo_i] = phi[i] + im * phi[3*vol+i];
+		M[eo_i + 3*vol] = phi[i] - im * phi[3*vol+i];
+		M[eo_i + vol] = im * (phi[vol+i] - im * phi[2*vol+i]);
+		M[eo_i + 2*vol] = im * (phi[vol+i] + im * phi[2*vol+i]);
+	}	
+	
 }
 
