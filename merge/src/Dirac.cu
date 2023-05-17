@@ -3,8 +3,6 @@
 extern __constant__ double yukawa_coupling_gpu;
 extern __constant__ double fermion_mass_gpu;
 
-template class DiracOP<double>;
-
 template <typename T>
 __host__ DiracOP<T>::DiracOP() : inVec(nullptr), outVec(nullptr), M(nullptr)
 	{
@@ -44,18 +42,15 @@ __host__ DiracOP<T>::DiracOP() : inVec(nullptr), outVec(nullptr), M(nullptr)
 			IDN.at[i][1] = toEOflat(idx[0], PBC(idx[1]-1, Sizes[1]));
 		}
 
-        /*diagArgs = {(void*)&inVec, (void*)&outVec, (void*)&useDagger, (void*)&M};
-		hoppingArgs = {(void*)&inVec, (void*) &outVec, (void*) &useDagger, (void*) &IUP.at, (void*) &IDN.at};*/
-		diagArgs[0] = (void*)&inVec;
-		diagArgs[1] = (void*)&outVec;
-		diagArgs[2] = (void*)&useDagger;
-		diagArgs[3] = (void*)&M;
-		hoppingArgs[0] = (void*)&inVec;
-		hoppingArgs[1] = (void*)&outVec;
-		hoppingArgs[2] = (void*)&useDagger;
-		hoppingArgs[3] = (void*)&IUP.at;
-		hoppingArgs[4] = (void*)&IDN.at;
-        
+		diagArgs[0] = (void*) &inVec;
+		diagArgs[1] = (void*) &outVec;
+		diagArgs[2] = (void*) &useDagger;
+		diagArgs[3] = (void*) &M;
+		hoppingArgs[0] = (void*) &inVec;
+		hoppingArgs[1] = (void*) &outVec;
+		hoppingArgs[2] = (void*) &useDagger;
+		hoppingArgs[3] = (void*) &IUP.at;
+		hoppingArgs[4] = (void*) &IDN.at;      
     }
 
 
@@ -77,6 +72,7 @@ __host__ void DiracOP<T>::applyD(){
     cudaDeviceSynchronize();
 
 }
+
 
 template <typename T>
 __global__ void D_oo(Spinor<T> *inVec, Spinor<T> *outVec, MatrixType const useDagger, thrust::complex<T> *M){
@@ -375,4 +371,5 @@ __global__ void D_oo_inv(Spinor<T> *inVec, Spinor<T> *outVec, MatrixType const u
 }
 
 
+template class DiracOP<double>;
 

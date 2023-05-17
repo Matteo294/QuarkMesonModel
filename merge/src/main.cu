@@ -28,6 +28,7 @@
 #include "Spinor.cuh"
 #include "Lattice.cuh"
 #include "CGsolver.cuh"
+#include "FermionicDrift.cuh"
 
 __constant__ myType epsBar;
 __constant__ myType m2;
@@ -36,10 +37,6 @@ __constant__ double yukawa_coupling_gpu;
 __constant__ double fermion_mass_gpu;
 
 using std::conj;
-
-void getForce(double *outVec, DiracOP<double>& D, thrust::complex<double> *M,  CGsolver& CG, dim3 dimGrid_drift, dim3 dimBlock_drift, std::mt19937 *gen, std::normal_distribution<float> *dist);
-
-__global__ void computeDrift(Spinor<double> *inVec, Spinor<double> *afterCG, thrust::complex<double> *outVec, int const vol);
 
 __global__ void copyMesonsToM(double* phi, thrust::complex<double>* M);
 
@@ -74,12 +71,10 @@ int main(int argc, char** argv) {
 	double *fermionic_contribution;
 	Spinor<double> *in, *out;
 	DiracOP<double> Dirac;
+	FermionicDrift fDrift;
 	CGsolver CG;
 
-	// set up random generator
-	std::random_device rd; 
-	std::mt19937 gen(rd()); 
-	std::normal_distribution<float> dist(0, 1.0);
+	
 
 	// Allocate two vectors and mesons matrix
 	cudaMallocManaged(&M, sizeof(thrust::complex<double>) * 4 * vol);
@@ -306,13 +301,13 @@ int main(int argc, char** argv) {
 			// ------------------------------------------------------------------------------------------------
 			cudaLaunchCooperativeKernel((void*)&copyMesonsToM, dimGrid_copy, dimGrid_copy, copyMArgs, 0, NULL);
 			cudaDeviceSynchronize();
-			setZeroArgs[0] = (void*)&fermionic_contribution;
+			setZeroArgs[0] = (void*) &fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 			cudaDeviceSynchronize();
-			getForce(fermionic_contribution, Dirac, M, CG, dimGrid_drift, dimBlock_drift, &gen, &dist);
+			fDrift.getForce(fermionic_contribution, Dirac, M, CG, dimGrid_drift, dimBlock_drift);
 			copyArgs[0] = (void*) &drift;
 			copyArgs[1] = (void*) &fermionic_contribution;
-			cudaLaunchCooperativeKernel((void*)&copyVec_re, dimGrid_copy, dimBlock_copy, copyArgs, 0, NULL);
+			cudaLaunchCooperativeKernel((void*) &copyVec_re, dimGrid_copy, dimBlock_copy, copyArgs, 0, NULL);
 			cudaDeviceSynchronize();
 			//for(int i=0; i<4*vol; i++){drift[i] = fermionic_contribution[i].real();}
 			// ------------------------------------------------------------------------------------------------
@@ -353,7 +348,7 @@ int main(int argc, char** argv) {
 			setZeroArgs[0] = (void*)&fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 			cudaDeviceSynchronize();
-			getForce(fermionic_contribution, Dirac, M, CG, dimGrid_drift, dimBlock_drift, &gen, &dist);
+			fDrift.getForce(fermionic_contribution, Dirac, M, CG, dimGrid_drift, dimBlock_drift);
 			copyArgs[0] = (void*) &drift;
 			copyArgs[1] = (void*) &fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*)&copyVec_re, dimGrid_copy, dimBlock_copy, copyArgs, 0, NULL);
@@ -391,8 +386,12 @@ int main(int argc, char** argv) {
 	std::vector<thrust::complex<double>> traces;
 
 	auto timerStart = std::chrono::high_resolution_clock::now();
+	auto cycleStart = timerStart;
+	auto cycleStop = timerStart;
 	while (elapsedLangevinTime < MaxLangevinTime) {
 		myType t = 0.0;
+		
+		cycleStart = std::chrono::high_resolution_clock::now();
 		while (t < ExportTime) {
 			cn();
 			
@@ -402,7 +401,7 @@ int main(int argc, char** argv) {
 			setZeroArgs[0] = (void*)&fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 			cudaDeviceSynchronize();
-			getForce(fermionic_contribution, Dirac, M, CG, dimGrid_drift, dimBlock_drift, &gen, &dist);
+			fDrift.getForce(fermionic_contribution, Dirac, M, CG, dimGrid_drift, dimBlock_drift);
 			copyArgs[0] = (void*) &drift;
 			copyArgs[1] = (void*) &fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*)&copyVec_re, dimGrid_copy, dimBlock_copy, copyArgs, 0, NULL);
@@ -416,6 +415,8 @@ int main(int argc, char** argv) {
 			cudaDeviceSynchronize();
 			t += *h_eps;
 		}
+		cycleStop = std::chrono::high_resolution_clock::now();
+		std::cout << "Cycle time: " << std::chrono::duration_cast<std::chrono::milliseconds>(cycleStop - cycleStart).count() / 1000.0 << " s \n";
 		
 		elapsedLangevinTime += t;
 
@@ -558,106 +559,6 @@ int main(int argc, char** argv) {
 	// ---------------------------------
 
 	return 0;
-}
-
-
-void getForce(double *outVec, DiracOP<double>& D, thrust::complex<double> *M, CGsolver& CG, dim3 dimGrid_drift, dim3 dimBlock_drift, std::mt19937 *gen, std::normal_distribution<float> *dist){
-	
-	Spinor<double> *afterCG, *buf, *vec;
-	thrust::complex<double> *eobuf;
-	cudaMallocManaged(&afterCG, sizeof(Spinor<double>) * vol);
-	cudaMallocManaged(&buf, sizeof(Spinor<double>) * vol);
-	cudaMallocManaged(&vec, sizeof(Spinor<double>) * vol);
-	cudaMallocManaged(&eobuf, sizeof(thrust::complex<double>) * 4 * vol);
-
-	// set up set spinor to zero
-	int nBlocks_zero = 0;
-	int nThreads_zero = 0;
-	cudaOccupancyMaxPotentialBlockSize(&nBlocks_zero, &nThreads_zero, setZeroGPU);
-	cudaDeviceSynchronize();
-	int const spinor_vol = 4*vol;
-	void *setZeroArgs[] = {(void*)afterCG, (void*) &spinor_vol};
-
-	// Set up dot product call
-	void *driftArgs[] = {(void*) &vec, (void*) &afterCG, (void*) &eobuf, (void*) &vol};
-
-
-	for(int i=0; i<vol; i++){ 
-		//afterCG[i].setZeroGPU(); 
-		//buf[i].setZero();
-		for(int j=0; j<4; j++) vec[i].val[j] = (*dist)(*gen);
-	}
-	
-	// set some spinors to zero
-	setZeroArgs[0] = (void*)&afterCG;
-	cudaLaunchCooperativeKernel((void*)&setZeroGPU, dim3(nBlocks_zero, 1, 1), dim3(nThreads_zero, 1, 1), setZeroArgs, 0, NULL);
-	cudaDeviceSynchronize();
-	setZeroArgs[0] = (void*)&buf;
-	cudaLaunchCooperativeKernel((void*)&setZeroGPU, dim3(nBlocks_zero, 1, 1), dim3(nThreads_zero, 1, 1), setZeroArgs, 0, NULL);
-	cudaDeviceSynchronize();
-
-	CG.solve(vec, buf, D, M);
-	
-	D.setInVec(buf);
-	D.setOutVec(afterCG);
-	D.setDagger(MatrixType::Dagger);
-	D.applyD();
-	cudaDeviceSynchronize();
-
-	cudaLaunchCooperativeKernel((void*)&computeDrift, dimGrid_drift, dimBlock_drift, driftArgs, 0, NULL);
-	cudaDeviceSynchronize();
-	
-	int eo_i;
-	for(int i=0; i<vol; i++){
-		eo_i = NormalToEO(i);
-		outVec[i] = eobuf[eo_i].real();
-		outVec[i + vol] = eobuf[eo_i + vol].real();
-		outVec[i + 2*vol] = eobuf[eo_i + 2*vol].real();
-		outVec[i + 3*vol] = eobuf[eo_i + 3*vol].real();
-
-	}
-
-	cudaFree(afterCG);
-	cudaFree(buf);
-	cudaFree(vec);
-	cudaFree(eobuf);
-	 
-}
-
-__global__ void computeDrift(Spinor<double> *inVec, Spinor<double> *afterCG, thrust::complex<double> *outVec, int const vol){
-
-	cg::thread_block cta = cg::this_thread_block();
-	cg::grid_group grid = cg::this_grid();
-
-	thrust::complex<double> im (0.0, 1.0);
-
-	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
-		// Drift for sigma
-		outVec[i] = yukawa_coupling_gpu * (	  conj(afterCG[i].val[0])*inVec[i].val[0]
-											+ conj(afterCG[i].val[1])*inVec[i].val[1] 
-											+ conj(afterCG[i].val[2])*inVec[i].val[2] 
-											+ conj(afterCG[i].val[3])*inVec[i].val[3]);
-
-		// Drift for pi1
-		outVec[i + vol] = yukawa_coupling_gpu * (	- conj(afterCG[i].val[0])*inVec[i].val[3]
-											 		+ conj(afterCG[i].val[1])*inVec[i].val[2] 
-													- conj(afterCG[i].val[2])*inVec[i].val[1] 
-													+ conj(afterCG[i].val[3])*inVec[i].val[0]);
-
-		// Drift for pi2
-		outVec[i + 2*vol] = yukawa_coupling_gpu * (	  im * conj(afterCG[i].val[0])*inVec[i].val[3] 
-													- im * conj(afterCG[i].val[1])*inVec[i].val[2] 
-													- im * conj(afterCG[i].val[2])*inVec[i].val[1] 
-													+ im * conj(afterCG[i].val[3])*inVec[i].val[0]);
-
-		// Drift for pi3
-		outVec[i + 3*vol] = yukawa_coupling_gpu * (	- conj(afterCG[i].val[0])*inVec[i].val[1]
-													+ conj(afterCG[i].val[1])*inVec[i].val[0]
-													+ conj(afterCG[i].val[2])*inVec[i].val[3]
-													- conj(afterCG[i].val[3])*inVec[i].val[2]);
-
-	}
-
 }
 
 __global__ void copyMesonsToM(double* phi, thrust::complex<double>* M){

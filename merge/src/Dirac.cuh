@@ -3,12 +3,13 @@
 #include <array>
 #include <complex>
 #include <iostream>
-#include <thrust/complex.h>
 #include "Spinor.cuh"
 #include "Lattice.cuh"
+#include "CGsolver.cuh"
 #include <cooperative_groups.h>
 #include "params.h"
 
+class CGsolver;
 
 namespace cg = cooperative_groups;
 
@@ -16,8 +17,8 @@ namespace cg = cooperative_groups;
 template <typename T>
 class DiracOP {
 	public:
-		__host__ DiracOP();
-		__host__ ~DiracOP(){cudaFree(temp); cudaFree(temp2);}
+		DiracOP();
+		~DiracOP(){cudaFree(temp); cudaFree(temp2);}
 		__host__  void applyD();
 		__host__ __device__ void setInVec(Spinor<T> *v){inVec = v;}
 		__host__ __device__ void setOutVec(Spinor<T> *v){outVec = v;}

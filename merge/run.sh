@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --ntasks=1
-#SBATCH --time=00:10:00
+#SBATCH --time=20:00:00
 #SBATCH --mem=1000mb
 #SBATCH -J test
-#SBATCH --partition=dev_gpu_4		# dev_gpu4, gpu_4, or gpu_8
+#SBATCH --partition=gpu_8		# dev_gpu4, gpu_4, or gpu_8
 #SBATCH --gres=gpu:1
 #SBATCH --signal=B:USR2@60		# send SIGNAL to the code to wrap up 60 seconds before killing it
 

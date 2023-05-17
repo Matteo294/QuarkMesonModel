@@ -30,7 +30,7 @@ using dimArray = std::array<int, nDim>;
 //dimArray constexpr Sizes = {128, 128};//, 12, 12};
 //dimArray constexpr Sizes = {256, 256};//, 12, 12};
 
-dimArray constexpr Sizes = {16, 16};
+dimArray constexpr Sizes = {64, 64};
 int const vol = Sizes[0]*Sizes[1];
 
 /*

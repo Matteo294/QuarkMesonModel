@@ -1,5 +1,6 @@
 #include "CGsolver.cuh"
 
+
 CGsolver::CGsolver(){
     cudaMallocManaged(&r, sizeof(Spinor<double>) * vol);
 	cudaMallocManaged(&p, sizeof(Spinor<double>) * vol);
@@ -36,23 +37,26 @@ CGsolver::~CGsolver(){
 
 
 
-
-void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<double>& D, thrust::complex<double> *M){
+void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<double>& D, thrust::complex<double> *M, MatrixType Mtype){
 	//cudaMemcpy(inVec, r, vol * sizeof(Spinor<double>), cudaMemcpyHostToDevice);
-	thrust::complex<double> alpha; // allocate space ??
-	double beta, rmodsq;
+	double rmodsq;
 
-
-	int const mySize = 4 * vol;
-
-	void *dotArgs[] = {(void*) &r, (void*) &r, (void*) &dot_res, (void*) &mySize};
+	void *dotArgs[] = {(void*) &r, (void*) &r, (void*) &dot_res, (void*) &spinor_vol};
 	// set up set spinor to zero
-	int nBlocks_zero = 0;
-	int nThreads_zero = 0;
-	cudaOccupancyMaxPotentialBlockSize(&nBlocks_zero, &nThreads_zero, setZeroGPU);
+	int nBlocks = 0;
+	int nThreads = 0;
+	cudaOccupancyMaxPotentialBlockSize(&nBlocks, &nThreads, setZeroGPU);
 	cudaDeviceSynchronize();
-	int const spinor_vol = 4*vol;
+	nBlocks = 0;
+	nThreads = 0;
+	dimGrid_zero = dim3(nBlocks, 1, 1);
+	dimBlock_zero = dim3(nThreads, 1, 1);
+	cudaOccupancyMaxPotentialBlockSize(&nBlocks, &nThreads, gpuSumSpinors);
+	cudaDeviceSynchronize();
+	dimGrid_sum = dim3(nBlocks, 1, 1);
+	dimBlock_sum = dim3(nThreads, 1, 1);
 	void *setZeroArgs[] = {(void*)temp, (void*) &spinor_vol};
+	void *sumArgs[] = {(void*) &r, (void*) &r, (void*) &r, (void*) &beta};
 
 	D.setInVec(p);
 	D.setOutVec(temp2);
@@ -68,13 +72,13 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
 	}
 
 	setZeroArgs[0] = (void*) &temp;
-	cudaLaunchCooperativeKernel((void*)&setZeroGPU, dim3(nBlocks_zero, 1, 1), dim3(nThreads_zero, 1, 1), setZeroArgs, 0, NULL);
+	cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 	cudaDeviceSynchronize();
 	setZeroArgs[0] = (void*) &temp2;
-	cudaLaunchCooperativeKernel((void*)&setZeroGPU, dim3(nBlocks_zero, 1, 1), dim3(nThreads_zero, 1, 1), setZeroArgs, 0, NULL);
+	cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 	cudaDeviceSynchronize();
 	setZeroArgs[0] = (void*) &sol;
-	cudaLaunchCooperativeKernel((void*)&setZeroGPU, dim3(nBlocks_zero, 1, 1), dim3(nThreads_zero, 1, 1), setZeroArgs, 0, NULL);
+	cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 	cudaDeviceSynchronize();
 
 
@@ -89,19 +93,21 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
 
 		// Set buffers to zero to store the result fo the Dirac operator applied to p
 		setZeroArgs[0] = (void*) &temp;
-		cudaLaunchCooperativeKernel((void*)&setZeroGPU, dim3(nBlocks_zero, 1, 1), dim3(nThreads_zero, 1, 1), setZeroArgs, 0, NULL);
+		cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 		cudaDeviceSynchronize();
 		setZeroArgs[0] = (void*) &temp2;
-		cudaLaunchCooperativeKernel((void*)&setZeroGPU, dim3(nBlocks_zero, 1, 1), dim3(nThreads_zero, 1, 1), setZeroArgs, 0, NULL);
+		cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 		cudaDeviceSynchronize();
 
 		// Apply D dagger
-		D.setDagger(MatrixType::Dagger);
+		if (Mtype == MatrixType::Normal) D.setDagger(MatrixType::Dagger);
+		else D.setDagger(MatrixType::Normal);
 		D.setInVec(p);
 		D.setOutVec(temp2);
 		D.applyD();
 		// Apply D
-		D.setDagger(MatrixType::Normal);
+		if (Mtype == MatrixType::Normal) D.setDagger(MatrixType::Normal);
+		else D.setDagger(MatrixType::Dagger);
 		D.setInVec(temp2);
 		D.setOutVec(temp);
 		D.applyD();
@@ -114,29 +120,48 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
 		alpha = rmodsq / *dot_res; 
 
 		// x = x + alpha p
-		for(int i=0; i<vol; i++){
+		sumArgs[0] = (void*) &outVec;
+		sumArgs[1] = (void*) &p;
+		sumArgs[2] = (void*) &outVec;
+		sumArgs[3] = (void*) &alpha;
+		cudaLaunchCooperativeKernel((void*)&gpuSumSpinors, dimGrid_dot, dimBlock_dot, sumArgs, 0, NULL);
+		cudaDeviceSynchronize();
+		/*for(int i=0; i<vol; i++){
 			for(int j=0; j<4; j++) outVec[i].val[j] += alpha*p[i].val[j];
-		}
+		}*/
 		// r = r - alpha A p
-		for(int i=0; i<vol; i++){
+		sumArgs[0] = (void*) &r;
+		sumArgs[1] = (void*) &temp;
+		sumArgs[2] = (void*) &r;
+		sumArgs[3] = (void*) &alpha;
+		alpha = -alpha;
+		cudaLaunchCooperativeKernel((void*)&gpuSumSpinors, dimGrid_dot, dimBlock_dot, sumArgs, 0, NULL);
+		cudaDeviceSynchronize();
+		/*for(int i=0; i<vol; i++){
 			for(int j=0; j<4; j++) r[i].val[j] -= alpha*temp[i].val[j];
-		}
+		}*/
 
 		dotArgs[0] = (void*) &r; dotArgs[1] = (void*) &r;
 		*dot_res = 0.0;
 		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid_dot, dimBlock_dot, dotArgs, sizeof(thrust::complex<double>) * (32), NULL);
 		cudaDeviceSynchronize();
-		beta = abs(*dot_res) / rmodsq;
+		beta = dot_res->real() / rmodsq;
 
 		// p = r - beta p
-		for(int i=0; i<vol; i++){
+		sumArgs[0] = (void*) &r;
+		sumArgs[1] = (void*) &p;
+		sumArgs[2] = (void*) &p;
+		sumArgs[3] = (void*) &beta;
+		cudaLaunchCooperativeKernel((void*)&gpuSumSpinors, dimGrid_dot, dimBlock_dot, sumArgs, 0, NULL);
+		cudaDeviceSynchronize();
+		/*for(int i=0; i<vol; i++){
 			for(int j=0; j<4; j++) p[i].val[j] = r[i].val[j] + beta*p[i].val[j];
-		}
+		}*/
 
 		*dot_res = 0.0;
 		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid_dot, dimBlock_dot, dotArgs, sizeof(thrust::complex<double>) * (32), NULL);
 		cudaDeviceSynchronize();
-		rmodsq = abs(*dot_res);
+		rmodsq = dot_res->real();
 	}
 
 	//if (k < IterMax) std::cout << "Convergence reached in " << k-1 << " steps \n";
@@ -173,5 +198,13 @@ __global__ void gpuDotProduct(thrust::complex<double> *vecA, thrust::complex<dou
 		atomicAdd(reinterpret_cast<double*>(result), temp_sum.real());
 		atomicAdd(reinterpret_cast<double*>(result)+1, temp_sum.imag());
 		}
+	}
+}
+
+
+__global__ void gpuSumSpinors(Spinor<double> *s1, Spinor<double> *s2, Spinor<double> *res, thrust::complex<double> c){
+	auto grid = cg::this_grid();
+	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
+		for(int j=0; j<4; j++) res[i].val[j] = s1[i].val[j] + c * s2[i].val[j];
 	}
 }

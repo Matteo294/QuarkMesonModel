@@ -30,7 +30,7 @@ all: out
 
 BUILD_DIR:=./build
 
-SRCS := CGsolver.cu Dirac.cu Lattice.cu Laplace.cu langevin_gpu_v2.cu HDF5.cpp reductions.cu main.cu colouredNoise.cpp
+SRCS := FermionicDrift.cu Dirac.cu CGsolver.cu Lattice.cu Laplace.cu langevin_gpu_v2.cu HDF5.cpp reductions.cu main.cu colouredNoise.cpp
 OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
