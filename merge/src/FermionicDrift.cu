@@ -58,7 +58,7 @@ void FermionicDrift::getForce(double *outVec, DiracOP<double>& D, thrust::comple
 	
 	D.setInVec(buf);
 	D.setOutVec(afterCG);
-	D.setDagger(MatrixType::Dagger);
+	D.setDagger(MatrixType::Normal);
 	D.applyD();
 	cudaDeviceSynchronize();
 
