@@ -276,7 +276,7 @@ int main(int argc, char** argv) {
 		(void*)&maxDrift};
 
 	// ----------------------------------------------------------------------
-	copyMArgs[0] = (void*)&ivec;
+	copyMArgs[0] = (void*)&(ivec.data());
 	// ----------------------------------------------------------------------
 
 
@@ -304,12 +304,12 @@ int main(int argc, char** argv) {
 			setZeroArgs[0] = (void*) &fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 			cudaDeviceSynchronize();
-			fDrift.getForce(fermionic_contribution, Dirac, M, CG, dimGrid_drift, dimBlock_drift);
-			copyArgs[0] = (void*) &drift;
+			//fDrift.getForce(fermionic_contribution, Dirac, M, CG, dimGrid_drift, dimBlock_drift);
+			/*copyArgs[0] = (void*) &drift;
 			copyArgs[1] = (void*) &fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*) &copyVec_re, dimGrid_copy, dimBlock_copy, copyArgs, 0, NULL);
-			cudaDeviceSynchronize();
-			//for(int i=0; i<4*vol; i++){drift[i] = fermionic_contribution[i].real();}
+			cudaDeviceSynchronize();*/
+			// for(int i=0; i<4*vol; i++){drift[i] = fermionic_contribution[i];}
 			// ------------------------------------------------------------------------------------------------
 
 
@@ -348,12 +348,12 @@ int main(int argc, char** argv) {
 			setZeroArgs[0] = (void*)&fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 			cudaDeviceSynchronize();
-			fDrift.getForce(fermionic_contribution, Dirac, M, CG, dimGrid_drift, dimBlock_drift);
-			copyArgs[0] = (void*) &drift;
+			//fDrift.getForce(fermionic_contribution, Dirac, M, CG, dimGrid_drift, dimBlock_drift);
+			/*copyArgs[0] = (void*) &drift;
 			copyArgs[1] = (void*) &fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*)&copyVec_re, dimGrid_copy, dimBlock_copy, copyArgs, 0, NULL);
-			cudaDeviceSynchronize();
-			//for(int i=0; i<4*vol; i++){drift[i] = fermionic_contribution[i].real();}
+			cudaDeviceSynchronize();*/
+			//for(int i=0; i<4*vol; i++){drift[i] = fermionic_contribution[i];}
 			// ------------------------------------------------------------------------------------------------
 
 			
@@ -388,33 +388,31 @@ int main(int argc, char** argv) {
 	auto timerStart = std::chrono::high_resolution_clock::now();
 	auto cycleStart = timerStart;
 	auto cycleStop = timerStart;
-	while (elapsedLangevinTime < MaxLangevinTime) {
+	//while (elapsedLangevinTime < MaxLangevinTime) {
 		myType t = 0.0;
 		
 		cycleStart = std::chrono::high_resolution_clock::now();
 		while (t < ExportTime) {
-			cn();
-			
+			cn();			
 			// ------------------------------------------------------------------------------------------------
 			cudaLaunchCooperativeKernel((void*)&copyMesonsToM, dimGrid_copy, dimGrid_copy, copyMArgs, 0, NULL);
 			cudaDeviceSynchronize();
 			setZeroArgs[0] = (void*)&fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 			cudaDeviceSynchronize();
-			fDrift.getForce(fermionic_contribution, Dirac, M, CG, dimGrid_drift, dimBlock_drift);
-			copyArgs[0] = (void*) &drift;
+			//fDrift.getForce(fermionic_contribution, Dirac, M, CG, dimGrid_drift, dimBlock_drift);
+			/*copyArgs[0] = (void*) &drift;
 			copyArgs[1] = (void*) &fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*)&copyVec_re, dimGrid_copy, dimBlock_copy, copyArgs, 0, NULL);
-			cudaDeviceSynchronize();
-			//for(int i=0; i<4*vol; i++){drift[i] = fermionic_contribution[i].real();}
+			cudaDeviceSynchronize();*/
+			//for(int i=0; i<4*vol; i++){drift[i] = fermionic_contribution[i];}
 			// ------------------------------------------------------------------------------------------------
 			
 			kli.Run(kAll, kli_sMem);
-			cudaDeviceSynchronize();
 			cudaMemcpy(h_eps, eps, sizeof(myType), cudaMemcpyDeviceToHost);
 			cudaDeviceSynchronize();
 			t += *h_eps;
-		}
+		//}
 		cycleStop = std::chrono::high_resolution_clock::now();
 		std::cout << "Cycle time: " << std::chrono::duration_cast<std::chrono::milliseconds>(cycleStop - cycleStart).count() / 1000.0 << " s \n";
 		
@@ -440,21 +438,32 @@ int main(int argc, char** argv) {
 		setZeroArgs[0] = (void*)&out;
 		cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 		cudaDeviceSynchronize();
+		
+
+		for(int i=0; i<vol; i++){
+			M[i] = 0.2 + im * 0.1;
+			M[i+3*vol] = 0.2 - im * 0.1;
+			M[i+vol] = im * (0.1 - im * 0.15);
+			M[i+2*vol] = im * (0.1 + im * 0.15);
+			/*M[i] = 0.0;
+			M[i+3*vol] = 0.0;
+			M[i+vol] = 0.0;
+			M[i+2*vol] = 0.0;*/
+		}
 
 		// Compute fermionic correlator and print to file
 		in[0].val[0] = 1.0;
 		in[0].val[1] = 1.0;
 		in[0].val[2] = 1.0;
 		in[0].val[3] = 1.0;
-		Dirac.setInVec(in);
-		Dirac.setOutVec(out);
-		Dirac.setDagger(MatrixType::Normal);
-		CG.solve(in, out, Dirac, M);
+
+		CG.solve(in, out, Dirac);
 		for(int i=0; i<vol; i++){in[i].setZero();}
 		Dirac.setInVec(out);
 		Dirac.setOutVec(in);
 		Dirac.setDagger(MatrixType::Dagger);
 		Dirac.applyD();
+
 		thrust::complex<double> corr = 0.0;
 		for(int nt=0; nt<Sizes[0]; nt++){
 			corr = 0.0;
@@ -500,11 +509,11 @@ int main(int argc, char** argv) {
 					<< 	avg[0] / (Sizes[0]*Sizes[1]) 		<< ","
 					<< 	avg[1] / (Sizes[0]*Sizes[1]) 		<< "," 
 					<< 	avg[2] / (Sizes[0]*Sizes[1]) 		<< ","
-					<< 	avg[3] / (Sizes[0]*Sizes[1]) 		<< "\n";
+					<< 	avg[3] / (Sizes[0]*Sizes[1]) 		<< std::endl;
 		std::cout << "Traces: " 	<< tr[0].real()/(Sizes[0]*Sizes[1]) << "\t" 
 								<< tr[1].real()/(Sizes[0]*Sizes[1]) << "\t" 
 								<< tr[2].real()/(Sizes[0]*Sizes[1]) << "\t"
-								<< tr[3].real()/(Sizes[0]*Sizes[1]) << "\n";
+								<< tr[3].real()/(Sizes[0]*Sizes[1]) << std::endl;
 
 		nMeasurements++;
 		

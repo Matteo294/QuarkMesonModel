@@ -10,11 +10,11 @@
 class FermionicDrift{
     public:
         FermionicDrift();
-        ~FermionicDrift(){cudaFree(afterCG); cudaFree(buf); cudaFree(vec); cudaFree(eobuf);};
+        ~FermionicDrift(){cudaFree(afterCG); cudaFree(buf); cudaFree(noiseVec); cudaFree(eobuf);};
 		void getForce(double *outVec, DiracOP<double>& D, thrust::complex<double> *M, CGsolver& CG, dim3 dimGrid_drift, dim3 dimBlock_drift);
         //void setDirac(DiracOP<double> *Dirac){D = Dirac;}
     private:
-        Spinor<double> *afterCG, *buf, *vec;
+        Spinor<double> *afterCG, *buf, *noiseVec;
 		thrust::complex<double> *eobuf;
 		std::random_device rd; 
 		std::mt19937 gen; 
@@ -29,6 +29,6 @@ class FermionicDrift{
 
 };
 
-__global__ void computeDrift(Spinor<double> *inVec, Spinor<double> *afterCG, thrust::complex<double> *outVec, int const vol);
+__global__ void computeDrift(Spinor<double> *afterCG, Spinor<double> *noise, thrust::complex<double> *outVec);
 
 __global__ void eoConv(thrust::complex<double> *eoVec, double *normalVec);

@@ -8,9 +8,9 @@ cutFraction = 1.0
 
 [langevin]
 averageEpsilon = 0.02
-MaxLangevinTime = 10000.0
+MaxLangevinTime = 0.03
 ExportTime = 1.0
-burnCount = 10
+burnCount = 0
 MeasureDriftCount = 0
 
 [io]

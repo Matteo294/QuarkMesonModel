@@ -7,7 +7,7 @@ FermionicDrift::FermionicDrift() : gen(rd()), dist(0.0, 1.0)
 {
     cudaMallocManaged(&afterCG, sizeof(Spinor<double>) * vol);
 	cudaMallocManaged(&buf, sizeof(Spinor<double>) * vol);
-	cudaMallocManaged(&vec, sizeof(Spinor<double>) * vol);
+	cudaMallocManaged(&noiseVec, sizeof(Spinor<double>) * vol);
 	cudaMallocManaged(&eobuf, sizeof(thrust::complex<double>) * 4 * vol);
 
 	int nBlocks = 0;
@@ -30,20 +30,15 @@ FermionicDrift::FermionicDrift() : gen(rd()), dist(0.0, 1.0)
 	convArgs[0] = (void*) &eobuf;
     convArgs[1] = (void*) &eobuf;
     
-	driftArgs[0] = (void*) &vec;
-    driftArgs[1] = (void*) &afterCG;
-    driftArgs[2] = (void*) &eobuf;
-    driftArgs[3] = (void*) &vol;  
+	driftArgs[0] = (void*) &afterCG;
+    driftArgs[1] = (void*) &noiseVec;
+    driftArgs[2] = (void*) &noiseVec; 
 }
 
 void FermionicDrift::getForce(double *outVec, DiracOP<double>& D, thrust::complex<double> *M, CGsolver& CG, dim3 dimGrid_drift, dim3 dimBlock_drift){
-
-	// set up set spinor to zero
-    setZeroArgs[0] = (void*) &afterCG;
-    setZeroArgs[1] = (void*) &spinor_vol;
 	
 	for(int i=0; i<vol; i++){ 
-		for(int j=0; j<4; j++) vec[i].val[j] = dist(gen);
+		for(int j=0; j<4; j++) noiseVec[i].val[j] = dist(gen);
 	}
 	
 	// set some spinors to zero
@@ -54,7 +49,7 @@ void FermionicDrift::getForce(double *outVec, DiracOP<double>& D, thrust::comple
 	cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 	cudaDeviceSynchronize();
 
-	CG.solve(vec, buf, D, M, MatrixType::Dagger);
+	CG.solve(noiseVec, buf, D, MatrixType::Dagger);
 	
 	D.setInVec(buf);
 	D.setOutVec(afterCG);
@@ -62,6 +57,9 @@ void FermionicDrift::getForce(double *outVec, DiracOP<double>& D, thrust::comple
 	D.applyD();
 	cudaDeviceSynchronize();
 
+	driftArgs[0] = (void*) &afterCG;
+    driftArgs[1] = (void*) &noiseVec;
+    driftArgs[2] = (void*) &eobuf;
 	cudaLaunchCooperativeKernel((void*)&computeDrift, dimGrid_drift, dimBlock_drift, driftArgs, 0, NULL);
 	cudaDeviceSynchronize();
 	
@@ -85,7 +83,7 @@ __global__ void eoConv(thrust::complex<double> *eoVec, double *normalVec){
 	}
 }
 
-__global__ void computeDrift(Spinor<double> *inVec, Spinor<double> *afterCG, thrust::complex<double> *outVec, int const vol){
+__global__ void computeDrift(Spinor<double> *afterCG, Spinor<double> *noise, thrust::complex<double> *outVec){
 
 	cg::thread_block cta = cg::this_thread_block();
 	cg::grid_group grid = cg::this_grid();
@@ -94,28 +92,28 @@ __global__ void computeDrift(Spinor<double> *inVec, Spinor<double> *afterCG, thr
 
 	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
 		// Drift for sigma
-		outVec[i] = yukawa_coupling_gpu * (	  conj(afterCG[i].val[0])*inVec[i].val[0]
-											+ conj(afterCG[i].val[1])*inVec[i].val[1] 
-											+ conj(afterCG[i].val[2])*inVec[i].val[2] 
-											+ conj(afterCG[i].val[3])*inVec[i].val[3]);
+		outVec[i] = yukawa_coupling_gpu * (	  conj(afterCG[i].val[0])*noise[i].val[0]
+											+ conj(afterCG[i].val[1])*noise[i].val[1] 
+											+ conj(afterCG[i].val[2])*noise[i].val[2] 
+											+ conj(afterCG[i].val[3])*noise[i].val[3]);
 
 		// Drift for pi1
-		outVec[i + vol] = yukawa_coupling_gpu * (	- conj(afterCG[i].val[0])*inVec[i].val[3]
-											 		+ conj(afterCG[i].val[1])*inVec[i].val[2] 
-													- conj(afterCG[i].val[2])*inVec[i].val[1] 
-													+ conj(afterCG[i].val[3])*inVec[i].val[0]);
+		outVec[i + vol] = yukawa_coupling_gpu * (	- conj(afterCG[i].val[0])*noise[i].val[3]
+											 		+ conj(afterCG[i].val[1])*noise[i].val[2] 
+													- conj(afterCG[i].val[2])*noise[i].val[1] 
+													+ conj(afterCG[i].val[3])*noise[i].val[0]);
 
 		// Drift for pi2
-		outVec[i + 2*vol] = yukawa_coupling_gpu * (	  im * conj(afterCG[i].val[0])*inVec[i].val[3] 
-													- im * conj(afterCG[i].val[1])*inVec[i].val[2] 
-													- im * conj(afterCG[i].val[2])*inVec[i].val[1] 
-													+ im * conj(afterCG[i].val[3])*inVec[i].val[0]);
+		outVec[i + 2*vol] = yukawa_coupling_gpu * (	  im * conj(afterCG[i].val[0])*noise[i].val[3] 
+													- im * conj(afterCG[i].val[1])*noise[i].val[2] 
+													- im * conj(afterCG[i].val[2])*noise[i].val[1] 
+													+ im * conj(afterCG[i].val[3])*noise[i].val[0]);
 
 		// Drift for pi3
-		outVec[i + 3*vol] = yukawa_coupling_gpu * (	- conj(afterCG[i].val[0])*inVec[i].val[1]
-													+ conj(afterCG[i].val[1])*inVec[i].val[0]
-													+ conj(afterCG[i].val[2])*inVec[i].val[3]
-													- conj(afterCG[i].val[3])*inVec[i].val[2]);
+		outVec[i + 3*vol] = yukawa_coupling_gpu * (	- conj(afterCG[i].val[0])*noise[i].val[1]
+													+ conj(afterCG[i].val[1])*noise[i].val[0]
+													+ conj(afterCG[i].val[2])*noise[i].val[3]
+													- conj(afterCG[i].val[3])*noise[i].val[2]);
 
 	}
 

@@ -37,7 +37,7 @@ CGsolver::~CGsolver(){
 
 
 
-void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<double>& D, thrust::complex<double> *M, MatrixType Mtype){
+void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<double>& D, MatrixType Mtype){
 	//cudaMemcpy(inVec, r, vol * sizeof(Spinor<double>), cudaMemcpyHostToDevice);
 	double rmodsq;
 
@@ -58,9 +58,6 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
 	void *setZeroArgs[] = {(void*)temp, (void*) &spinor_vol};
 	void *sumArgs[] = {(void*) &r, (void*) &r, (void*) &r, (void*) &beta};
 
-	D.setInVec(p);
-	D.setOutVec(temp2);
-
 	for(int i=0; i<vol; i++) {
 		outVec[i] = Spinor<double> ();
 		temp[i] = Spinor<double> ();
@@ -71,7 +68,7 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
 		}
 	}
 
-	setZeroArgs[0] = (void*) &temp;
+	/*setZeroArgs[0] = (void*) &temp;
 	cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 	cudaDeviceSynchronize();
 	setZeroArgs[0] = (void*) &temp2;
@@ -79,13 +76,14 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
 	cudaDeviceSynchronize();
 	setZeroArgs[0] = (void*) &sol;
 	cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
-	cudaDeviceSynchronize();
+	cudaDeviceSynchronize();*/
 
 
 	*dot_res = 0.0;
 	cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid_dot, dimBlock_dot, dotArgs, sizeof(thrust::complex<double>) * (32), NULL);
 	cudaDeviceSynchronize();
-	rmodsq = dot_res->real();
+	rmodsq = abs(*dot_res);
+	std::cout << "Initial rmodsq: " << rmodsq << std::endl;
 
 
 	int k;
@@ -145,7 +143,7 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
 		*dot_res = 0.0;
 		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid_dot, dimBlock_dot, dotArgs, sizeof(thrust::complex<double>) * (32), NULL);
 		cudaDeviceSynchronize();
-		beta = dot_res->real() / rmodsq;
+		beta = abs(*dot_res) / rmodsq;
 
 		// p = r - beta p
 		sumArgs[0] = (void*) &r;
@@ -161,11 +159,11 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
 		*dot_res = 0.0;
 		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid_dot, dimBlock_dot, dotArgs, sizeof(thrust::complex<double>) * (32), NULL);
 		cudaDeviceSynchronize();
-		rmodsq = dot_res->real();
+		rmodsq = abs(*dot_res);
 	}
 
-	//if (k < IterMax) std::cout << "Convergence reached in " << k-1 << " steps \n";
-	//else std::cout << "Max. number of iterations reached (" << IterMax << "), final err: " << sqrt(rmodsq) << "\n";
+	if (k < IterMax) std::cout << "Convergence reached in " << k-1 << " steps \n";
+	else std::cout << "Max. number of iterations reached (" << IterMax << "), final err: " << sqrt(rmodsq) << "\n";
 
 }
 
@@ -173,7 +171,7 @@ __global__ void gpuDotProduct(thrust::complex<double> *vecA, thrust::complex<dou
 	cg::thread_block cta = cg::this_thread_block();
 	cg::grid_group grid = cg::this_grid();
 	//*result = 0.0;
-	extern __shared__ thrust::complex<double> tmp[];
+	extern __shared__ thrust::complex<double> tmp2[];
 
 	thrust::complex<double> temp_sum = 0.0;
 	for (int i = grid.thread_rank(); i < size; i += grid.size()) {
@@ -185,13 +183,13 @@ __global__ void gpuDotProduct(thrust::complex<double> *vecA, thrust::complex<dou
 	temp_sum = cg::reduce(tile32, temp_sum, cg::plus<thrust::complex<double>>());
 
 	if (tile32.thread_rank() == 0) {
-		tmp[tile32.meta_group_rank()] = temp_sum;
+		tmp2[tile32.meta_group_rank()] = temp_sum;
 	}
 
 	cg::sync(cta);
 
 	if (tile32.meta_group_rank() == 0) {
-		temp_sum = tile32.thread_rank() < tile32.meta_group_size() ? tmp[tile32.thread_rank()] : 0.0;
+		temp_sum = tile32.thread_rank() < tile32.meta_group_size() ? tmp2[tile32.thread_rank()] : 0.0;
 		temp_sum = cg::reduce(tile32, temp_sum, cg::plus<thrust::complex<double>>());
 
 		if (tile32.thread_rank() == 0) {

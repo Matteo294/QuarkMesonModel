@@ -17,7 +17,7 @@ class CGsolver{
     public:
         CGsolver();
         ~CGsolver();
-        void solve(Spinor<double> *inVec, Spinor<double> *outVec, DiracOP<double>& D, thrust::complex<double> *M, MatrixType Mtype=MatrixType::Normal);
+        void solve(Spinor<double> *inVec, Spinor<double> *outVec, DiracOP<double>& D, MatrixType Mtype=MatrixType::Normal);
     private:
         thrust::complex<double> *dot_res;
         Spinor<double> *r, *p, *temp, *temp2, *sol;

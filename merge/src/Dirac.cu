@@ -61,9 +61,11 @@ __host__ void DiracOP<T>::applyD(){
 
     cudaLaunchCooperativeKernel((void*)&D_ee<T>, dimGrid_Dee, dimBlock_Dee, diagArgs, 0, NULL);
     cudaDeviceSynchronize();
+    std::cout << "Dee " << outVec[0].val[0] << " " << outVec[vol/2].val[4] << std::endl;
 
     cudaLaunchCooperativeKernel((void*)&D_oo<T>, dimGrid_Doo, dimBlock_Doo, diagArgs, 0, NULL);
     cudaDeviceSynchronize();
+    std::cout << "Dee " << outVec[0].val[0] << " " << outVec[vol/2].val[4] << std::endl;
 
    	cudaLaunchCooperativeKernel((void*)&D_eo<T>, dimGrid_Deo, dimBlock_Deo, hoppingArgs, 0, NULL);
     cudaDeviceSynchronize();
@@ -124,9 +126,6 @@ __global__ void D_ee(Spinor<T> *inVec, Spinor<T> *outVec, MatrixType const useDa
     thrust::complex<T> *M2 = &M[vol];
     thrust::complex<T> *M3 = &M[2*vol];
     thrust::complex<T> *M4 = &M[3*vol];
-
-    //printf("%d, %f, %f + i%f \n\n", vol, fermion_mass_gpu, M[0].real(), M[0].imag());
-
 
     for (int i = grid.thread_rank(); i < vol/2; i += grid.size()) {
     
