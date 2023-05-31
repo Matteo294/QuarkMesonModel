@@ -4,6 +4,17 @@ from scipy.optimize import curve_fit as fit
 import numpy as np
 import sys
 
+'''m0 = 0.2
+yukawa_coupling = 1.0
+sigma = 0.2
+pi = [0.3, 0.4, 0.1]'''
+
+m0 = 0.2
+yukawa_coupling = 1.0
+sigma = 0.2
+pi = [0.1, 0.15, 0.1]
+
+plot = False
 
 data = read_csv(sys.argv[1])
 Nt = int(sys.argv[2])
@@ -15,7 +26,7 @@ def expectedM(m0, g, sigma, pi):
     num = -sqrroot + g**2*r2 + 2*g*m0*sigma + 2*g*sigma + m0**2 + 2*m0 + 2
     return -np.log(num/denom)
 
-def fitToSinh(ydata, startidx, endidx):
+def fitToSinh(ydata, startidx, endidx, plot=False):
     yvals = ydata[startidx:endidx]
     xvals = np.array(range(startidx, endidx))
 
@@ -24,7 +35,14 @@ def fitToSinh(ydata, startidx, endidx):
 
     fitparams = fit(fitfuncSinh, xvals, yvals, p0=[np.log(1+2.0), 1.0], maxfev=int(1e5))
     #print("Mass: ", abs(fitparams[0][0]))
-    #print("Expected: ", expectedM(0.1, 1.0, -0.15927687234042556, [0, 0, 0]))
+    
+    if plot:
+    	xvals = np.linspace(0, 64, 1000)
+    	plt.plot(xvals, fitfuncSinh(xvals, fitparams[0][0], fitparams[0][1]), label='fit')
+    	plt.plot(range(1,Nt), timeslices[-1][1:], label='data')
+    	plt.legend()
+    	plt.show()
+   
     
     return abs(fitparams[0][0])
 
@@ -48,9 +66,10 @@ plt.show()
 
 masses = []
 for sl in timeslices:
-	masses.append(fitToSinh(sl, 1, Nt))
+	masses.append(fitToSinh(sl, 1, Nt, False))
 	
 finalmass = np.average(masses)
 print("mass:", finalmass, "+-", np.std(masses)/np.sqrt(len(masses)))
+print("Expected: ", expectedM(m0, yukawa_coupling, sigma, pi))
 
 
