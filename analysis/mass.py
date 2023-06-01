@@ -12,9 +12,9 @@ pi = [0.3, 0.4, 0.1]'''
 m0 = 0.2
 yukawa_coupling = 1.0
 sigma = 0.2
-pi = [0.1, 0.15, 0.1]
+pi = [0, 0., 0]
 
-plot = False
+plot = True
 
 data = read_csv(sys.argv[1])
 Nt = int(sys.argv[2])
@@ -63,13 +63,15 @@ plt.title("vecfield components of the correlator")
 plt.tight_layout()
 plt.show()
 
+corr = np.average(timeslices, axis=1)
+print(corr.shape)
 
-masses = []
-for sl in timeslices:
-	masses.append(fitToSinh(sl, 1, Nt, False))
-	
-finalmass = np.average(masses)
-print("mass:", finalmass, "+-", np.std(masses)/np.sqrt(len(masses)))
+
+finalmass = fitToSinh(corr, 2, Nt-2, plot)
+print("mass:", finalmass)
 print("Expected: ", expectedM(m0, yukawa_coupling, sigma, pi))
+
+
+
 
 
