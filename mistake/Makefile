@@ -5,7 +5,7 @@ LIB_DIR=-L$(HDF_LIB)
 LINK_ARGS=-Xlinker '-rpath,$(HDF_LIB)'
 
 FLAGS=-O2 --std=c++17 -Xcompiler '-march=native' -MMD -MP -rdc=true -arch=$(ARCH) --expt-relaxed-constexpr
-LIBS=-lcurand -lhdf5_cpp -lhdf5
+LIBS=-lcurand
 
 ifeq ($(FFT), cuFFT)
 	LIBS+= -lcufft
@@ -30,7 +30,7 @@ all: out
 
 BUILD_DIR:=./build
 
-SRCS := Dirac.cu Lattice.cu Laplace.cu langevin_gpu_v2.cu HDF5.cpp reductions.cu main.cu colouredNoise.cpp
+SRCS := CGsolver.cu Dirac.cu Lattice.cu Laplace.cu langevin_gpu_v2.cu reductions.cu main.cu colouredNoise.cpp
 OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
@@ -47,5 +47,11 @@ out: $(OBJS)
 
 clean:
 	rm -rf build/ out
+
+rmitp:
+	rm *.csv *.o* *.e*
+
+rmbw:
+	rm *.csv *.out
 
 -include $(DEPS)

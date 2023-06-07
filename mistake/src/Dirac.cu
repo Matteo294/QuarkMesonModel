@@ -57,15 +57,15 @@ __host__ DiracOP<T>::DiracOP() : inVec(nullptr), outVec(nullptr), M(nullptr)
 template <typename T>
 __host__ void DiracOP<T>::applyD(){
 
-    for(int i=0; i<vol; i++) outVec[i].setZero(); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    for(int i=0; i<vol; i++) {
+        for (int j=0; j<4; j++) outVec[i].val[j] = 0.0; // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    }
 
     cudaLaunchCooperativeKernel((void*)&D_ee<T>, dimGrid_Dee, dimBlock_Dee, diagArgs, 0, NULL);
     cudaDeviceSynchronize();
-    std::cout << "Dee " << outVec[0].val[0] << " " << outVec[vol/2].val[4] << std::endl;
-
+    
     cudaLaunchCooperativeKernel((void*)&D_oo<T>, dimGrid_Doo, dimBlock_Doo, diagArgs, 0, NULL);
     cudaDeviceSynchronize();
-    std::cout << "Dee " << outVec[0].val[0] << " " << outVec[vol/2].val[4] << std::endl;
 
    	cudaLaunchCooperativeKernel((void*)&D_eo<T>, dimGrid_Deo, dimBlock_Deo, hoppingArgs, 0, NULL);
     cudaDeviceSynchronize();

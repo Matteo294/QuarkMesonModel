@@ -24,6 +24,7 @@ class CGsolver{
         dim3 dimGrid_dot, dimBlock_dot;
         dim3 dimGrid_zero, dimBlock_zero;
         dim3 dimGrid_sum, dimBlock_sum;
+        dim3 dimGrid_copy, dimBlock_copy;
         thrust::complex<double> beta, alpha;
 		int const spinor_vol = 4 * vol;
 };
