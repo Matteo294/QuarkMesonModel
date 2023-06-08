@@ -20,7 +20,7 @@ __device__ void PotentialAndMass(myType *ivec, myType *ovec, int size) {
 		}
 		for (int j = 0; j < nVectorComponents; ++j) {
 			auto const myVal = ivec[j * size + i];
-			ovec[j * size + i] = myVal * (m2 + myLambda * interaction);
+			ovec[j * size + i] += myVal * (m2 + myLambda * interaction);
 		}
 	}
 }

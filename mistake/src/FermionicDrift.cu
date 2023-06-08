@@ -45,9 +45,6 @@ void FermionicDrift::getForce(double *outVec, DiracOP<double>& D, thrust::comple
 	setZeroArgs[0] = (void*)&afterCG;
 	cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 	cudaDeviceSynchronize();
-	setZeroArgs[0] = (void*)&buf;
-	cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
-	cudaDeviceSynchronize();
 
 	CG.solve(noiseVec, buf, D, MatrixType::Dagger);
 	
@@ -71,7 +68,6 @@ void FermionicDrift::getForce(double *outVec, DiracOP<double>& D, thrust::comple
 }
 
 __global__ void eoConv(thrust::complex<double> *eoVec, double *normalVec){
-	cg::thread_block cta = cg::this_thread_block();
 	cg::grid_group grid = cg::this_grid();
 	int eo_i;
 	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
@@ -85,7 +81,6 @@ __global__ void eoConv(thrust::complex<double> *eoVec, double *normalVec){
 
 __global__ void computeDrift(Spinor<double> *afterCG, Spinor<double> *noise, thrust::complex<double> *outVec){
 
-	cg::thread_block cta = cg::this_thread_block();
 	cg::grid_group grid = cg::this_grid();
 
 	thrust::complex<double> im (0.0, 1.0);

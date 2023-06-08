@@ -20,7 +20,7 @@ class CGsolver{
         void solve(Spinor<double> *inVec, Spinor<double> *outVec, DiracOP<double>& D, MatrixType Mtype=MatrixType::Normal);
     private:
         thrust::complex<double> *dot_res;
-        Spinor<double> *r, *p, *temp, *temp2, *sol;
+        Spinor<double> *r, *p, *temp, *temp2;
         dim3 dimGrid_dot, dimBlock_dot;
         dim3 dimGrid_zero, dimBlock_zero;
         dim3 dimGrid_sum, dimBlock_sum;

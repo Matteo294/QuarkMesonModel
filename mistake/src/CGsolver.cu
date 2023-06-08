@@ -6,7 +6,6 @@ CGsolver::CGsolver(){
 	cudaMallocManaged(&p, sizeof(Spinor<double>) * vol);
 	cudaMallocManaged(&temp, sizeof(Spinor<double>) * vol);
 	cudaMallocManaged(&temp2, sizeof(Spinor<double>) * vol);
-	cudaMallocManaged(&sol, sizeof(Spinor<double>) * vol);
 	cudaMallocManaged(&dot_res, sizeof(thrust::complex<double>));
 
     int nBlocks = 0;
@@ -48,7 +47,6 @@ CGsolver::~CGsolver(){
 	cudaFree(temp);
 	cudaFree(temp2);
 	cudaFree(dot_res);
-	cudaFree(sol);
 }
 
 
@@ -67,7 +65,7 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
 	setZeroArgs[0] = (void*) &temp2;
 	cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 	cudaDeviceSynchronize();
-	setZeroArgs[0] = (void*) &sol;
+	setZeroArgs[0] = (void*) &outVec;
 	cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 	cudaDeviceSynchronize();
     copyArgs[0] = (void*) &r; copyArgs[1] = (void*) &inVec;
@@ -150,8 +148,8 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
 	
 	}
 
-	if (k < IterMax) std::cout << "Convergence reached in " << k-1 << " steps \n";
-	else std::cout << "Max. number of iterations reached (" << IterMax << "), final err: " << sqrt(rmodsq) << "\n";
+	//if (k < IterMax) std::cout << "Convergence reached in " << k-1 << " steps \n";
+	//else std::cout << "Max. number of iterations reached (" << IterMax << "), final err: " << sqrt(rmodsq) << "\n";
 
 }
 
