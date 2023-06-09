@@ -95,8 +95,8 @@ __global__ void computeDrift(Spinor<double> *afterCG, Spinor<double> *noise, thr
 		// Drift for pi1
 		outVec[i + vol] = yukawa_coupling_gpu * (	- conj(afterCG[i].val[0])*noise[i].val[3]
 											 		+ conj(afterCG[i].val[1])*noise[i].val[2] 
-													- conj(afterCG[i].val[2])*noise[i].val[1] 
-													+ conj(afterCG[i].val[3])*noise[i].val[0]);
+													+ conj(afterCG[i].val[2])*noise[i].val[1] 
+													- conj(afterCG[i].val[3])*noise[i].val[0]);
 
 		// Drift for pi2
 		outVec[i + 2*vol] = yukawa_coupling_gpu * (	  im * conj(afterCG[i].val[0])*noise[i].val[3] 

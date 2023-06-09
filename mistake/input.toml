@@ -4,14 +4,14 @@ mass = 1.0
 g = 0.0
 kappa = 0.26
 lambda = 0.02
-cutFraction = 0.0
+cutFraction = 1.0
 
 [langevin]
-averageEpsilon = 0.01
+averageEpsilon = 0.02
 MaxLangevinTime = 1000.0
 ExportTime = 1.0
 burnCount = 10
-MeasureDriftCount = 0
+MeasureDriftCount = 3
 
 [io]
 configFileName = "test.hdf"
