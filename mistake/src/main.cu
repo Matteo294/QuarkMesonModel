@@ -319,7 +319,7 @@ int main(int argc, char** argv) {
 			cn();
 
 			// ----------------------------------------------------------
-			copyMesonsArgs[0] = (void*) &(ivec.data());
+			/*copyMesonsArgs[0] = (void*) &(ivec.data());
         	copyMesonsArgs[1] = (void*) &M;
 			cudaLaunchCooperativeKernel((void*)&copyScalarsIntoM, dimGrid_mesons, dimBlock_mesons, copyMesonsArgs, 0, NULL);
 			cudaDeviceSynchronize();
@@ -331,7 +331,7 @@ int main(int argc, char** argv) {
 			copyVecDoubleArgs[0] = (void*) &(drift.data());
 			copyVecDoubleArgs[1] = (void*) &fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*) &copyVec_double, dimGrid_copyDouble, dimBlock_copyDouble, copyVecDoubleArgs, 0, NULL);
-			cudaDeviceSynchronize();
+			cudaDeviceSynchronize();*/
 			// ----------------------------------------------------------
 
 			kli.Run(kAll, kli_sMem);
@@ -364,7 +364,7 @@ int main(int argc, char** argv) {
 			cn();
 
 			// ----------------------------------------------------------
-			copyMesonsArgs[0] = (void*) &(ivec.data());
+			/*copyMesonsArgs[0] = (void*) &(ivec.data());
         	copyMesonsArgs[1] = (void*) &M;
 			cudaLaunchCooperativeKernel((void*)&copyScalarsIntoM, dimGrid_mesons, dimBlock_mesons, copyMesonsArgs, 0, NULL);
 			cudaDeviceSynchronize();
@@ -376,7 +376,7 @@ int main(int argc, char** argv) {
 			copyVecDoubleArgs[0] = (void*) &(drift.data());
 			copyVecDoubleArgs[1] = (void*) &fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*) &copyVec_double, dimGrid_copyDouble, dimBlock_copyDouble, copyVecDoubleArgs, 0, NULL);
-			cudaDeviceSynchronize();
+			cudaDeviceSynchronize();*/
 			// ----------------------------------------------------------
 
 			kli.Run(kAll, kli_sMem);
@@ -410,7 +410,7 @@ int main(int argc, char** argv) {
 			cn();
 
 			// ----------------------------------------------------------
-			copyMesonsArgs[0] = (void*) &(ivec.data());
+			/*copyMesonsArgs[0] = (void*) &(ivec.data());
         	copyMesonsArgs[1] = (void*) &M;
 			cudaLaunchCooperativeKernel((void*)&copyScalarsIntoM, dimGrid_mesons, dimBlock_mesons, copyMesonsArgs, 0, NULL);
 			cudaDeviceSynchronize();
@@ -422,7 +422,7 @@ int main(int argc, char** argv) {
             copyVecDoubleArgs[0] = (void*) &(drift.data());
 			copyVecDoubleArgs[1] = (void*) &fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*) &copyVec_double, dimGrid_copyDouble, dimBlock_copyDouble, copyVecDoubleArgs, 0, NULL);
-			cudaDeviceSynchronize();
+			cudaDeviceSynchronize();*/
 			// ----------------------------------------------------------
 
 			kli.Run(kAll, kli_sMem);
@@ -460,13 +460,12 @@ int main(int argc, char** argv) {
 		std::cout << std::sqrt(sum2) / N << std::endl;
         
         // ------------------------------------------------------
-        setZeroArgs[0] = (void*) &in;
+        /*setZeroArgs[0] = (void*) &in;
         cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);        
-		cudaDeviceSynchronize();
-		//for(int i=0; i<vol; i++){ for(int j=0; j<4; j++) in[i].val[j] = 0.0; }
-		
+		cudaDeviceSynchronize();*/
+		for(int i=0; i<vol; i++){ for(int j=0; j<4; j++) in[i].val[j] = 0.0; }
         
-        /*in[0].val[0] = 1.0;
+        in[0].val[0] = 1.0;
 		in[0].val[1] = 1.0;
 		in[0].val[2] = 1.0;
 		in[0].val[3] = 1.0;
@@ -485,14 +484,23 @@ int main(int argc, char** argv) {
 		Dirac.setInVec(out);
 		Dirac.setOutVec(in);
 		Dirac.setDagger(MatrixType::Dagger);
-		Dirac.applyD();*/
+		Dirac.applyD();
+
+		thrust::complex<double> corr = 0.0;
+		for(int nt=0; nt<Sizes[0]; nt++){
+			corr = 0.0;
+			for(int nx=0; nx<Sizes[1]; nx++){
+				for(int j=0; j<4; j++) corr += in[toEOflat(nt, nx)].val[j];
+			}
+			datafile << corr.real() << "\n";
+		}
         
         // compute condensates from drifts as they are proportional
-        for(int i=0; i<4; i++) traces[i] = 0.0;
+        /*for(int i=0; i<4; i++) traces[i] = 0.0;
         
-        //for(int i=0; i<4*vol; i++) traces[(int) i/vol] += fermionic_contribution[i];
-		cudaLaunchCooperativeKernel((void*) &gpuTraces, dimGrid_traces, dimBlock_traces, tracesArgs, 32 * sizeof(double), NULL);
-		cudaDeviceSynchronize();
+        for(int i=0; i<4*vol; i++) traces[(int) i/vol] += fermionic_contribution[i];
+		//cudaLaunchCooperativeKernel((void*) &gpuTraces, dimGrid_traces, dimBlock_traces, tracesArgs, 32 * sizeof(double), NULL);
+		//cudaDeviceSynchronize();
         
 		traces[0] /= yukawa_coupling;
 		traces[1] /= yukawa_coupling;
@@ -505,17 +513,8 @@ int main(int argc, char** argv) {
 					<< 	avg[0] / (Sizes[0]*Sizes[1]) 		<< ","
 					<< 	avg[1] / (Sizes[0]*Sizes[1]) 		<< "," 
 					<< 	avg[2] / (Sizes[0]*Sizes[1]) 		<< ","
-					<< 	avg[3] / (Sizes[0]*Sizes[1]) 		<< std::endl;
+					<< 	avg[3] / (Sizes[0]*Sizes[1]) 		<< std::endl;*/
 		
-
-		/*thrust::complex<double> corr = 0.0;
-		for(int nt=0; nt<Sizes[0]; nt++){
-			corr = 0.0;
-			for(int nx=0; nx<Sizes[1]; nx++){
-				for(int j=0; j<4; j++) corr += in[toEOflat(nt, nx)].val[j];
-			}
-			datafile << corr.real() << "\n";
-		}*/
 		// ------------------------------------------------------
 
 		nMeasurements++;

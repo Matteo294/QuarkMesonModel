@@ -55,7 +55,7 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
 	double rmodsq;
     
     void *dotArgs[] = {(void*) &r, (void*) &r, (void*) &dot_res, (void*) &spinor_vol};
-	void *setZeroArgs[] = {(void*)temp, (void*) &spinor_vol};
+	void *setZeroArgs[] = {(void*)&temp, (void*) &spinor_vol};
 	void *sumArgs[] = {(void*) &r, (void*) &r, (void*) &r, (void*) &beta};
     void *copyArgs[] = {(void*) &r, (void*) &inVec, (void*) &spinor_vol};
 

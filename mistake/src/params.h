@@ -12,7 +12,7 @@ double constexpr fermion_mass = 0.2;
 
 thrust::complex<double> const im {0.0, 1.0};
 
-double constexpr tolerance = 1e-11;
+double constexpr tolerance = 1e-12;
 int constexpr IterMax = 1000;
 using myType = double;
 //using myType = float;
