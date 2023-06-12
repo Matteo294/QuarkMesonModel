@@ -11,8 +11,8 @@ pi = [0.3, 0.4, 0.1]'''
 
 mq0 = 0.2
 yukawa_coupling = 1.0
-sigma = 0
-pi = [0, 0, 0]
+sigma = 0.12 
+pi = [0.23, 0.16, 0.2]
 
 plot = True
 
@@ -45,7 +45,7 @@ def fitToSinh(ydata, startidx, endidx, plot=False):
     plt.xlabel("t")
     plt.show()'''
     
-timeslices = data['f0c0'].to_numpy().reshape((-1, Nt))
+timeslices = data['corr'].to_numpy().reshape((-1, Nt))
 
 for i in range(1, timeslices.shape[0]):
     plt.plot(range(1, Nt), timeslices[i][1:])

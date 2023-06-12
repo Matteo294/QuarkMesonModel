@@ -49,9 +49,9 @@ clean:
 	rm -rf build/ out
 
 rmitp:
-	rm *.csv *.o* *.e*
+	rm -rf *.csv *.o* *.e*
 
 rmbw:
-	rm *.csv *.out
+	rm -rf *.csv *.out
 
 -include $(DEPS)

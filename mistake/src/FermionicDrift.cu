@@ -88,7 +88,7 @@ __global__ void computeDrift(Spinor<double> *afterCG, Spinor<double> *noise, thr
     int eo_i;
 	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
         eo_i = NormalToEO(i);
-		// Drift for sigma
+		// Drift for sigma !!!!!!!!!!!!!!!! remember that this assumes outVec not even ordered !!!!!!!!!!!!
 		outVec[i] = yukawa_coupling_gpu * (	  conj(afterCG[eo_i].val[0])*noise[eo_i].val[0]
 											+ conj(afterCG[eo_i].val[1])*noise[eo_i].val[1] 
 											- conj(afterCG[eo_i].val[2])*noise[eo_i].val[2] 

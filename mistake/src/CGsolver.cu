@@ -150,7 +150,7 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
 
 	//if (k < IterMax) std::cout << "Convergence reached in " << k-1 << " steps \n";
 	//else std::cout << "Max. number of iterations reached (" << IterMax << "), final err: " << sqrt(rmodsq) << "\n";
-
+	std::cout << "N/Nmax: " << (double) k/IterMax << "\n";
 }
 
 __global__ void gpuDotProduct(thrust::complex<double> *vecA, thrust::complex<double> *vecB, thrust::complex<double> *result, int size) {

@@ -463,7 +463,16 @@ int main(int argc, char** argv) {
         /*setZeroArgs[0] = (void*) &in;
         cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);        
 		cudaDeviceSynchronize();*/
-		for(int i=0; i<vol; i++){ for(int j=0; j<4; j++) in[i].val[j] = 0.0; }
+		/*for(int i=0; i<vol; i++){ for(int j=0; j<4; j++) in[i].val[j] = 0.0; }
+
+		int eo_i;
+		for (int i = 0; i < vol; i++){
+			eo_i = NormalToEO(i);
+			M[eo_i] = 0.22 + im * 0.81;
+			M[eo_i + 3*vol] = 0.22 - im * 0.81;
+			M[eo_i + vol] = im * (0.07 - im * 0.77);
+			M[eo_i + 2*vol] = im * (0.07 + im * 0.77);
+		}
         
         in[0].val[0] = 1.0;
 		in[0].val[1] = 1.0;
@@ -493,7 +502,7 @@ int main(int argc, char** argv) {
 				for(int j=0; j<4; j++) corr += in[toEOflat(nt, nx)].val[j];
 			}
 			datafile << corr.real() << "\n";
-		}
+		}*/
         
         // compute condensates from drifts as they are proportional
         /*for(int i=0; i<4; i++) traces[i] = 0.0;

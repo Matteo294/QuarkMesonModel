@@ -1,17 +1,17 @@
 [physics]
 useMass = true
-mass = -1.0
-g = 0.5
+mass = 1.0
+g = 0.0
 kappa = 0.26
 lambda = 0.02
 cutFraction = 0.0
 
 [langevin]
 averageEpsilon = 0.01
-MaxLangevinTime = 100.0
+MaxLangevinTime = 50.0
 ExportTime = 1.0
-burnCount = 50
-MeasureDriftCount = 10
+burnCount = 0
+MeasureDriftCount = 0
 
 [io]
 configFileName = "test.hdf"
