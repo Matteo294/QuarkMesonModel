@@ -11,8 +11,8 @@ pi = [0.3, 0.4, 0.1]'''
 
 mq0 = 0.15
 yukawa_coupling = 1.0
-sigma = 0.10294811100000001
-pi = [-0.006982258229999999, 0.0022181826999999998, -0.0009741045340000004]
+sigma = 0.09961534264112902
+pi = [-0.00026237785510080646, 0.00015096426088709677, 6.0233002409274166e-05]
 
 plot = True
 
@@ -59,16 +59,16 @@ corr = np.average(timeslices, axis=0)
 print(corr)
 
 f = open("averaged.csv", "w")
-for i in range(len(corr)-1):
+for i in range(len(corr)):
     f.write(str(i+1) + "," + str(corr[i+1]) + "\n")
 f.close()
 
 fitparams = fitToSinh(corr, 1, Nt, plot)
 
 if plot:
-    plt.plot(range(2,Nt-1), corr[2:Nt-1], label="data")
+    plt.plot(range(1,Nt), corr[1:Nt], label="data")
     xvals = np.linspace(0, Nt, 1000)
-    plt.plot(xvals, fitfuncSinh(xvals, fitparams[0], fitparams[1]), label='fit')
+    #plt.plot(xvals, fitfuncSinh(xvals, fitparams[0], fitparams[1]), label='fit')
     plt.xlabel(r'$N_t$')
     plt.title("Correlator")
     plt.tight_layout()

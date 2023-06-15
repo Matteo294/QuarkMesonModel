@@ -57,7 +57,7 @@ __host__ DiracOP<T>::DiracOP() : inVec(nullptr), outVec(nullptr), M(nullptr)
 template <typename T>
 __host__ void DiracOP<T>::applyD(){
 
-    /*&for(int i=0; i<vol; i++) {
+    /*for(int i=0; i<vol; i++) {
         for (int j=0; j<4; j++) outVec[i].val[j] = 0.0; // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     }*/
 

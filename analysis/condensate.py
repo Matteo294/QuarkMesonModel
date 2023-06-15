@@ -38,6 +38,8 @@ for f in onlyfiles_mass:
 mypath = "./data/"
 for cutoff_frac in sorted(s):
     filename = mypath + "traces_" + str(cutoff_frac) + "_.csv"
+    
+    print("\n Cutoff fraction:", cutoff_frac)
    
     data = read_csv(filename)
     #data = data.drop(labels=range(1,1000), axis=0)
@@ -56,6 +58,10 @@ for cutoff_frac in sorted(s):
     trpi_vals[0].append(np.average(data['trp1'].to_numpy()))
     trpi_vals[1].append(np.average(data['trp2'].to_numpy()))
     trpi_vals[2].append(np.average(data['trp3'].to_numpy()))
+    
+    print("sigma:", sigma_vals[-1])
+    print("pions:", pi_vals[0][-1], pi_vals[1][-1], pi_vals[2][-1])
+    
 
     # errs
     sigma_errs.append(np.std(data['sigma'].to_numpy()) / np.sqrt(N-1))
@@ -156,7 +162,7 @@ sigma_errs = []
 pi_vals = [[] for _ in range(3)]
 pi_errs = [[] for _ in range(3)]
 
-mypath = "./mass/"
+'''mypath = "./mass/"
 for m in sorted(m0):
     filename = mypath + "traces_" + str(m) + "_.csv"
    
@@ -174,6 +180,7 @@ for m in sorted(m0):
     pi_errs[0].append(np.std(data['pi1'].to_numpy()) / np.sqrt(N-1))
     pi_errs[1].append(np.std(data['pi2'].to_numpy()) / np.sqrt(N-1))
     pi_errs[2].append(np.std(data['pi3'].to_numpy()) / np.sqrt(N-1))
+
  
  
 plt.errorbar(sorted(m0), np.abs(sigma_vals), fmt='.-', yerr=sigma_errs, capsize=4, markersize=12, label=r'$|\left\langle\sigma\right\rangle|$')
@@ -195,5 +202,5 @@ plt.legend(fontsize=18)
 plt.xlabel(r"$m_0$", fontsize=22)
 plt.tight_layout()
 plt.savefig("massplots/pions.pdf")
-plt.close()
+plt.close()'''
 

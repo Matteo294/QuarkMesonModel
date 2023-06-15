@@ -8,7 +8,7 @@
 enum class MatrixType {Normal, Dagger};
 
 double constexpr yukawa_coupling = 1.0;
-double constexpr fermion_mass = 0.2;
+double constexpr fermion_mass = 0.3;
 
 thrust::complex<double> const im {0.0, 1.0};
 
@@ -24,7 +24,7 @@ int constexpr nVectorComponents = 4;
 
 using dimArray = std::array<int, nDim>;
 
-dimArray constexpr Sizes = {32, 32};
+dimArray constexpr Sizes = {128, 128};
 int const vol = Sizes[0]*Sizes[1];
 
 template <int N>

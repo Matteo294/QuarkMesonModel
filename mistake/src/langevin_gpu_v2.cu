@@ -21,6 +21,7 @@ __device__ void PotentialAndMass(myType *ivec, myType *ovec, int size) {
 		for (int j = 0; j < nVectorComponents; ++j) {
 			auto const myVal = ivec[j * size + i];
 			ovec[j * size + i] += myVal * (m2 + myLambda * interaction);
+            //if (j == 0) ovec[j * size + i] -= 0.1; // magnetization sigma
 		}
 	}
 }
@@ -67,7 +68,7 @@ __global__ void Run(myType *eps, myType ExportTime, myType *field,
 	cg::grid_group grid = cg::this_grid();
 	cg::thread_block cta = cg::this_thread_block();
 //	myType t = 0.0;
-	myType constexpr Kbar = 15.0;
+	myType constexpr Kbar = 5.0;
 	myType myEps = *eps;
 //	while (t < ExportTime) {
 		PotentialAndMass(field, drift, size);
