@@ -10,8 +10,8 @@ rcParams['text.usetex'] = True
 
 mypath = "./data/"
 onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
-mypath = "./mass/"
-onlyfiles_mass = [f for f in listdir(mypath) if isfile(join(mypath, f))]
+'''mypath = "./mass/"
+onlyfiles_mass = [f for f in listdir(mypath) if isfile(join(mypath, f))]'''
 
 sigma_vals = []
 sigma_errs = []
@@ -29,10 +29,10 @@ for f in onlyfiles:
     s.append(cutoff_frac)
 print(s)
 
-m0 = []
+'''m0 = []
 for f in onlyfiles_mass:
     m = float(f.split('_')[1])
-    m0.append(m)
+    m0.append(m)'''
     
     
 mypath = "./data/"

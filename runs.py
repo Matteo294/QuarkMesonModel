@@ -4,11 +4,10 @@ import toml
 import sys
 import fileinput
 
-cluster = "itp"
-#cluster = "bw" 
+cluster = sys.argv[1]
 
 
-cutoffs = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+cutoffs = [0.1, 0.3, 0.5, 0.7, 0.9]
 
 for s in cutoffs:
     dirname = "s_" + str(s).replace(".", "_")
