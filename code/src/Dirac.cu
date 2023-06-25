@@ -33,6 +33,18 @@ __host__ DiracOP<T>::DiracOP() : inVec(nullptr), outVec(nullptr), M(nullptr)
         cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, D_oe<T>);
         dimGrid_Doe = dim3(numBlocks, 1, 1);    
         dimBlock_Doe = dim3(numThreads, 1, 1);
+
+        numBlocks = 0;
+        numThreads = 0;
+        cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, D_ee_inv<T>);
+        dimGrid_Dee_inv = dim3(numBlocks, 1, 1);    
+        dimBlock_Dee_inv = dim3(numThreads, 1, 1);
+
+        numBlocks = 0;
+        numThreads = 0;
+        cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, D_oo_inv<T>);
+        dimGrid_Doo_inv = dim3(numBlocks, 1, 1);    
+        dimBlock_Doo_inv = dim3(numThreads, 1, 1);
 	
 		auto idx = eoToVec(0);
 		for(int i=0; i<vol; i++){
@@ -58,10 +70,6 @@ __host__ DiracOP<T>::DiracOP() : inVec(nullptr), outVec(nullptr), M(nullptr)
 template <typename T>
 __host__ void DiracOP<T>::applyD(){
 
-    /*for(int i=0; i<vol; i++) {
-        for (int j=0; j<4; j++) outVec[i].val[j] = 0.0; // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    }*/
-
     cudaLaunchCooperativeKernel((void*)&D_ee<T>, dimGrid_Dee, dimBlock_Dee, diagArgs, 0, NULL);
     cudaDeviceSynchronize();
     
@@ -75,6 +83,39 @@ __host__ void DiracOP<T>::applyD(){
     cudaDeviceSynchronize();
 
 }
+
+template <typename T>
+__host__ void DiracOP<T>::applyDhat(Spinor<double> *inVec, Spinor<double> *outVec){
+
+    // !!!!!!!!!!!!!!!!!!!! for the useDagger consider inverting the order of the product
+
+    setInVec(inVec);
+    setOutVec(outVec);
+    //D_ee(vec, res, useDagger);
+    cudaLaunchCooperativeKernel((void*)&D_ee<T>, dimGrid_Dee, dimBlock_Dee, diagArgs, 0, NULL);
+    cudaDeviceSynchronize();
+
+    //D_oe(vec, temp.begin(), useDagger);
+    setOutVec(temp);
+    cudaLaunchCooperativeKernel((void*)&D_oe<T>, dimGrid_Doe, dimBlock_Doe, hoppingArgs, 0, NULL);
+    cudaDeviceSynchronize();
+
+    //D_oo_inv(temp.begin(), temp2.begin(), useDagger);
+    setInVec(temp); setOutVec(temp2);
+    cudaLaunchCooperativeKernel((void*)&D_oo_inv<T>, dimGrid_Doo_inv, dimBlock_Doo_inv, diagArgs, 0, NULL);
+    cudaDeviceSynchronize();
+
+    for(int i=0; i<vol/2; i++) {for(int j=0; j<4; j++) temp[i].val[j] = 0.0;}
+
+    //D_eo(temp2.begin(), temp.begin(), useDagger);
+    setInVec(temp2); setOutVec(temp);
+    cudaLaunchCooperativeKernel((void*)&D_eo<T>, dimGrid_Deo, dimBlock_Deo, hoppingArgs, 0, NULL);
+    cudaDeviceSynchronize();
+
+    for(int i=0; i<vol/2; i++) { for (int j=0; j<4; j++) outVec[i].val[j] -= temp[i].val[j]; }
+    
+}
+
 
 
 template <typename T>

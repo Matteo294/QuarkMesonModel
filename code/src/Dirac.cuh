@@ -20,18 +20,24 @@ class DiracOP {
 		DiracOP();
 		~DiracOP(){cudaFree(temp); cudaFree(temp2);}
 		__host__  void applyD();
+		__host__  void applyDhat(Spinor<double> *inVec, Spinor<double> *outVec);
 		__host__ __device__ void setInVec(Spinor<T> *v){inVec = v;}
 		__host__ __device__ void setOutVec(Spinor<T> *v){outVec = v;}
 		__host__ __device__ void setDagger(MatrixType const Mtype){useDagger = Mtype;}
 		__host__ __device__ void setM(thrust::complex<T> *mesonsMat){M = mesonsMat;}
+
+		// Move into private:
+		dim3 dimGrid_Dee, dimGrid_Doo, dimGrid_Doe, dimGrid_Deo, dimGrid_Doo_inv, dimGrid_Dee_inv;
+		dim3 dimBlock_Dee, dimBlock_Doo, dimBlock_Doe, dimBlock_Deo, dimBlock_Doo_inv, dimBlock_Dee_inv;
+		void *diagArgs[4]; // arguments for Dee, Doo, Deeinv, Dooinv
+		void *hoppingArgs[5]; // arguments for Deo, Doe
+		
 	private:
 		Spinor<T> *temp, *temp2;
 		thrust::complex<T> *M;
-		dim3 dimGrid_Dee, dimGrid_Doo, dimGrid_Doe, dimGrid_Deo;
-		dim3 dimBlock_Dee, dimBlock_Doo, dimBlock_Doe, dimBlock_Deo;
+		
 		MatrixType useDagger;
-		void *diagArgs[4]; // arguments for Dee, Doo, Deeinv, Dooinv
-		void *hoppingArgs[5]; // arguments for Deo, Doe
+		
 		Spinor<T> *inVec, *outVec;
 		LookUpTable IUP, IDN;
 
