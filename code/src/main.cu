@@ -472,12 +472,12 @@ int main(int argc, char** argv) {
         cudaDeviceSynchronize();
 
         switch (CGmode) {
+			
 			case '0':
-
-				myvol = spinor_vol;
 
 				CG.solve(in, out, Dirac, MatrixType::Normal);
 
+				myvol = spinor_vol;
 				setZeroArgs[0] = (void*) &in;
 				cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 				cudaDeviceSynchronize();
