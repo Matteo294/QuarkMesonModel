@@ -59,8 +59,8 @@ for cutoff_frac in sorted(s):
     trpi_vals[1].append(np.average(np.abs(data['trp2'].to_numpy())))
     trpi_vals[2].append(np.average(np.abs(data['trp3'].to_numpy())))
     
-    print("sigma:", sigma_vals[-1])
-    print("pions:", pi_vals[0][-1], pi_vals[1][-1], pi_vals[2][-1])
+    print("sigma:", np.average(data['sigma'].to_numpy()))
+    print("pions:", np.average(data['pi1'].to_numpy()), np.average(data['pi2'].to_numpy()), np.average(data['pi3'].to_numpy()))
     
 
     # errs
