@@ -105,9 +105,9 @@ int main(int argc, char** argv) {
 
 	auto const inputData = toml::parse(argv[1]);
 	auto const& parameters = toml::find(inputData, "physics");
-	auto const useMass = toml::find<bool>(parameters, "useMass");
+	auto const useMass = toml::find<std::string>(parameters, "useMass");
 	myType my_m2, myLambda, kappa, Lambda;
-	if (useMass == true) {
+	if (useMass == "true") {
 		my_m2 = toml::find<myType>(parameters, "mass");
 		myLambda = toml::find<myType>(parameters, "g");
 
@@ -263,7 +263,7 @@ int main(int argc, char** argv) {
 	std::string fname;
 	fname.append("traces"); fname.append(".csv");
 	tracefile.open(fname);
-	tracefile << "tr,trp1,trp2,trp3,sigma,pi1,pi2,pi3" << "\n";
+	tracefile << "tr,trp1,trp2,trp3,sigma,pi1,pi2,pi3,phi" << "\n";
 	// ----------------------------------------------------------
 
 	myType *maxDrift;
@@ -325,7 +325,7 @@ int main(int argc, char** argv) {
 			cn();
 
 			// ----------------------------------------------------------
-			/*copyMesonsArgs[0] = (void*) &(ivec.data());
+			copyMesonsArgs[0] = (void*) &(ivec.data());
         	copyMesonsArgs[1] = (void*) &M;
 			cudaLaunchCooperativeKernel((void*)copyScalarsIntoM, dimGrid_mesons, dimBlock_mesons, copyMesonsArgs, 0, NULL);
 			cudaDeviceSynchronize();
@@ -333,7 +333,7 @@ int main(int argc, char** argv) {
 			copyVecDoubleArgs[0] = (void*) &(drift.data());
 			copyVecDoubleArgs[1] = (void*) &fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*) copyVec_double, dimGrid_copyDouble, dimBlock_copyDouble, copyVecDoubleArgs, 0, NULL);
-			cudaDeviceSynchronize();*/
+			cudaDeviceSynchronize();
 			// ----------------------------------------------------------
 
 			kli.Run(kAll, kli_sMem);
@@ -368,7 +368,7 @@ int main(int argc, char** argv) {
 			cn();
 
 			// ----------------------------------------------------------
-			/*copyMesonsArgs[0] = (void*) &(ivec.data());
+			copyMesonsArgs[0] = (void*) &(ivec.data());
         	copyMesonsArgs[1] = (void*) &M;
 			cudaLaunchCooperativeKernel((void*)&copyScalarsIntoM, dimGrid_mesons, dimBlock_mesons, copyMesonsArgs, 0, NULL);
 			cudaDeviceSynchronize();
@@ -376,7 +376,7 @@ int main(int argc, char** argv) {
 			copyVecDoubleArgs[0] = (void*) &(drift.data());
 			copyVecDoubleArgs[1] = (void*) &fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*) &copyVec_double, dimGrid_copyDouble, dimBlock_copyDouble, copyVecDoubleArgs, 0, NULL);
-			cudaDeviceSynchronize();*/
+			cudaDeviceSynchronize();
 			// ----------------------------------------------------------
 
 			kli.Run(kAll, kli_sMem);
@@ -412,7 +412,7 @@ int main(int argc, char** argv) {
 			cn();
 
 			// ----------------------------------------------------------
-			/*copyMesonsArgs[0] = (void*) &(ivec.data());
+			copyMesonsArgs[0] = (void*) &(ivec.data());
         	copyMesonsArgs[1] = (void*) &M;
 			cudaLaunchCooperativeKernel((void*)&copyScalarsIntoM, dimGrid_mesons, dimBlock_mesons, copyMesonsArgs, 0, NULL);
 			cudaDeviceSynchronize();
@@ -420,7 +420,7 @@ int main(int argc, char** argv) {
 			copyVecDoubleArgs[0] = (void*) &(drift.data());
 			copyVecDoubleArgs[1] = (void*) &fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*) &copyVec_double, dimGrid_copyDouble, dimBlock_copyDouble, copyVecDoubleArgs, 0, NULL);
-			cudaDeviceSynchronize();*/
+			cudaDeviceSynchronize();
 			// ----------------------------------------------------------
 
 			kli.Run(kAll, kli_sMem);
@@ -450,14 +450,14 @@ int main(int argc, char** argv) {
 		std::cout << elapsedLangevinTime << '\t' << *h_eps << '\t';
 		myType sum2 = 0.0;
 		for (auto e : avg) {
-			if (useMass == false) e /= sq2Kappa;
+			if (useMass == "false") e /= sq2Kappa;
 			std::cout << e / N << '\t';
 			sum2 += e*e;
 		}
 		std::cout << std::sqrt(sum2) / N << std::endl;
         
         // ------------------------------------------------------
-        setZeroArgs[0] = (void*) &in;
+        /*setZeroArgs[0] = (void*) &in;
         cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);        
 		cudaDeviceSynchronize();
 
@@ -558,7 +558,7 @@ int main(int argc, char** argv) {
 				for(int j=0; j<4; j++) corr += in[toEOflat(nt, nx)].val[j];
 			}
 			datafile << corr.real() << "\n";
-		}
+		}*/
         
         // compute condensates from drifts as they are proportional
         for(int i=0; i<4; i++) traces[i] = 0.0;
@@ -567,18 +567,15 @@ int main(int argc, char** argv) {
 		cudaLaunchCooperativeKernel((void*) &gpuTraces, dimGrid_traces, dimBlock_traces, tracesArgs, 32 * sizeof(double), NULL);
 		cudaDeviceSynchronize();
         
-		traces[0] /= yukawa_coupling;
-		traces[1] /= yukawa_coupling;
-		traces[2] /= yukawa_coupling;
-		traces[3] /= yukawa_coupling;
-		tracefile 	<< 	traces[0]/(Sizes[0]*Sizes[1]) 	<< ","
-					<< 	traces[1]/(Sizes[0]*Sizes[1]) 	<< ","
-					<< 	traces[2]/(Sizes[0]*Sizes[1]) 	<< ","
-					<< 	traces[3]/(Sizes[0]*Sizes[1]) 	<< ","
-					<< 	avg[0] / (Sizes[0]*Sizes[1]) 		<< ","
-					<< 	avg[1] / (Sizes[0]*Sizes[1]) 		<< "," 
-					<< 	avg[2] / (Sizes[0]*Sizes[1]) 		<< ","
-					<< 	avg[3] / (Sizes[0]*Sizes[1]) 		<< std::endl;
+        if (yukawa_coupling != 0.0) { 
+            for(int i=0; i<4; i++) traces[i] /= yukawa_coupling;
+        } else {
+            for(int i=0; i<4; i++) traces[i] = 0.0;
+        }
+		
+		for(int i=0; i<4; i++) tracefile << (double) traces[i] / vol << ",";
+        for(int i=0; i<4; i++) tracefile << (double) avg[i] / vol << ",";
+		tracefile << std::sqrt(sum2) / vol << "\n";
 		// ------------------------------------------------------
 
 		nMeasurements++;
@@ -589,7 +586,7 @@ int main(int argc, char** argv) {
 				cudaMemcpyDeviceToHost);
 		cudaDeviceSynchronize();
 		// if the user provided kappa as input, we rescale the output field to dimensionless format
-		if (useMass == false)
+		if (useMass == "false")
 			for (auto& e : hostLattice)
 				// divide or multiply...?
 				e /= sq2Kappa;
