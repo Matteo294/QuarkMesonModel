@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -l walltime=0:30:00
+#PBS -l walltime=2:00:00
 #PBS -l nodes=1:ppn=1:gpus=1:gshort
 #PBS -q gshort
 module load cuda/11.4

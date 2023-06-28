@@ -20,8 +20,8 @@ __device__ void PotentialAndMass(myType *ivec, myType *ovec, int size) {
 		}
 		for (int j = 0; j < nVectorComponents; ++j) {
 			auto const myVal = ivec[j * size + i];
-			ovec[j * size + i] = myVal * (m2 + myLambda * interaction);
-            if (j == 0) ovec[j * size + i] -= 0.1; // magnetization sigma
+			ovec[j * size + i] += myVal * (m2 + myLambda * interaction);
+            //if (j == 0) ovec[j * size + i] -= 0.1; // magnetization sigma
 		}
 	}
 }

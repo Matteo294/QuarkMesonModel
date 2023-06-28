@@ -69,6 +69,8 @@ void signal_handler(int signal) {
 int main(int argc, char** argv) {
 	std::signal(SIGUSR2, signal_handler);
     srand(time(NULL));
+    
+    std::cout << "Nt: " << Sizes[0] << " Nx: " << Sizes[1] << "\n";  
 
 	if constexpr(nDim > 3)
 		std::cout << "#Due do technical limitations, coloured noise is *DISABLED* for nDim > 3.\n\n";
