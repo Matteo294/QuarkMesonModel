@@ -76,6 +76,14 @@ __global__ void Run(myType *eps, myType ExportTime, myType *field,
 		gpuSpMV(I, J, vals, size, field, drift);
 		if (threadIdx.x == 0 && blockIdx.x == 0) maxDrift[0] = 0.0;
 		cg::sync(grid);
+        
+        if (maxDrift[0] > 1e3) {
+            printf("Big drift: %f \n", maxDrift[0]);
+            maxDrift[0] = 1e3;
+        } else if (maxDrift[0] < 1e-3) {
+            printf("Small drift: %f \n", maxDrift[0]);
+            maxDrift[0] = 1e-3;
+        }
 		gpuMaxAbsReduce(drift, maxDrift, size);
 		cg::sync(grid);
 		myEps = epsBar * Kbar / maxDrift[0];

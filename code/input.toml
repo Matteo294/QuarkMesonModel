@@ -22,5 +22,5 @@ timeSliceFileName = "slice.dat"
 seed = 1234
 
 [fermions]
-yukawa_coupling = 0.2
-fermion_mass = 0.5
+yukawa_coupling = 0.05
+fermion_mass = 1.0
