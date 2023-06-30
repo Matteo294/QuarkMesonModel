@@ -11,7 +11,7 @@ averageEpsilon = 0.02
 MaxLangevinTime = 1000.0
 ExportTime = 1.0
 burnCount = 20
-MeasureDriftCount = 10
+MeasureDriftCount = 0
 
 [io]
 configFileName = "test.hdf"
@@ -23,4 +23,4 @@ seed = 1234
 
 [fermions]
 yukawa_coupling = 0.2
-fermion_mass = 5.0
+fermion_mass = 0.5
