@@ -76,7 +76,7 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
 	double rmodsq;
 
 	myvol = 4*vol;
-	setZeroArgs[0] = (void*) &temp;
+	/*setZeroArgs[0] = (void*) &temp;
 	cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 	cudaDeviceSynchronize();
 	setZeroArgs[0] = (void*) &temp2;
@@ -90,7 +90,16 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
 	cudaDeviceSynchronize();
     copyArgs[0] = (void*) &p; copyArgs[1] = (void*) &r;
 	cudaLaunchCooperativeKernel((void*)&copyVec, dimGrid_zero, dimBlock_copy, copyArgs, 0, NULL);
-	cudaDeviceSynchronize();
+	cudaDeviceSynchronize();*/
+    for(int i=0; i<vol; i++) {
+        for(int j=0; j<4; j++){
+            temp[i].val[j] = 0.0;
+            temp2[i].val[j] = 0.0;
+            outVec[i].val[j] = 0.0;
+            r[i].val[j] = inVec[i].val[j];
+            p[i].val[j] = inVec[i].val[j];
+        }
+    }
 
 
 	*dot_res = 0.0;
@@ -104,12 +113,18 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
 	for(k=0; k<IterMax && sqrt(rmodsq) > tolerance; k++){
 
 		myvol = 4*vol;
-		setZeroArgs[0] = (void*) &temp;
+		/*setZeroArgs[0] = (void*) &temp;
 		cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 		cudaDeviceSynchronize();
 		setZeroArgs[0] = (void*) &temp2;
 		cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
-		cudaDeviceSynchronize();
+		cudaDeviceSynchronize();*/
+        for(int i=0; i<vol; i++) {
+            for(int j=0; j<4; j++){
+                temp[i].val[j] = 0.0;
+                temp2[i].val[j] = 0.0;
+            }
+        }
 
 		// Apply D dagger
 		if (Mtype == MatrixType::Normal) D.setDagger(MatrixType::Dagger);
@@ -177,7 +192,7 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
 	if (k >= IterMax) std::cout << "Max. number of iterations reached (" << IterMax << "), final err: " << sqrt(rmodsq) << "\n";
 }
 
-void CGsolver::solveEO(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<double>& D, MatrixType Mtype){
+/*void CGsolver::solveEO(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<double>& D, MatrixType Mtype){
 	double rmodsq;
 
 	int const vol_eo = vol/2;
@@ -282,7 +297,7 @@ void CGsolver::solveEO(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<d
 	//if (k < IterMax) std::cout << "Convergence reached in " << k-1 << " steps \n";
 	//else std::cout << "Max. number of iterations reached (" << IterMax << "), final err: " << sqrt(rmodsq) << "\n";
 	if (k >= IterMax) std::cout << "Max. number of iterations reached (" << IterMax << "), final err: " << sqrt(rmodsq) << "\n";
-}
+}*/
 
 __global__ void gpuDotProduct(thrust::complex<double> *vecA, thrust::complex<double> *vecB, thrust::complex<double> *result, int size) {
 	cg::thread_block cta = cg::this_thread_block();

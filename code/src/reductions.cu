@@ -59,6 +59,7 @@ __device__ void gpuMaxAbsReduce(myType *vecA, myType *result, int size) {
 			atomicMax(result, temp_max);
 		}
 	}
+	//if (abs(*result) < 1e-4) printf("res %f\n", *result);
 }
 
 __global__ void gpuTimeSlices(myType *vecA, myType *result, int size) {

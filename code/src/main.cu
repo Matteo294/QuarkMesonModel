@@ -331,11 +331,13 @@ int main(int argc, char** argv) {
         	copyMesonsArgs[1] = (void*) &M;
 			cudaLaunchCooperativeKernel((void*)copyScalarsIntoM, dimGrid_mesons, dimBlock_mesons, copyMesonsArgs, 0, NULL);
 			cudaDeviceSynchronize();
-			fDrift.getForce(fermionic_contribution, Dirac, M, CG, dimGrid_drift, dimBlock_drift);
+			//fDrift.getForce(fermionic_contribution, Dirac, M, CG, dimGrid_drift, dimBlock_drift);
+            for(int i=0; i<4*vol; i++) fermionic_contribution[i] = 0.0;
 			copyVecDoubleArgs[0] = (void*) &(drift.data());
 			copyVecDoubleArgs[1] = (void*) &fermionic_contribution;
-			cudaLaunchCooperativeKernel((void*) copyVec_double, dimGrid_copyDouble, dimBlock_copyDouble, copyVecDoubleArgs, 0, NULL);
-			cudaDeviceSynchronize();
+			//cudaLaunchCooperativeKernel((void*) copyVec_double, dimGrid_copyDouble, dimBlock_copyDouble, copyVecDoubleArgs, 0, NULL);
+			//cudaDeviceSynchronize();
+            std::cout << "Errors? --> " << cudaPeekAtLastError()  << std::endl;
             /*for(int i=0; i<4*vol; i++){
                 if (abs(fermionic_contribution[i]) > 1e3) std::cout << "Big force: " << t << " " << i / vol << " " << i % vol << " " << fermionic_contribution[i] << "\n";
             }*/
@@ -382,6 +384,7 @@ int main(int argc, char** argv) {
 			copyVecDoubleArgs[1] = (void*) &fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*) &copyVec_double, dimGrid_copyDouble, dimBlock_copyDouble, copyVecDoubleArgs, 0, NULL);
 			cudaDeviceSynchronize();
+            std::cout << "Errors? --> " << cudaPeekAtLastError()  << std::endl;
             /*for(int i=0; i<4*vol; i++){
                 if (abs(fermionic_contribution[i]) > 1e3) std::cout << "Big force: " << t << " " << i / vol << " " << i % vol << " " << fermionic_contribution[i] << "\n";
             }*/
@@ -414,6 +417,9 @@ int main(int argc, char** argv) {
 	elapsedLangevinTime = nMeasurements * ExportTime;
 	auto timeSliceFile = std::ofstream(timeSliceFileName);
 	auto timerStart = std::chrono::high_resolution_clock::now();
+    
+    elapsedLangevinTime = MaxLangevinTime;
+    
 	while (elapsedLangevinTime < MaxLangevinTime) {
 		myType t = 0.0;
 		while (t < ExportTime) {
@@ -429,6 +435,7 @@ int main(int argc, char** argv) {
 			copyVecDoubleArgs[1] = (void*) &fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*) &copyVec_double, dimGrid_copyDouble, dimBlock_copyDouble, copyVecDoubleArgs, 0, NULL);
 			cudaDeviceSynchronize();
+            std::cout << "Errors? --> " << cudaPeekAtLastError()  << std::endl;
             /*for(int i=0; i<4*vol; i++){
                 if (abs(fermionic_contribution[i]) > 1e3) std::cout << "Big force: " << t << " " << i / vol << " " << i % vol << " " << fermionic_contribution[i] << "\n";
             }*/
@@ -644,7 +651,6 @@ int main(int argc, char** argv) {
 	cudaFree(temp3);
 	// ------------------------------------------------
     
-    std::cout << "Errors? --> " << cudaPeekAtLastError()  << std::endl;
     
 	return 0;
 }
