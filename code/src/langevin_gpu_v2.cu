@@ -20,7 +20,7 @@ __device__ void PotentialAndMass(myType *ivec, myType *ovec, int size) {
 		}
 		for (int j = 0; j < nVectorComponents; ++j) {
 			auto const myVal = ivec[j * size + i];
-			ovec[j * size + i] = myVal * (m2 + myLambda * interaction);
+			ovec[j * size + i] += myVal * (m2 + myLambda * interaction);
             //if (j == 0) ovec[j * size + i] -= 0.1; // magnetization sigma
 		}
 	}
@@ -78,13 +78,16 @@ __global__ void Run(myType *eps, myType ExportTime, myType *field,
 		cg::sync(grid);
         
 		gpuMaxAbsReduce(drift, maxDrift, size);
+        cg::sync(grid);
         
-        if (maxDrift[0] > 1e4 && threadIdx.x == 0 && blockIdx.x == 0) {
-            printf("Max. drift exceeded %f \n", maxDrift[0]);
-            maxDrift[0] = 1e4;
-        } else if (maxDrift[0] < 1e-4 && threadIdx.x == 0 && blockIdx.x == 0) {
-            printf("Min. drift exceeded %f \n", maxDrift[0]);
-            maxDrift[0] = 1e-4;
+        if (threadIdx.x == 0 && blockIdx.x == 0){
+            if (maxDrift[0] > 1e4) {
+                printf("Max. drift exceeded %f \n", maxDrift[0]);
+                maxDrift[0] = 1e4;
+            } else if (maxDrift[0] < 1e-4) {
+                printf("Min. drift exceeded %f \n", maxDrift[0]);
+                maxDrift[0] = 1e-4;
+            }
         }
         
         // ----------------------------------------------------------------------------------
@@ -105,7 +108,7 @@ __global__ void Run(myType *eps, myType ExportTime, myType *field,
         }*/
         // ----------------------------------------------------------------------------------
         
-		cg::sync(grid);
+		
 		myEps = epsBar * Kbar / maxDrift[0];
 		Evolve(drift, field, noise, size, myEps);
 //		t += *eps;

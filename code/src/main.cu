@@ -68,7 +68,7 @@ void signal_handler(int signal) {
 
 int main(int argc, char** argv) {
 	std::signal(SIGUSR2, signal_handler);
-    srand(time(NULL));
+    srand(1234);
     
     std::cout << "Nt: " << Sizes[0] << " Nx: " << Sizes[1] << "\n";  
 
@@ -338,7 +338,7 @@ int main(int argc, char** argv) {
 			cudaLaunchCooperativeKernel((void*) copyVec_double, dimGrid_copyDouble, dimBlock_copyDouble, copyVecDoubleArgs, 0, NULL);
 			cudaDeviceSynchronize();
             auto err = cudaPeekAtLastError();
-            if (err != 0) std::cout << "CUDA ERROR" << err << std::endl;
+            if (err != 0) std::cout << "CUDA ERROR: " << err << std::endl;
 			// ----------------------------------------------------------
 
 			kli.Run(kAll, kli_sMem);
@@ -411,6 +411,8 @@ int main(int argc, char** argv) {
 	elapsedLangevinTime = nMeasurements * ExportTime;
 	auto timeSliceFile = std::ofstream(timeSliceFileName);
 	auto timerStart = std::chrono::high_resolution_clock::now();
+    
+    //elapsedLangevinTime = MaxLangevinTime;
     
 	while (elapsedLangevinTime < MaxLangevinTime) {
 		myType t = 0.0;
