@@ -8,7 +8,7 @@ cluster = sys.argv[1]
 
 configurations = []
 
-s = 0.5
+s = 1.0
 
 configurations.append({ "physics": {"useMass": "true", "mass": 1.0*s*s, "g": 1.0*s*s, "kappa": 0.00, "lambda": 0.00, "cutFraction": s}, \
                         "langevin": {"averageEpsilon": 0.02, "MaxLangevinTime": 1000.0, "ExportTime": 1.0, "burnCount": 20, "MeasureDriftCount": 0}, \
