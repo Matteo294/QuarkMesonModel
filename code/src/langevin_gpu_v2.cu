@@ -84,7 +84,7 @@ __global__ void Run(myType *eps, myType ExportTime, myType *field,
             maxDrift[0] = 1e4;
         } else if (maxDrift[0] < 1e-4 && threadIdx.x == 0 && blockIdx.x == 0) {
             printf("Min. drift exceeded %f \n", maxDrift[0]);
-            minDrift[0] = 1e-4;
+            maxDrift[0] = 1e-4;
         }
         
         // ----------------------------------------------------------------------------------
