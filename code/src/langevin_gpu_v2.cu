@@ -79,11 +79,11 @@ __global__ void Run(myType *eps, myType ExportTime, myType *field,
         
 		gpuMaxAbsReduce(drift, maxDrift, size);
         
-        if (maxDrift[0] > 1e4) {
-            std::cout << "Max. drift exceeded " << maxDrift[0];
+        if (maxDrift[0] > 1e4 && threadIdx.x == 0 && blockIdx.x == 0) {
+            printf("Max. drift exceeded %f \n", maxDrift[0]);
             maxDrift[0] = 1e4;
-        } else if (maxDrift[0] < 1e-4) {
-            std::cout << "Min. drift exceeded " << maxDrift[0];
+        } else if (maxDrift[0] < 1e-4 && threadIdx.x == 0 && blockIdx.x == 0) {
+            printf("Min. drift exceeded %f \n", maxDrift[0]);
             minDrift[0] = 1e-4;
         }
         
