@@ -418,8 +418,6 @@ int main(int argc, char** argv) {
 	auto timeSliceFile = std::ofstream(timeSliceFileName);
 	auto timerStart = std::chrono::high_resolution_clock::now();
     
-    elapsedLangevinTime = MaxLangevinTime;
-    
 	while (elapsedLangevinTime < MaxLangevinTime) {
 		myType t = 0.0;
 		while (t < ExportTime) {
