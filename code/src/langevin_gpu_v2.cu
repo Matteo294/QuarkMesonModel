@@ -79,8 +79,16 @@ __global__ void Run(myType *eps, myType ExportTime, myType *field,
         
 		gpuMaxAbsReduce(drift, maxDrift, size);
         
+        if (maxDrift[0] > 1e4) {
+            std::cout << "Max. drift exceeded " << maxDrift[0];
+            maxDrift[0] = 1e4;
+        } else if (maxDrift[0] < 1e-4) {
+            std::cout << "Min. drift exceeded " << maxDrift[0];
+            minDrift[0] = 1e-4;
+        }
+        
         // ----------------------------------------------------------------------------------
-        if (threadIdx.x == 0 && blockIdx.x == 0){
+        /*if (threadIdx.x == 0 && blockIdx.x == 0){
             if (maxDrift[0] > 1e3) {
                 printf("Big drift: %f \n", maxDrift[0]);
                  for(int i=0; i<4*vol; i++) {
@@ -94,7 +102,7 @@ __global__ void Run(myType *eps, myType ExportTime, myType *field,
                 maxDrift[0] = 1e-3;
                 }
             }
-        }
+        }*/
         // ----------------------------------------------------------------------------------
         
 		cg::sync(grid);
