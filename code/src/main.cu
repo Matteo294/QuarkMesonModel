@@ -335,12 +335,8 @@ int main(int argc, char** argv) {
             for(int i=0; i<4*vol; i++) fermionic_contribution[i] = 0.0;
 			copyVecDoubleArgs[0] = (void*) &(drift.data());
 			copyVecDoubleArgs[1] = (void*) &fermionic_contribution;
-			//cudaLaunchCooperativeKernel((void*) copyVec_double, dimGrid_copyDouble, dimBlock_copyDouble, copyVecDoubleArgs, 0, NULL);
-			//cudaDeviceSynchronize();
-            std::cout << "Errors? --> " << cudaPeekAtLastError()  << std::endl;
-            /*for(int i=0; i<4*vol; i++){
-                if (abs(fermionic_contribution[i]) > 1e3) std::cout << "Big force: " << t << " " << i / vol << " " << i % vol << " " << fermionic_contribution[i] << "\n";
-            }*/
+			cudaLaunchCooperativeKernel((void*) copyVec_double, dimGrid_copyDouble, dimBlock_copyDouble, copyVecDoubleArgs, 0, NULL);
+			cudaDeviceSynchronize();
 			// ----------------------------------------------------------
 
 			kli.Run(kAll, kli_sMem);
@@ -384,10 +380,6 @@ int main(int argc, char** argv) {
 			copyVecDoubleArgs[1] = (void*) &fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*) &copyVec_double, dimGrid_copyDouble, dimBlock_copyDouble, copyVecDoubleArgs, 0, NULL);
 			cudaDeviceSynchronize();
-            std::cout << "Errors? --> " << cudaPeekAtLastError()  << std::endl;
-            /*for(int i=0; i<4*vol; i++){
-                if (abs(fermionic_contribution[i]) > 1e3) std::cout << "Big force: " << t << " " << i / vol << " " << i % vol << " " << fermionic_contribution[i] << "\n";
-            }*/
 			// ----------------------------------------------------------
 
 			kli.Run(kAll, kli_sMem);
@@ -433,10 +425,6 @@ int main(int argc, char** argv) {
 			copyVecDoubleArgs[1] = (void*) &fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*) &copyVec_double, dimGrid_copyDouble, dimBlock_copyDouble, copyVecDoubleArgs, 0, NULL);
 			cudaDeviceSynchronize();
-            std::cout << "Errors? --> " << cudaPeekAtLastError()  << std::endl;
-            /*for(int i=0; i<4*vol; i++){
-                if (abs(fermionic_contribution[i]) > 1e3) std::cout << "Big force: " << t << " " << i / vol << " " << i % vol << " " << fermionic_contribution[i] << "\n";
-            }*/
 			// ----------------------------------------------------------
 
 			kli.Run(kAll, kli_sMem);
