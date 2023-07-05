@@ -465,7 +465,7 @@ int main(int argc, char** argv) {
 		std::cout << std::sqrt(sum2) / N << std::endl;
         
         // ------------------------------------------------------
-        /*setZeroArgs[0] = (void*) &in;
+        setZeroArgs[0] = (void*) &in;
         cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);        
 		cudaDeviceSynchronize();
 
@@ -500,7 +500,7 @@ int main(int argc, char** argv) {
 
 			case '1':
 
-				myvol = spinor_vol/2;
+				/*myvol = spinor_vol/2;
 				
 				//Dirac_d.D_oo_inv(psiField.pos.begin() + lattice.vol/2, temp2.begin());
 				//Dirac_d.D_eo(temp2.begin(), temp1.begin());
@@ -553,7 +553,7 @@ int main(int argc, char** argv) {
 				//Dirac_d.D_oo_inv(temp3.begin(), psiField.pos.begin() + lattice.vol/2);
 				Dirac.setInVec(temp3); Dirac.setOutVec(temp1);
 				cudaLaunchCooperativeKernel((void*)&D_oo_inv<double>, Dirac.dimGrid_Doo_inv, Dirac.dimBlock_Doo_inv, Dirac.diagArgs, 0, NULL);
-				cudaDeviceSynchronize();
+				cudaDeviceSynchronize();*/
 
 				break;
 
@@ -566,7 +566,7 @@ int main(int argc, char** argv) {
 				for(int j=0; j<4; j++) corr += in[toEOflat(nt, nx)].val[j];
 			}
 			datafile << corr.real() << "\n";
-		}*/
+		}
         
         // compute condensates from drifts as they are proportional
         for(int i=0; i<4; i++) traces[i] = 0.0;
