@@ -45,35 +45,35 @@ for cutoff_frac in sorted(s):
     #data = data.drop(labels=range(1,1000), axis=0)
     N = len(data['sigma'])
 
-    plt.hist(data['sigma'].to_numpy(), bins=50)
+    '''plt.hist(data['sigma'].to_numpy(), bins=50)
     plt.savefig("plots/sigma_hist/sigmhist_" + str(cutoff_frac) + ".pdf")
-    plt.close()
+    plt.close()'''
 
     # vals
-    sigma_vals.append(np.average(np.abs(data['sigma'].to_numpy())))
-    pi_vals[0].append(np.average(np.abs(data['pi1'].to_numpy())))
-    pi_vals[1].append(np.average(np.abs(data['pi2'].to_numpy())))
-    pi_vals[2].append(np.average(np.abs(data['pi3'].to_numpy())))
-    tr_vals.append(np.average(np.abs(data['tr'].to_numpy())))
-    trpi_vals[0].append(np.average(np.abs(data['trp1'].to_numpy())))
-    trpi_vals[1].append(np.average(np.abs(data['trp2'].to_numpy())))
-    trpi_vals[2].append(np.average(np.abs(data['trp3'].to_numpy())))
+    sigma_vals.append(np.average(data['sigma'].to_numpy()))
+    pi_vals[0].append(np.average(data['pi1'].to_numpy()))
+    pi_vals[1].append(np.average(data['pi2'].to_numpy()))
+    pi_vals[2].append(np.average(data['pi3'].to_numpy()))
+    tr_vals.append(np.average(data['tr'].to_numpy()))
+    trpi_vals[0].append(np.average(data['trp1'].to_numpy()))
+    trpi_vals[1].append(np.average(data['trp2'].to_numpy()))
+    trpi_vals[2].append(np.average(data['trp3'].to_numpy()))
     
     print("sigma:", np.average(data['sigma'].to_numpy()))
     print("pions:", np.average(data['pi1'].to_numpy()), np.average(data['pi2'].to_numpy()), np.average(data['pi3'].to_numpy()))
     
 
     # errs
-    sigma_errs.append(np.std(np.abs(data['sigma'].to_numpy())) / np.sqrt(N-1))
-    pi_errs[0].append(np.std(np.abs(data['pi1'].to_numpy())) / np.sqrt(N-1))
-    pi_errs[1].append(np.std(np.abs(data['pi2'].to_numpy())) / np.sqrt(N-1))
-    pi_errs[2].append(np.std(np.abs(data['pi3'].to_numpy())) / np.sqrt(N-1))
-    tr_errs.append(np.std(np.abs(data['tr'].to_numpy())) / np.sqrt(N-1))
-    trpi_errs[0].append(np.std(np.abs(data['trp1'].to_numpy())) / np.sqrt(N-1))
-    trpi_errs[1].append(np.std(np.abs(data['trp2'].to_numpy())) / np.sqrt(N-1))
-    trpi_errs[2].append(np.std(np.abs(data['trp3'].to_numpy())) / np.sqrt(N-1))
+    sigma_errs.append(np.std(data['sigma'].to_numpy()) / np.sqrt(N-1))
+    pi_errs[0].append(np.std(data['pi1'].to_numpy()) / np.sqrt(N-1))
+    pi_errs[1].append(np.std(data['pi2'].to_numpy()) / np.sqrt(N-1))
+    pi_errs[2].append(np.std(data['pi3'].to_numpy()) / np.sqrt(N-1))
+    tr_errs.append(np.std(data['tr'].to_numpy()) / np.sqrt(N-1))
+    trpi_errs[0].append(np.std(data['trp1'].to_numpy()) / np.sqrt(N-1))
+    trpi_errs[1].append(np.std(data['trp2'].to_numpy()) / np.sqrt(N-1))
+    trpi_errs[2].append(np.std(data['trp3'].to_numpy()) / np.sqrt(N-1))
 
-    plt.plot(range(len(sigma_vals)), sigma_vals, label=r'$\sigma$')
+    '''plt.plot(range(len(sigma_vals)), sigma_vals, label=r'$\sigma$')
     plt.xlabel("Langevin time", fontsize=22)
     plt.title(r"$s=\Lambda' / \Lambda$ = " + str(cutoff_frac), fontsize=22)
     plt.tight_layout()
@@ -96,7 +96,7 @@ for cutoff_frac in sorted(s):
     plt.title(r"$s=\Lambda' / \Lambda$ = " + str(cutoff_frac), fontsize=22)
     plt.tight_layout()
     plt.savefig("plots/pi2_evol/pi2_evol_" + str(cutoff_frac) + ".pdf")
-    plt.close()
+    plt.close()'''
 
 print(len(s), len(sigma_vals))
 
