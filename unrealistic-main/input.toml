@@ -1,0 +1,22 @@
+[physics]
+useMass = true
+mass = -0.25
+g = 0.5
+kappa = 0.26
+lambda = 0.02
+cutFraction = 0.50
+
+[langevin]
+averageEpsilon = 0.0010
+MaxLangevinTime = 50.0
+ExportTime = 10.0
+burnCount = 1
+MeasureDriftCount = 10
+
+[io]
+configFileName = "test.hdf"
+export = false
+timeSliceFileName = "slice.dat"
+
+[random]
+seed = 1234
