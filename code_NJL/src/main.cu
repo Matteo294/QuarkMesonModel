@@ -328,12 +328,10 @@ int main(int argc, char** argv) {
 			cudaLaunchCooperativeKernel((void*)copyScalarsIntoM, dimGrid_mesons, dimBlock_mesons, copyMesonsArgs, 0, NULL);
 			cudaDeviceSynchronize();
 			fDrift.getForce(fermionic_contribution, Dirac, M, CG, dimGrid_drift, dimBlock_drift);
-            for(int i=0; i<vol; i++) fermionic_contribution[i] = 0.0;
 			copyVecDoubleArgs[0] = (void*) &(drift.data());
 			copyVecDoubleArgs[1] = (void*) &fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*) copyVec_double, dimGrid_copyDouble, dimBlock_copyDouble, copyVecDoubleArgs, 0, NULL);
 			cudaDeviceSynchronize();
-            for(int i=0; i<vol; i++) {if(drift.data()[i] != 0.0) std::cout << "ERRRRRRRRRRRRRRRR \n";}
             auto err = cudaPeekAtLastError();
             if (err != 0) std::cout << "CUDA ERROR: " << err << std::endl;
 			// ----------------------------------------------------------
@@ -379,7 +377,6 @@ int main(int argc, char** argv) {
 			copyVecDoubleArgs[1] = (void*) &fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*) copyVec_double, dimGrid_copyDouble, dimBlock_copyDouble, copyVecDoubleArgs, 0, NULL);
 			cudaDeviceSynchronize();
-            for(int i=0; i<vol; i++) {if(drift.data()[i] != 0.0) std::cout << "ERRRRRRRRRRRRRRRR \n";}
             auto err = cudaPeekAtLastError();
             if (err != 0) std::cout << "CUDA ERROR: " << err << std::endl;
 			// ----------------------------------------------------------
@@ -424,12 +421,10 @@ int main(int argc, char** argv) {
 			cudaLaunchCooperativeKernel((void*)copyScalarsIntoM, dimGrid_mesons, dimBlock_mesons, copyMesonsArgs, 0, NULL);
 			cudaDeviceSynchronize();
 			fDrift.getForce(fermionic_contribution, Dirac, M, CG, dimGrid_drift, dimBlock_drift);
-            for(int i=0; i<vol; i++) fermionic_contribution[i] = 0.0;
 			copyVecDoubleArgs[0] = (void*) &(drift.data());
 			copyVecDoubleArgs[1] = (void*) &fermionic_contribution;
 			cudaLaunchCooperativeKernel((void*) copyVec_double, dimGrid_copyDouble, dimBlock_copyDouble, copyVecDoubleArgs, 0, NULL);
 			cudaDeviceSynchronize();
-            for(int i=0; i<vol; i++) {if(drift.data()[i] != 0.0) std::cout << "ERRRRRRRRRRRRRRRR \n";}
             auto err = cudaPeekAtLastError();
             if (err != 0) std::cout << "CUDA ERROR: " << err << std::endl;
 			// ----------------------------------------------------------
