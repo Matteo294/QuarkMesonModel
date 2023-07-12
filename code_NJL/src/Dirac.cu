@@ -79,8 +79,6 @@ __global__ void D_oo(Spinor<T> *inVec, Spinor<T> *outVec, MatrixType const useDa
 
     auto grid = cg::this_grid();
 
-
-    thrust::complex<T> sigma;
     thrust::complex<T> const g = static_cast<thrust::complex<T>> (yukawa_coupling_gpu);
     thrust::complex<T> const two {2.0, 0.0};
     thrust::complex<T> mass = static_cast<thrust::complex<T>> (fermion_mass_gpu);
@@ -93,10 +91,10 @@ __global__ void D_oo(Spinor<T> *inVec, Spinor<T> *outVec, MatrixType const useDa
             outVec[i].val[2] += (two + mass + g * conj(*M)) * inVec[i].val[2];
             outVec[i].val[3] += (two + mass + g * conj(*M)) * inVec[i].val[3];
         } else{
-            outVec[i].val[0] += (two + mass + g * *sigma) * inVec[i].val[0];
-            outVec[i].val[1] += (two + mass + g * *sigma) * inVec[i].val[1];
-            outVec[i].val[2] += (two + mass + g * *sigma) * inVec[i].val[2];
-            outVec[i].val[3] += (two + mass + g * *sigma) * inVec[i].val[3];
+            outVec[i].val[0] += (two + mass + g * *M) * inVec[i].val[0];
+            outVec[i].val[1] += (two + mass + g * *M) * inVec[i].val[1];
+            outVec[i].val[2] += (two + mass + g * *M) * inVec[i].val[2];
+            outVec[i].val[3] += (two + mass + g * *M) * inVec[i].val[3];
         }
     }
 }
@@ -106,7 +104,6 @@ __global__ void D_ee(Spinor<T> *inVec, Spinor<T> *outVec, MatrixType const useDa
 
     auto grid = cg::this_grid();
 
-    thrust::complex<T> sigma;
     thrust::complex<T> const two {2.0, 0.0};
     thrust::complex<T> const g = static_cast<thrust::complex<T>> (yukawa_coupling_gpu);
     thrust::complex<T> const mass = static_cast<thrust::complex<T>> (fermion_mass_gpu);

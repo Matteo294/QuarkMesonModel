@@ -113,7 +113,7 @@ __global__ void gpuMagnetisation(myType *vecA, myType *result, int size) {
 								// it to zero outside the kernel, but that looks ugly
 		myType temp_sum = 0.0;
 		for (int i = grid.thread_rank(); i < size; i += grid.size()) {
-			temp_sum += vecA[i + comp * size];
+			temp_sum += abs(vecA[i + comp * size]);
 		}
 
 		cg::thread_block_tile<32> tile32 = cg::tiled_partition<32>(cta);
@@ -168,33 +168,32 @@ __global__ void gpuTraces(double *vec, double *result) {
 	cg::grid_group grid = cg::this_grid();
 	extern __shared__ double tmpTr[];
 
-	for (int j = 0; j < 4; j++) {
-		//result[j] = 0.0;		// TODO: is this bad? It seems to work. I can also set
-								// it to zero outside the kernel, but that looks ugly
-		double temp_sum = 0.0;
-		for (int i = grid.thread_rank(); i < vol; i += grid.size()) {
-			temp_sum += vec[i + j*vol];
-		}
+    //result[j] = 0.0;		// TODO: is this bad? It seems to work. I can also set
+                            // it to zero outside the kernel, but that looks ugly
+    double temp_sum = 0.0;
+    for (int i = grid.thread_rank(); i < vol; i += grid.size()) {
+        temp_sum += vec[i];
+    }
 
-		cg::thread_block_tile<32> tile32 = cg::tiled_partition<32>(cta);
+    cg::thread_block_tile<32> tile32 = cg::tiled_partition<32>(cta);
 
-		temp_sum = cg::reduce(tile32, temp_sum, cg::plus<double>());
+    temp_sum = cg::reduce(tile32, temp_sum, cg::plus<double>());
 
-		if (tile32.thread_rank() == 0) {
-			tmpTr[tile32.meta_group_rank()] = temp_sum;
-		}
+    if (tile32.thread_rank() == 0) {
+        tmpTr[tile32.meta_group_rank()] = temp_sum;
+    }
 
-		// for some reason, if I synchronise with cta the cluster gives me wrong results for
-		// comp > 1 when using "large" lattices (> 64x64x4)
-		cg::sync(grid);
+    // for some reason, if I synchronise with cta the cluster gives me wrong results for
+    // comp > 1 when using "large" lattices (> 64x64x4)
+    cg::sync(grid);
 
-		if (tile32.meta_group_rank() == 0) {
-			temp_sum = tile32.thread_rank() < tile32.meta_group_size() ? tmpTr[tile32.thread_rank()] : 0.0;
-			temp_sum = cg::reduce(tile32, temp_sum, cg::plus<double>());
+    if (tile32.meta_group_rank() == 0) {
+        temp_sum = tile32.thread_rank() < tile32.meta_group_size() ? tmpTr[tile32.thread_rank()] : 0.0;
+        temp_sum = cg::reduce(tile32, temp_sum, cg::plus<double>());
 
-			if (tile32.thread_rank() == 0) {
-				atomicAdd(result+j, temp_sum);
-			}
-		}
-	}
+        if (tile32.thread_rank() == 0) {
+            atomicAdd(result, temp_sum);
+        }
+    }
+
 }

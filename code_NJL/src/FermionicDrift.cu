@@ -10,7 +10,7 @@ FermionicDrift::FermionicDrift(int const seed) : gen(rd()), dist(0.0, 1.0)
     cudaMallocManaged(&afterCG, sizeof(Spinor<double>) * vol);
 	cudaMallocManaged(&buf, sizeof(Spinor<double>) * vol);
 	cudaMallocManaged(&noiseVec, sizeof(Spinor<double>) * vol);
-	cudaMallocManaged(&eobuf, sizeof(thrust::complex<double>) * spinor_vol);
+	cudaMallocManaged(&eobuf, sizeof(thrust::complex<double>) * vol);
 	cudaMallocManaged(&state, sizeof(curandState) * spinor_vol);
 
 	int nBlocks = 0;
@@ -133,9 +133,6 @@ __global__ void eoConv(thrust::complex<double> *eoVec, double *normalVec){
 	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
 		eo_i = NormalToEO(i);
 		normalVec[i] = eoVec[eo_i].real();
-		normalVec[i + vol] = eoVec[eo_i + vol].real();
-		normalVec[i + 2*vol] = eoVec[eo_i + 2*vol].real();
-		normalVec[i + 3*vol] = eoVec[eo_i + 3*vol].real();
 	}
 }
 
@@ -149,24 +146,6 @@ __global__ void computeDrift(Spinor<double> *afterCG, Spinor<double> *noise, dou
 											+ conj(afterCG[eo_i].val[1])*noise[eo_i].val[1] 
 											- conj(afterCG[eo_i].val[2])*noise[eo_i].val[2] 
 											+ conj(afterCG[eo_i].val[3])*noise[eo_i].val[3]).real();
-
-		// Drift for pi1
-		outVec[i + vol] = -yukawa_coupling_gpu * (	- conj(afterCG[eo_i].val[0])*noise[eo_i].val[3]
-											 		+ conj(afterCG[eo_i].val[1])*noise[eo_i].val[2] 
-													- conj(afterCG[eo_i].val[2])*noise[eo_i].val[1] 
-													+ conj(afterCG[eo_i].val[3])*noise[eo_i].val[0]).real();
-
-		// Drift for pi2
-		outVec[i + 2*vol] = -yukawa_coupling_gpu * (  im_gpu * conj(afterCG[eo_i].val[0])*noise[eo_i].val[3] 
-													- im_gpu * conj(afterCG[eo_i].val[1])*noise[eo_i].val[2] 
-													- im_gpu * conj(afterCG[eo_i].val[2])*noise[eo_i].val[1] 
-													+ im_gpu * conj(afterCG[eo_i].val[3])*noise[eo_i].val[0]).real();
-
-		// Drift for pi3
-		outVec[i + 3*vol] = -yukawa_coupling_gpu * (- conj(afterCG[eo_i].val[0])*noise[eo_i].val[1]
-													+ conj(afterCG[eo_i].val[1])*noise[eo_i].val[0]
-													+ conj(afterCG[eo_i].val[2])*noise[eo_i].val[3]
-													- conj(afterCG[eo_i].val[3])*noise[eo_i].val[2]).real();
 
 	}
 

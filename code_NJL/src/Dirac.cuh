@@ -34,7 +34,7 @@ class DiracOP {
 		
 	private:
 		Spinor<T> *temp, *temp2;
-		T *M;
+		thrust::complex<T> *M;
 		
 		MatrixType useDagger;
 		

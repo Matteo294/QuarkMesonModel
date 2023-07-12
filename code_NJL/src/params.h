@@ -18,11 +18,11 @@ using myType = double;
 
 int constexpr nDim = 2;
 int constexpr nElements = (1+2*nDim);
-int constexpr nVectorComponents = 4;
+int constexpr nVectorComponents = 1;
 
 using dimArray = std::array<int, nDim>;
 
-dimArray constexpr Sizes = {128, 256};
+dimArray constexpr Sizes = {128, 128};
 int const vol = Sizes[0]*Sizes[1];
 
 template <int N>
