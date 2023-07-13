@@ -65,11 +65,11 @@ __host__ void DiracOP<T>::applyD(){
     cudaLaunchCooperativeKernel((void*)&D_oo<T>, dimGrid_Doo, dimBlock_Doo, diagArgs, 0, NULL);
     cudaDeviceSynchronize();
 
- 	cudaLaunchCooperativeKernel((void*)&D_eo<T>, dimGrid_Deo, dimBlock_Deo, hoppingArgs, 0, NULL);
-    cudaDeviceSynchronize();
+ 	//cudaLaunchCooperativeKernel((void*)&D_eo<T>, dimGrid_Deo, dimBlock_Deo, hoppingArgs, 0, NULL);
+    //cudaDeviceSynchronize();
 
-    cudaLaunchCooperativeKernel((void*)&D_oe<T>, dimGrid_Doe, dimBlock_Doe, hoppingArgs, 0, NULL);
-    cudaDeviceSynchronize();
+    //cudaLaunchCooperativeKernel((void*)&D_oe<T>, dimGrid_Doe, dimBlock_Doe, hoppingArgs, 0, NULL);
+    //cudaDeviceSynchronize();
 
 }
 
@@ -86,15 +86,15 @@ __global__ void D_oo(Spinor<T> *inVec, Spinor<T> *outVec, MatrixType const useDa
 
     for (int i = grid.thread_rank() + vol/2; i < vol; i += grid.size()) {
         if (useDagger == MatrixType::Dagger){
-            outVec[i].val[0] += (two + mass + g * conj(*M)) * inVec[i].val[0];
-            outVec[i].val[1] += (two + mass + g * conj(*M)) * inVec[i].val[1];
-            outVec[i].val[2] += (two + mass + g * conj(*M)) * inVec[i].val[2];
-            outVec[i].val[3] += (two + mass + g * conj(*M)) * inVec[i].val[3];
+            outVec[i].val[0] += (mass + g * conj(*M)) * inVec[i].val[0];
+            outVec[i].val[1] += (mass + g * conj(*M)) * inVec[i].val[1];
+            outVec[i].val[2] += (mass + g * conj(*M)) * inVec[i].val[2];
+            outVec[i].val[3] += (mass + g * conj(*M)) * inVec[i].val[3];
         } else{
-            outVec[i].val[0] += (two + mass + g * *M) * inVec[i].val[0];
-            outVec[i].val[1] += (two + mass + g * *M) * inVec[i].val[1];
-            outVec[i].val[2] += (two + mass + g * *M) * inVec[i].val[2];
-            outVec[i].val[3] += (two + mass + g * *M) * inVec[i].val[3];
+            outVec[i].val[0] += (mass + g * (*M)) * inVec[i].val[0];
+            outVec[i].val[1] += (mass + g * (*M)) * inVec[i].val[1];
+            outVec[i].val[2] += (mass + g * (*M)) * inVec[i].val[2];
+            outVec[i].val[3] += (mass + g * (*M)) * inVec[i].val[3];
         }
     }
 }
@@ -112,15 +112,15 @@ __global__ void D_ee(Spinor<T> *inVec, Spinor<T> *outVec, MatrixType const useDa
     for (int i = grid.thread_rank(); i < vol/2; i += grid.size()) {
     
     if (useDagger == MatrixType::Dagger){
-        outVec[i].val[0] += (two + mass + g * conj(*M)) * inVec[i].val[0];
-        outVec[i].val[1] += (two + mass + g * conj(*M)) * inVec[i].val[1];
-        outVec[i].val[2] += (two + mass + g * conj(*M)) * inVec[i].val[2];
-        outVec[i].val[3] += (two + mass + g * conj(*M)) * inVec[i].val[3];
+        outVec[i].val[0] += (mass + g * conj(*M)) * inVec[i].val[0];
+        outVec[i].val[1] += (mass + g * conj(*M)) * inVec[i].val[1];
+        outVec[i].val[2] += (mass + g * conj(*M)) * inVec[i].val[2];
+        outVec[i].val[3] += (mass + g * conj(*M)) * inVec[i].val[3];
     } else {
-        outVec[i].val[0] += (two + mass + g * *M) * inVec[i].val[0];
-        outVec[i].val[1] += (two + mass + g * *M) * inVec[i].val[1];
-        outVec[i].val[2] += (two + mass + g * *M) * inVec[i].val[2];
-        outVec[i].val[3] += (two + mass + g * *M) * inVec[i].val[3];
+        outVec[i].val[0] += (mass + g * (*M)) * inVec[i].val[0];
+        outVec[i].val[1] += (mass + g * (*M)) * inVec[i].val[1];
+        outVec[i].val[2] += (mass + g * (*M)) * inVec[i].val[2];
+        outVec[i].val[3] += (mass + g * (*M)) * inVec[i].val[3];
     }
     }
 

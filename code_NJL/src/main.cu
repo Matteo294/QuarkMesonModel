@@ -522,7 +522,7 @@ int main(int argc, char** argv) {
             *trace = 0.0;
         }
 		
-        tracefile << (double) (*trace / vol) << (double) (avg[0] / vol) << "," << (double) (std::sqrt(sum2) / vol) << "\n";
+        tracefile << (double) (*trace) << "," << (double) (avg[0] / vol) << "," << (double) (std::sqrt(sum2) / vol) << "\n";
 		// ------------------------------------------------------
 
 		nMeasurements++;
@@ -532,15 +532,7 @@ int main(int argc, char** argv) {
 		cudaMemcpy(hostLattice.data(), ivec.data(), N*nVectorComponents*sizeof(myType),
 				cudaMemcpyDeviceToHost);
 		cudaDeviceSynchronize();
-        
-        /*double magn = 0.0;
-        for(int i=0; i<vol; i++) magn += abs(hostLattice.data()[i]);
-		std::cout << std::sqrt(magn) / vol << std::endl;
-        
-        magn = 0.0;
-        for(int i=0; i<vol; i++) magn += abs(ivec.data()[i]);
-		std::cout << std::sqrt(magn) / vol << std::endl;*/
-        
+    
         
 		// if the user provided kappa as input, we rescale the output field to dimensionless format
 		if (useMass == "false")
@@ -574,8 +566,6 @@ int main(int argc, char** argv) {
 	std::cout << "#Number of measurements: " << nMeasurements << '\n';
 
 	std::cout << "#Run time for main loop: " << duration.count() / 1000.0 << "s\n";
-    
-    std::cout << "exp: " << sqrt(6.0 * abs(my_m2) / myLambda) << std::endl;
 
 	cudaFree(eps);
 	cudaFree(maxDrift);
