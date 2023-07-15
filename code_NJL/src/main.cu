@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
 
 	auto ivec  = ManagedVector<myType>{N * nVectorComponents};
 	for (auto &e : ivec)
-		e = static_cast<myType>(1.0 - 2.0*drand48());
+		e = static_cast<myType>(1.5 - 2.0*drand48());
 //		e = static_cast<myType>(drand48());
 
 	auto drift = ManagedVector<myType>{N * nVectorComponents};

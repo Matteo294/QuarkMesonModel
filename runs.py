@@ -8,35 +8,46 @@ cluster = sys.argv[1]
 
 configurations = []
 
-configurations.append({ "physics": {"useMass": "true", "mass": -2.0, "g": 0.1, "kappa": 0.00, "lambda": 0.00, "cutFraction": 0.0}, \
-                        "langevin": {"averageEpsilon": 0.02, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 10}, \
-                        "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
-                        "random": {"seed": 1234}, \
-                        "fermions": {"yukawa_coupling": 0.0, "fermion_mass": 1.0} })
+s = 1.0
 
-configurations.append({ "physics": {"useMass": "true", "mass": -2.0, "g": 0.1, "kappa": 0.00, "lambda": 0.00, "cutFraction": 0.0}, \
-                        "langevin": {"averageEpsilon": 0.02, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 10}, \
-                        "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
-                        "random": {"seed": 1234}, \
-                        "fermions": {"yukawa_coupling": 0.1, "fermion_mass": 1.0} })
 
-configurations.append({ "physics": {"useMass": "true", "mass": -2.0, "g": 0.1, "kappa": 0.00, "lambda": 0.00, "cutFraction": 0.0}, \
-                        "langevin": {"averageEpsilon": 0.02, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 10}, \
+configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0*s*s, "kappa": 0.00, "lambda": 0.00, "cutFraction": s}, \
+                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 20}, \
                         "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
                         "random": {"seed": 1234}, \
-                        "fermions": {"yukawa_coupling": 0.5, "fermion_mass": 1.0} })
+                        "fermions": {"yukawa_coupling": 0.0*s, "fermion_mass": 0.5*s} })
 
-configurations.append({ "physics": {"useMass": "true", "mass": -2.0, "g": 0.1, "kappa": 0.00, "lambda": 0.00, "cutFraction": 0.0}, \
-                        "langevin": {"averageEpsilon": 0.02, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 10}, \
+configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0*s*s, "kappa": 0.00, "lambda": 0.00, "cutFraction": s}, \
+                        "langevin": {"averageEpsilon": 0.1, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 20}, \
                         "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
                         "random": {"seed": 1234}, \
-                        "fermions": {"yukawa_coupling": 1.0, "fermion_mass": 1.0} })
+                        "fermions": {"yukawa_coupling": 0.1*s, "fermion_mass": 0.5*s} })
 
-configurations.append({ "physics": {"useMass": "true", "mass": -2.0, "g": 0.1, "kappa": 0.00, "lambda": 0.00, "cutFraction": 0.0}, \
-                        "langevin": {"averageEpsilon": 0.02, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 10}, \
+configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0*s*s, "kappa": 0.00, "lambda": 0.00, "cutFraction": s}, \
+                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 20}, \
                         "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
                         "random": {"seed": 1234}, \
-                        "fermions": {"yukawa_coupling": 5.0, "fermion_mass": 1.0} })
+                        "fermions": {"yukawa_coupling": 1.0*s, "fermion_mass": 0.5*s} })
+
+configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0*s*s, "kappa": 0.00, "lambda": 0.00, "cutFraction": s}, \
+                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 20}, \
+                        "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
+                        "random": {"seed": 1234}, \
+                        "fermions": {"yukawa_coupling": 5.0*s, "fermion_mass": 0.5*s} })
+
+configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0*s*s, "kappa": 0.00, "lambda": 0.00, "cutFraction": s}, \
+                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 20}, \
+                        "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
+                        "random": {"seed": 1234}, \
+                        "fermions": {"yukawa_coupling": 10.0*s, "fermion_mass": 0.5*s} })
+
+
+
+
+
+
+
+
 
 
 
