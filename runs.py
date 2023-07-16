@@ -10,7 +10,6 @@ configurations = []
 
 s = 1.0
 
-
 configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0*s*s, "kappa": 0.00, "lambda": 0.00, "cutFraction": s}, \
                         "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 20}, \
                         "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
@@ -18,10 +17,22 @@ configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0
                         "fermions": {"yukawa_coupling": 0.0*s, "fermion_mass": 0.5*s} })
 
 configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0*s*s, "kappa": 0.00, "lambda": 0.00, "cutFraction": s}, \
-                        "langevin": {"averageEpsilon": 0.1, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 20}, \
+                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 20}, \
+                        "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
+                        "random": {"seed": 1234}, \
+                        "fermions": {"yukawa_coupling": 0.01*s, "fermion_mass": 0.5*s} })
+
+configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0*s*s, "kappa": 0.00, "lambda": 0.00, "cutFraction": s}, \
+                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 20}, \
                         "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
                         "random": {"seed": 1234}, \
                         "fermions": {"yukawa_coupling": 0.1*s, "fermion_mass": 0.5*s} })
+
+configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0*s*s, "kappa": 0.00, "lambda": 0.00, "cutFraction": s}, \
+                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 20}, \
+                        "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
+                        "random": {"seed": 1234}, \
+                        "fermions": {"yukawa_coupling": 0.5*s, "fermion_mass": 0.5*s} })
 
 configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0*s*s, "kappa": 0.00, "lambda": 0.00, "cutFraction": s}, \
                         "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 20}, \
@@ -40,6 +51,21 @@ configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0
                         "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
                         "random": {"seed": 1234}, \
                         "fermions": {"yukawa_coupling": 10.0*s, "fermion_mass": 0.5*s} })
+
+configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0*s*s, "kappa": 0.00, "lambda": 0.00, "cutFraction": s}, \
+                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 20}, \
+                        "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
+                        "random": {"seed": 1234}, \
+                        "fermions": {"yukawa_coupling": 50.0*s, "fermion_mass": 0.5*s} })
+
+configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0*s*s, "kappa": 0.00, "lambda": 0.00, "cutFraction": s}, \
+                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 20}, \
+                        "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
+                        "random": {"seed": 1234}, \
+                        "fermions": {"yukawa_coupling": 100.0*s, "fermion_mass": 0.5*s} })
+
+
+
 
 
 

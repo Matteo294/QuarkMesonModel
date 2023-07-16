@@ -1,14 +1,14 @@
 [physics]
 useMass = "true"
-mass = 1.0
-g = 0.0
+mass = 0.125
+g = 0.25
 kappa = 0.0
 lambda = 0.0
-cutFraction = 1.0
+cutFraction = 0.5
 
 [langevin]
-averageEpsilon = 0.02
-MaxLangevinTime = 1000.0
+averageEpsilon = 0.01
+MaxLangevinTime = 10000.0
 ExportTime = 1.0
 burnCount = 50
 MeasureDriftCount = 20
@@ -22,5 +22,5 @@ timeSliceFileName = "slice.dat"
 seed = 1234
 
 [fermions]
-yukawa_coupling = 1.0
-fermion_mass = 0.5
+yukawa_coupling = 5.0
+fermion_mass = 0.25
