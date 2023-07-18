@@ -133,10 +133,10 @@ __global__ void computeDrift(cp<double> *afterCG,cp<double> *noise, double *outV
 	int eo_i;
 	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
 		eo_i = N2EO.at[i];
-		outVec[i] = -0.25*yukawa_coupling_gpu * (     conj(afterCG[4*eo_i])*noise[4*eo_i]
+		outVec[i] = -yukawa_coupling_gpu * (     conj(afterCG[4*eo_i])*noise[4*eo_i]
                                                     + conj(afterCG[4*eo_i+1])*noise[4*eo_i+1] 
                                                     - conj(afterCG[4*eo_i+2])*noise[4*eo_i+2] 
-                                                    + conj(afterCG[4*eo_i+3])*noise[4*eo_i+3].real();
+                                                    + conj(afterCG[4*eo_i+3])*noise[4*eo_i+3].real());
 
 	}
 

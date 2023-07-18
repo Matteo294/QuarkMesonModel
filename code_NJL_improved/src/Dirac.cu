@@ -160,28 +160,28 @@ __global__ void D_eo(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, my
     
     if (useDagger == MatrixType::Dagger) {
         
-        psisum[0]  = inVec[IUP[i][1]].val[0] + inVec[IUP[i][1]].val[1];
-        psisum[1]  = inVec[IUP[i][1]].val[2] + inVec[IUP[i][1]].val[3];
-        psidiff[0] = inVec[IDN[i][1]].val[0] - inVec[IDN[i][1]].val[1];
-        psidiff[1] = inVec[IDN[i][1]].val[2] - inVec[IDN[i][1]].val[3];
+        psisum[0]  = inVec[4*IUP[i][1] + 0] + inVec[IUP[i][1] + 1];
+        psisum[1]  = inVec[4*IUP[i][1] + 2] + inVec[IUP[i][1] + 3];
+        psidiff[0] = inVec[4*IDN[i][1] + 0] - inVec[IDN[i][1] + 1];
+        psidiff[1] = inVec[4*IDN[i][1] + 2] - inVec[IDN[i][1] + 3];
 
-        outVec[i].val[0] -=  sgn[0] * inVec[IUP[i][0]].val[0] + half*psidiff[0] + half*psisum[0];
-        outVec[i].val[2] -=  sgn[0] * inVec[IUP[i][0]].val[2] + half*psidiff[1] + half*psisum[1];
-        outVec[i].val[1] -=  sgn[1] * inVec[IDN[i][0]].val[1] - half*psidiff[0] + half*psisum[0];
-        outVec[i].val[3] -=  sgn[1] * inVec[IDN[i][0]].val[3] - half*psidiff[1] + half*psisum[1];
+        outVec[4*i + 0] -=  sgn[0] * inVec[4*IUP[i][0] + 0] + half*psidiff[0] + half*psisum[0];
+        outVec[4*i + 2] -=  sgn[0] * inVec[4*IUP[i][0] + 2] + half*psidiff[1] + half*psisum[1];
+        outVec[4*i + 1] -=  sgn[1] * inVec[4*IDN[i][0] + 1] - half*psidiff[0] + half*psisum[0];
+        outVec[4*i + 3] -=  sgn[1] * inVec[4*IDN[i][0] + 3] - half*psidiff[1] + half*psisum[1];
 
     } else {
 
         
-        psisum[0]  = inVec[IDN[i][1]].val[0] + inVec[IDN[i][1]].val[1];
-        psisum[1]  = inVec[IDN[i][1]].val[2] + inVec[IDN[i][1]].val[3];
-        psidiff[0] = inVec[IUP[i][1]].val[0] - inVec[IUP[i][1]].val[1];
-        psidiff[1] = inVec[IUP[i][1]].val[2] - inVec[IUP[i][1]].val[3];
+        psisum[0]  = inVec[IDN[i][1] + 0] + inVec[IDN[i][1] + 1];
+        psisum[1]  = inVec[IDN[i][1] + 2] + inVec[IDN[i][1] + 3];
+        psidiff[0] = inVec[IUP[i][1] + 0] - inVec[IUP[i][1] + 1];
+        psidiff[1] = inVec[IUP[i][1] + 2] - inVec[IUP[i][1] + 3];
 
-        outVec[i].val[0] -=  sgn[1] * inVec[IDN[i][0]].val[0] + half*psisum[0] + half*psidiff[0];
-        outVec[i].val[2] -=  sgn[1] * inVec[IDN[i][0]].val[2] + half*psisum[1] + half*psidiff[1];
-        outVec[i].val[1] -=  sgn[0] * inVec[IUP[i][0]].val[1] + half*psisum[0] - half*psidiff[0];
-        outVec[i].val[3] -=  sgn[0] * inVec[IUP[i][0]].val[3] + half*psisum[1] - half*psidiff[1];
+        outVec[i + 0] -=  sgn[1] * inVec[4*IDN[i][0] + 0] + half*psisum[0] + half*psidiff[0];
+        outVec[i + 1] -=  sgn[1] * inVec[4*IDN[i][0] + 2] + half*psisum[1] + half*psidiff[1];
+        outVec[i + 2] -=  sgn[0] * inVec[4*IUP[i][0] + 1] + half*psisum[0] - half*psidiff[0];
+        outVec[i + 3] -=  sgn[0] * inVec[4*IUP[i][0] + 3] + half*psisum[1] - half*psidiff[1];
 
     }
 
@@ -226,27 +226,27 @@ __global__ void D_oe(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, my
 		i = j;
         if (useDagger == MatrixType::Dagger) {
 
-            psisum[0]  = inVec[IUP[i+vol/2][1]].val[0] + inVec[IUP[i+vol/2][1]].val[1];
-            psisum[1]  = inVec[IUP[i+vol/2][1]].val[2] + inVec[IUP[i+vol/2][1]].val[3];
-            psidiff[0] = inVec[IDN[i+vol/2][1]].val[0] - inVec[IDN[i+vol/2][1]].val[1];
-            psidiff[1] = inVec[IDN[i+vol/2][1]].val[2] - inVec[IDN[i+vol/2][1]].val[3];
+            psisum[0]  = inVec[4*IUP[i+vol/2][1] + 0] + inVec[4*IUP[i+vol/2][1] + 1];
+            psisum[1]  = inVec[4*IUP[i+vol/2][1] + 2] + inVec[4*IUP[i+vol/2][1] + 3];
+            psidiff[0] = inVec[4*IDN[i+vol/2][1] + 0] - inVec[4*IDN[i+vol/2][1] + 1];
+            psidiff[1] = inVec[4*IDN[i+vol/2][1] + 2] - inVec[4*IDN[i+vol/2][1] + 3];
 
-            outVec[i+vol/2].val[0] -=  sgn[0] * inVec[IUP[i+vol/2][0]].val[0] + half*(psidiff[0] + psisum[0]);
-            outVec[i+vol/2].val[2] -=  sgn[0] * inVec[IUP[i+vol/2][0]].val[2] + half*(psidiff[1] + psisum[1]);
-            outVec[i+vol/2].val[1] -=  sgn[1] * inVec[IDN[i+vol/2][0]].val[1] - half*(psidiff[0] - psisum[0]);
-            outVec[i+vol/2].val[3] -=  sgn[1] * inVec[IDN[i+vol/2][0]].val[3] - half*(psidiff[1] - psisum[1]);
+            outVec[4*(i+vol/2) + 0] -=  sgn[0] * inVec[4*IUP[i+vol/2][0] + 0] + half*(psidiff[0] + psisum[0]);
+            outVec[4*(i+vol/2) + 2] -=  sgn[0] * inVec[4*IUP[i+vol/2][0] + 2] + half*(psidiff[1] + psisum[1]);
+            outVec[4*(i+vol/2) + 1] -=  sgn[1] * inVec[4*IDN[i+vol/2][0] + 1] - half*(psidiff[0] - psisum[0]);
+            outVec[4*(i+vol/2) + 3] -=  sgn[1] * inVec[4*IDN[i+vol/2][0] + 3] - half*(psidiff[1] - psisum[1]);
 
         } else {
 
-            psisum[0]  = inVec[IDN[i+vol/2][1]].val[0] + inVec[IDN[i+vol/2][1]].val[1];
-            psisum[1]  = inVec[IDN[i+vol/2][1]].val[2] + inVec[IDN[i+vol/2][1]].val[3];
-            psidiff[0] = inVec[IUP[i+vol/2][1]].val[0] - inVec[IUP[i+vol/2][1]].val[1];
-            psidiff[1] = inVec[IUP[i+vol/2][1]].val[2] - inVec[IUP[i+vol/2][1]].val[3];
+            psisum[0]  = inVec[4*IDN[i+vol/2][1] + 0] + inVec[4*IDN[i+vol/2][1] + 1];
+            psisum[1]  = inVec[4*IDN[i+vol/2][1] + 2] + inVec[4*IDN[i+vol/2][1] + 3];
+            psidiff[0] = inVec[4*IUP[i+vol/2][1] + 0] - inVec[4*IUP[i+vol/2][1] + 1];
+            psidiff[1] = inVec[4*IUP[i+vol/2][1] + 2] - inVec[4*IUP[i+vol/2][1] + 3];
 
-            outVec[i+vol/2].val[0] -=  sgn[1] * inVec[IDN[i+vol/2][0]].val[0] + half*psisum[0] + half*psidiff[0];
-            outVec[i+vol/2].val[2] -=  sgn[1] * inVec[IDN[i+vol/2][0]].val[2] + half*psisum[1] + half*psidiff[1];
-            outVec[i+vol/2].val[1] -=  sgn[0] * inVec[IUP[i+vol/2][0]].val[1] + half*psisum[0] - half*psidiff[0];
-            outVec[i+vol/2].val[3] -=  sgn[0] * inVec[IUP[i+vol/2][0]].val[3] + half*psisum[1] - half*psidiff[1];
+            outVec[4*(i+vol/2) + 0] -=  sgn[1] * inVec[4*IDN[i+vol/2][0] + 0] + half*psisum[0] + half*psidiff[0];
+            outVec[4*(i+vol/2) + 2] -=  sgn[1] * inVec[4*IDN[i+vol/2][0] + 2] + half*psisum[1] + half*psidiff[1];
+            outVec[4*(i+vol/2) + 1] -=  sgn[0] * inVec[4*IUP[i+vol/2][0] + 1] + half*psisum[0] - half*psidiff[0];
+            outVec[4*(i+vol/2) + 3] -=  sgn[0] * inVec[4*IUP[i+vol/2][0] + 3] + half*psisum[1] - half*psidiff[1];
 
 
         }
