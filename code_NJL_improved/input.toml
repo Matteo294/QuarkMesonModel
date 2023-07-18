@@ -1,0 +1,26 @@
+[physics]
+useMass = "true"
+mass = 0.125
+g = 0.25
+kappa = 0.0
+lambda = 0.0
+cutFraction = 0.5
+
+[langevin]
+averageEpsilon = 0.01
+MaxLangevinTime = 10000.0
+ExportTime = 1.0
+burnCount = 50
+MeasureDriftCount = 20
+
+[io]
+configFileName = "test.hdf"
+export = "false"
+timeSliceFileName = "slice.dat"
+
+[random]
+seed = 1234
+
+[fermions]
+yukawa_coupling = 5.0
+fermion_mass = 0.25
