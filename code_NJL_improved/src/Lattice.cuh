@@ -20,8 +20,15 @@ struct LookUpTable{
     my2dArray *at;
 };
 
+struct LookUpTableConv{
+    LookUpTableConv();
+    ~LookUpTableConv();
+    int *at;
+};
+
+
 __host__ __device__ unsigned int PBC(int const n, int const N);
-__host__ __device__ unsigned int oEOflat(int const nt, int const nx);
+__host__ __device__ unsigned int toEOflat(int const nt, int const nx);
 __host__ __device__ my2dArray eoToVec(int n);
 __host__ __device__ int convertEOtoNormal(int n);
 __host__ __device__ int convertNormalToEO(int n);

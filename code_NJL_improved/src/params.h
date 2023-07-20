@@ -13,6 +13,9 @@ constexpr char CGmode = '0';
 constexpr double tolerance = 1e-12;
 constexpr int IterMax = 1000;
 
+template <typename T>
+using cp = thrust::complex<T>;
+
 using myType = double;
 //using myType = float;
 

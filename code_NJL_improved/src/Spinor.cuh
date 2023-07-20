@@ -1,14 +1,16 @@
 #pragma once
 
 #include <thrust/complex.h>
+#include "params.h"
 
 
 template <typename T>
 struct Spinor {
     public:
+		Spinor(){cudaMallocManaged(&val, sizeof(thrust::complex<double>) * 4*vol);}
 		Spinor(int vol){cudaMallocManaged(&val, sizeof(thrust::complex<double>) * 4*vol);}
 		~Spinor(){cudaFree(val);}
-		thrust::complex<double> data(){return val;}
+		cp<T>*& data(){return val;}
 	private:
-    	thrust::complex<double> *val;
+    	cp<T> *val;
 };

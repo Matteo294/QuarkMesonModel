@@ -3,11 +3,11 @@
 
 extern __constant__ double yukawa_coupling_gpu;
 extern __constant__ thrust::complex<double> im_gpu;
-
+extern __constant__ double cutFraction_gpu;
 
 FermionicDrift::FermionicDrift(int const seed) : gen(rd()), dist(0.0, 1.0)
 {
-	cudaMallocManaged(&eobuf, sizeof(thrust::cp<double>) * vol);
+	cudaMallocManaged(&eobuf, sizeof(cp<double>) * vol);
 	cudaMallocManaged(&state, sizeof(curandState) * spinor_vol);
 
 	int nBlocks = 0;
@@ -50,11 +50,14 @@ FermionicDrift::FermionicDrift(int const seed) : gen(rd()), dist(0.0, 1.0)
     
 	driftArgs[0] = (void*) &afterCG.data();
     driftArgs[1] = (void*) &noiseVec.data();
-    driftArgs[2] = (void*) &noiseVec.data(); 
+    driftArgs[2] = (void*) &noiseVec.data();
+    driftArgs[3] = (void*) &N2EO.at; 
 
 	rndArgs[0] = (void*) &noiseVec.data();
-	rndArgs[1] = (void*) &state.data();
+	rndArgs[1] = (void*) &state;
 	rndArgs[2] = (void*) &spinor_vol;
+    
+    for(int i=0; i<vol; i++) N2EO.at[i] = convertNormalToEO(i);
 
 }
 
@@ -77,9 +80,9 @@ void FermionicDrift::getForce(double *outVec, DiracOP<double>& D, cp<double> *M,
 
 	switch (CGmode){
 		case '0':
-			CG.solve(noiseVec, buf, D, MatrixType::Dagger);
-			D.setInVec(buf);
-			D.setOutVec(afterCG);
+			CG.solve(noiseVec.data(), buf.data(), D, MatrixType::Dagger);
+			D.setInVec(buf.data());
+			D.setOutVec(afterCG.data());
 			D.setDagger(MatrixType::Normal);
 			D.applyD();
 			cudaDeviceSynchronize();
@@ -122,21 +125,22 @@ __global__ void eoConv(cp<double> *eoVec, double *normalVec){
 	cg::grid_group grid = cg::this_grid();
 	int eo_i;
 	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
-		eo_i = N2EO.at[i];
+		eo_i = convertNormalToEO(i);
 		normalVec[i] = eoVec[eo_i].real();
 	}
 }
 
-__global__ void computeDrift(cp<double> *afterCG,cp<double> *noise, double *outVec){
+__global__ void computeDrift(cp<double> *afterCG,cp<double> *noise, double *outVec, int *N2EO){
 
 	cg::grid_group grid = cg::this_grid();
 	int eo_i;
 	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
-		eo_i = N2EO.at[i];
-		outVec[i] = -yukawa_coupling_gpu * (     conj(afterCG[4*eo_i])*noise[4*eo_i]
-                                                    + conj(afterCG[4*eo_i+1])*noise[4*eo_i+1] 
-                                                    - conj(afterCG[4*eo_i+2])*noise[4*eo_i+2] 
-                                                    + conj(afterCG[4*eo_i+3])*noise[4*eo_i+3].real());
+		//eo_i = convertNormalToEO(i);
+        eo_i = N2EO[i];
+		outVec[i] = - cutFraction_gpu * cutFraction_gpu * yukawa_coupling_gpu * (   conj(afterCG[4*eo_i])*noise[4*eo_i]
+                                                                + conj(afterCG[4*eo_i+1])*noise[4*eo_i+1] 
+                                                                - conj(afterCG[4*eo_i+2])*noise[4*eo_i+2] 
+                                                                + conj(afterCG[4*eo_i+3])*noise[4*eo_i+3]).real();
 
 	}
 

@@ -44,7 +44,7 @@ __constant__ myType lambda;
 __constant__ double yukawa_coupling_gpu;
 __constant__ double fermion_mass_gpu;
 __constant__ thrust::complex<double> im_gpu;
-
+__constant__ double cutFraction_gpu;
 __global__ void copyScalarsIntoM(double* phi, thrust::complex<double>* M);
 // ----------------------------------------------------------
 
@@ -205,11 +205,12 @@ int main(int argc, char** argv) {
 	cudaMallocManaged(&fermionic_contribution, sizeof(double) * vol);
 	cudaMallocManaged(&trace, sizeof(double));
     
-	Dirac.setM(M);
+	Dirac.setM(ivec.data());
+    
     for(int i=0; i<vol; i++) {
         for(int j=0; j<4; j++) {
-            in[i].val[j] = 0.0;
-            out[i].val[j] = 0.0;
+            in.data()[4*i+j] = 0.0;
+            out.data()[4*i+j] = 0.0;
         }
     }
     
@@ -310,6 +311,7 @@ int main(int argc, char** argv) {
 	cudaMemcpyToSymbol(yukawa_coupling_gpu, &yukawa_coupling, sizeof(double));
 	cudaMemcpyToSymbol(fermion_mass_gpu, &fermion_mass, sizeof(double));
 	cudaMemcpyToSymbol(im_gpu, &im, sizeof(thrust::complex<double>));
+    cudaMemcpyToSymbol(cutFraction_gpu, &cutFraction, sizeof(double));
 	// -----------------------------------------------------------------
 
 
@@ -321,17 +323,11 @@ int main(int argc, char** argv) {
 			cn();
 
 			// ----------------------------------------------------------
-			copyMesonsArgs[0] = (void*) &(ivec.data());
+			/*copyMesonsArgs[0] = (void*) &(ivec.data());
         	copyMesonsArgs[1] = (void*) &M;
 			cudaLaunchCooperativeKernel((void*)copyScalarsIntoM, dimGrid_mesons, dimBlock_mesons, copyMesonsArgs, 0, NULL);
-			cudaDeviceSynchronize();
-			fDrift.getForce(fermionic_contribution, Dirac, M, CG, dimGrid_drift, dimBlock_drift);
-			copyVecDoubleArgs[0] = (void*) &(drift.data());
-			copyVecDoubleArgs[1] = (void*) &fermionic_contribution;
-			cudaLaunchCooperativeKernel((void*) copyVec_double, dimGrid_copyDouble, dimBlock_copyDouble, copyVecDoubleArgs, 0, NULL);
-			cudaDeviceSynchronize();
-            auto err = cudaPeekAtLastError();
-            if (err != 0) std::cout << "CUDA ERROR: " << err << std::endl;
+			cudaDeviceSynchronize();*/
+			fDrift.getForce(drift.data(), Dirac, M, CG, dimGrid_drift, dimBlock_drift);
 			// ----------------------------------------------------------
 
 			kli.Run(kAll, kli_sMem);
@@ -366,17 +362,11 @@ int main(int argc, char** argv) {
 			cn();
 
 			// ----------------------------------------------------------
-			copyMesonsArgs[0] = (void*) &(ivec.data());
+			/*copyMesonsArgs[0] = (void*) &(ivec.data());
         	copyMesonsArgs[1] = (void*) &M;
 			cudaLaunchCooperativeKernel((void*)copyScalarsIntoM, dimGrid_mesons, dimBlock_mesons, copyMesonsArgs, 0, NULL);
-			cudaDeviceSynchronize();
-			fDrift.getForce(fermionic_contribution, Dirac, M, CG, dimGrid_drift, dimBlock_drift);
-			copyVecDoubleArgs[0] = (void*) &(drift.data());
-			copyVecDoubleArgs[1] = (void*) &fermionic_contribution;
-			cudaLaunchCooperativeKernel((void*) copyVec_double, dimGrid_copyDouble, dimBlock_copyDouble, copyVecDoubleArgs, 0, NULL);
-			cudaDeviceSynchronize();
-            auto err = cudaPeekAtLastError();
-            if (err != 0) std::cout << "CUDA ERROR: " << err << std::endl;
+			cudaDeviceSynchronize();*/
+			fDrift.getForce(drift.data(), Dirac, M, CG, dimGrid_drift, dimBlock_drift);
 			// ----------------------------------------------------------
 
 			kli.Run(kAll, kli_sMem);
@@ -414,17 +404,11 @@ int main(int argc, char** argv) {
 			cn();
 
 			// ----------------------------------------------------------
-			copyMesonsArgs[0] = (void*) &(ivec.data());
+            /*copyMesonsArgs[0] = (void*) &(ivec.data());
         	copyMesonsArgs[1] = (void*) &M;
 			cudaLaunchCooperativeKernel((void*)copyScalarsIntoM, dimGrid_mesons, dimBlock_mesons, copyMesonsArgs, 0, NULL);
-			cudaDeviceSynchronize();
-			fDrift.getForce(fermionic_contribution, Dirac, M, CG, dimGrid_drift, dimBlock_drift);
-			copyVecDoubleArgs[0] = (void*) &(drift.data());
-			copyVecDoubleArgs[1] = (void*) &fermionic_contribution;
-			cudaLaunchCooperativeKernel((void*) copyVec_double, dimGrid_copyDouble, dimBlock_copyDouble, copyVecDoubleArgs, 0, NULL);
-			cudaDeviceSynchronize();
-            auto err = cudaPeekAtLastError();
-            if (err != 0) std::cout << "CUDA ERROR: " << err << std::endl;
+			cudaDeviceSynchronize();*/
+			fDrift.getForce(drift.data(), Dirac, M, CG, dimGrid_drift, dimBlock_drift);
 			// ----------------------------------------------------------
 
 			kli.Run(kAll, kli_sMem);
@@ -508,6 +492,9 @@ int main(int argc, char** argv) {
 		}*/
         
         // compute condensates from drifts as they are proportional
+        
+
+        fDrift.getForce(drift.data(), Dirac, M, CG, dimGrid_drift, dimBlock_drift);        
         *trace = 0.0;
         
         //for(int i=0; i<4*vol; i++) traces[(int) i/vol] += fermionic_contribution[i];
@@ -570,8 +557,8 @@ int main(int argc, char** argv) {
 	free(h_eps);
 
 	// ------------------------------------------------
-	cudaFree(out);
 	cudaFree(fermionic_contribution);
+    cudaFree(M);
 	cudaFree(trace);
 	// ------------------------------------------------
     
@@ -584,7 +571,7 @@ __global__ void copyScalarsIntoM(double* phi, thrust::complex<double>* M){
     auto grid = cg::this_grid();
     thrust::complex<double> const im {0.0, 1.0};
 	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
-        eo_i = NormalToEO(i);
+        eo_i = convertNormalToEO(i);
         M[eo_i] = phi[i];
     }
 }

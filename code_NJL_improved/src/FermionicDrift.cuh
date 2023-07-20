@@ -7,8 +7,6 @@
 #include "CGsolver.cuh"
 #include <curand_kernel.h>
 
-using cp = thrust::complex;
-
 
 class FermionicDrift{
     public:
@@ -31,12 +29,12 @@ class FermionicDrift{
 		void *rndArgs[3];
 		int const spinor_vol = 4*vol;
 		curandState *state;
-        LookUpTable N2EO;
+        LookUpTableConv N2EO;
 
 
 };
 
-__global__ void computeDrift(cp<double> *afterCG, cp<double> *noise, double *outVec);
+__global__ void computeDrift(cp<double> *afterCG, cp<double> *noise, double *outVec, int *N2EO);
 
 __global__ void eoConv(cp<double> *eoVec, double *normalVec);
 

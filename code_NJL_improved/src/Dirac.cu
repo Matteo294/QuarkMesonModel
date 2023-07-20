@@ -4,6 +4,7 @@ extern __constant__ double yukawa_coupling_gpu;
 extern __constant__ double fermion_mass_gpu;
 extern __constant__ thrust::complex<double> im_gpu;
 
+
 template <typename T>
 __host__ DiracOP<T>::DiracOP() : inVec(nullptr), outVec(nullptr), M(nullptr)
 	{
@@ -46,11 +47,15 @@ __host__ DiracOP<T>::DiracOP() : inVec(nullptr), outVec(nullptr), M(nullptr)
 		diagArgs[1] = (void*) &outVec;
 		diagArgs[2] = (void*) &useDagger;
 		diagArgs[3] = (void*) &M;
+        diagArgs[4] = (void*) &EO2N.at;
 		hoppingArgs[0] = (void*) &inVec;
 		hoppingArgs[1] = (void*) &outVec;
 		hoppingArgs[2] = (void*) &useDagger;
 		hoppingArgs[3] = (void*) &IUP.at;
-		hoppingArgs[4] = (void*) &IDN.at;      
+		hoppingArgs[4] = (void*) &IDN.at;
+        
+        for(int i=0; i<vol; i++) EO2N.at[i] = convertEOtoNormal(i);
+
     }
 
 
@@ -73,7 +78,7 @@ __host__ void DiracOP<T>::applyD(){
 
 
 template <typename T>
-__global__ void D_oo(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, cp<T> *M){
+__global__ void D_oo(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, T *M, int *EO2N){
 
     auto grid = cg::this_grid();
 
@@ -82,23 +87,25 @@ __global__ void D_oo(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, cp
     thrust::complex<T> mass = static_cast<thrust::complex<T>> (fermion_mass_gpu);
     thrust::complex<T> half {0.5, 0.0};
 
+    int Ni;
     for (int i = grid.thread_rank() + vol/2; i < vol; i += grid.size()) {
+        Ni = EO2N[i];
         if (useDagger == MatrixType::Dagger){
-            outVec[4*i]     += (two + mass + g * conj(*M)) * inVec[i];
-            outVec[4*i+1]   += (two + mass + g * conj(*M)) * inVec[4*i+1];
-            outVec[4*i+2]   += (two + mass + g * conj(*M)) * inVec[4*i+2];
-            outVec[4*i+3]   += (two + mass + g * conj(*M)) * inVec[4*i+3];
+            outVec[4*i]     += (two + mass + g * M[Ni]) * inVec[4*i];
+            outVec[4*i+1]   += (two + mass + g * M[Ni]) * inVec[4*i+1];
+            outVec[4*i+2]   += (two + mass + g * M[Ni]) * inVec[4*i+2];
+            outVec[4*i+3]   += (two + mass + g * M[Ni]) * inVec[4*i+3];
         } else{
-            outVec[4*i]     += (two + mass + g * (*M)) * inVec[4*i];
-            outVec[4*i+1]   += (two + mass + g * (*M)) * inVec[4*i+1];
-            outVec[4*i+2]   += (two + mass + g * (*M)) * inVec[4*i+2];
-            outVec[4*i+3]   += (two + mass + g * (*M)) * inVec[4*i]+3;
+            outVec[4*i]     += (two + mass + g * (M[Ni])) * inVec[4*i];
+            outVec[4*i+1]   += (two + mass + g * (M[Ni])) * inVec[4*i+1];
+            outVec[4*i+2]   += (two + mass + g * (M[Ni])) * inVec[4*i+2];
+            outVec[4*i+3]   += (two + mass + g * (M[Ni])) * inVec[4*i+3];
         }
     }
 }
 
 template <typename T>
-__global__ void D_ee(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, cp<T> *M){
+__global__ void D_ee(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, T *M, int *EO2N){
 
     auto grid = cg::this_grid();
 
@@ -107,19 +114,20 @@ __global__ void D_ee(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, cp
     thrust::complex<T> const mass = static_cast<thrust::complex<T>> (fermion_mass_gpu);
     thrust::complex<T> half {0.5, 0.0};
 
+    int Ni;
     for (int i = grid.thread_rank(); i < vol/2; i += grid.size()) {
-    
-    if (useDagger == MatrixType::Dagger){
-        outVec[4*i]     += (two + mass + g * conj(*M)) * inVec[4*i];
-        outVec[4*i+1]   += (two + mass + g * conj(*M)) * inVec[4*i+1];
-        outVec[4*i+2]   += (two + mass + g * conj(*M)) * inVec[4*i+2];
-        outVec[4*i+3]   += (two + mass + g * conj(*M)) * inVec[4*i+3];
-    } else {
-        outVec[4*i]     += (two + mass + g * (*M)) * inVec[4*i];
-        outVec[4*i+1]   += (two + mass + g * (*M)) * inVec[4*i+1];
-        outVec[4*i+2]   += (two + mass + g * (*M)) * inVec[4*i+2];
-        outVec[4*i+3]   += (two + mass + g * (*M)) * inVec[4*i+3];
-    }
+        Ni = EO2N[i];
+        if (useDagger == MatrixType::Dagger){
+            outVec[4*i]     += (two + mass + g * M[Ni]) * inVec[4*i];
+            outVec[4*i+1]   += (two + mass + g * M[Ni]) * inVec[4*i+1];
+            outVec[4*i+2]   += (two + mass + g * M[Ni]) * inVec[4*i+2];
+            outVec[4*i+3]   += (two + mass + g * M[Ni]) * inVec[4*i+3];
+        } else {
+            outVec[4*i]     += (two + mass + g * (M[Ni])) * inVec[4*i];
+            outVec[4*i+1]   += (two + mass + g * (M[Ni])) * inVec[4*i+1];
+            outVec[4*i+2]   += (two + mass + g * (M[Ni])) * inVec[4*i+2];
+            outVec[4*i+3]   += (two + mass + g * (M[Ni])) * inVec[4*i+3];
+        }
     }
 
 }
@@ -160,10 +168,10 @@ __global__ void D_eo(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, my
     
     if (useDagger == MatrixType::Dagger) {
         
-        psisum[0]  = inVec[4*IUP[i][1] + 0] + inVec[IUP[i][1] + 1];
-        psisum[1]  = inVec[4*IUP[i][1] + 2] + inVec[IUP[i][1] + 3];
-        psidiff[0] = inVec[4*IDN[i][1] + 0] - inVec[IDN[i][1] + 1];
-        psidiff[1] = inVec[4*IDN[i][1] + 2] - inVec[IDN[i][1] + 3];
+        psisum[0]  = inVec[4*IUP[i][1] + 0] + inVec[4*IUP[i][1] + 1];
+        psisum[1]  = inVec[4*IUP[i][1] + 2] + inVec[4*IUP[i][1] + 3];
+        psidiff[0] = inVec[4*IDN[i][1] + 0] - inVec[4*IDN[i][1] + 1];
+        psidiff[1] = inVec[4*IDN[i][1] + 2] - inVec[4*IDN[i][1] + 3];
 
         outVec[4*i + 0] -=  sgn[0] * inVec[4*IUP[i][0] + 0] + half*psidiff[0] + half*psisum[0];
         outVec[4*i + 2] -=  sgn[0] * inVec[4*IUP[i][0] + 2] + half*psidiff[1] + half*psisum[1];
@@ -173,15 +181,15 @@ __global__ void D_eo(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, my
     } else {
 
         
-        psisum[0]  = inVec[IDN[i][1] + 0] + inVec[IDN[i][1] + 1];
-        psisum[1]  = inVec[IDN[i][1] + 2] + inVec[IDN[i][1] + 3];
-        psidiff[0] = inVec[IUP[i][1] + 0] - inVec[IUP[i][1] + 1];
-        psidiff[1] = inVec[IUP[i][1] + 2] - inVec[IUP[i][1] + 3];
+        psisum[0]  = inVec[4*IDN[i][1] + 0] + inVec[4*IDN[i][1] + 1];
+        psisum[1]  = inVec[4*IDN[i][1] + 2] + inVec[4*IDN[i][1] + 3];
+        psidiff[0] = inVec[4*IUP[i][1] + 0] - inVec[4*IUP[i][1] + 1];
+        psidiff[1] = inVec[4*IUP[i][1] + 2] - inVec[4*IUP[i][1] + 3];
 
-        outVec[i + 0] -=  sgn[1] * inVec[4*IDN[i][0] + 0] + half*psisum[0] + half*psidiff[0];
-        outVec[i + 1] -=  sgn[1] * inVec[4*IDN[i][0] + 2] + half*psisum[1] + half*psidiff[1];
-        outVec[i + 2] -=  sgn[0] * inVec[4*IUP[i][0] + 1] + half*psisum[0] - half*psidiff[0];
-        outVec[i + 3] -=  sgn[0] * inVec[4*IUP[i][0] + 3] + half*psisum[1] - half*psidiff[1];
+        outVec[4*i + 0] -=  sgn[1] * inVec[4*IDN[i][0] + 0] + half*psisum[0] + half*psidiff[0];
+        outVec[4*i + 2] -=  sgn[1] * inVec[4*IDN[i][0] + 2] + half*psisum[1] + half*psidiff[1];
+        outVec[4*i + 1] -=  sgn[0] * inVec[4*IUP[i][0] + 1] + half*psisum[0] - half*psidiff[0];
+        outVec[4*i + 3] -=  sgn[0] * inVec[4*IUP[i][0] + 3] + half*psisum[1] - half*psidiff[1];
 
     }
 

@@ -7,7 +7,9 @@
 #include "Dirac.cuh"
 #include "reductions.cuh"
 
-using cp = thrust::complex;
+
+template <typename T>
+using cp = thrust::complex<T>;
 
 __global__ void gpuDotProduct(cp<double> *vecA, cp<double> *vecB, cp<double> *result, int size);
 __global__ void gpuSumSpinors(cp<double> *s1, cp<double> *s2, cp<double> *res, cp<double> c, int size); //  = s1 + c * s2;

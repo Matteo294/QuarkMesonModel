@@ -8,6 +8,9 @@
 LookUpTable::LookUpTable(){cudaMallocManaged(&at, vol * sizeof(my2dArray));}
 LookUpTable::~LookUpTable(){cudaFree(at);}
 
+LookUpTableConv::LookUpTableConv(){cudaMallocManaged(&at, vol * sizeof(int));}
+LookUpTableConv::~LookUpTableConv(){cudaFree(at);}
+
 
 
 __host__ __device__ unsigned int PBC(int const n, int const N){
@@ -33,12 +36,12 @@ __host__ __device__ my2dArray eoToVec(int n){
 	return idx;
 }
 
-__host__ __device__ int EOtoNormal(int n){
+__host__ __device__ int convertEOtoNormal(int n){
 	my2dArray idx = eoToVec(n);
 	return idx[1] + Sizes[1]*idx[0];
 }
 
-__host__ __device__  int NormalToEO(int n){
+__host__ __device__  int convertNormalToEO(int n){
 	int nt = n / Sizes[1];
 	int nx = n % Sizes[1];
 	return toEOflat(nt, nx);
