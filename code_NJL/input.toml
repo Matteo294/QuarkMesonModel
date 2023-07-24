@@ -8,10 +8,10 @@ cutFraction = 0.5
 
 [langevin]
 averageEpsilon = 0.01
-MaxLangevinTime = 10000.0
+MaxLangevinTime = 100.0
 ExportTime = 1.0
-burnCount = 50
-MeasureDriftCount = 20
+burnCount = 0
+MeasureDriftCount = 0
 
 [io]
 configFileName = "test.hdf"
@@ -22,5 +22,5 @@ timeSliceFileName = "slice.dat"
 seed = 1234
 
 [fermions]
-yukawa_coupling = 5.0
-fermion_mass = 0.25
+yukawa_coupling = 2.0
+fermion_mass = 0.5

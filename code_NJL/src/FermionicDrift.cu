@@ -7,9 +7,6 @@ extern __constant__ thrust::complex<double> im_gpu;
 
 FermionicDrift::FermionicDrift(int const seed) : gen(rd()), dist(0.0, 1.0)
 {
-    cudaMallocManaged(&afterCG, sizeof(Spinor<double>) * vol);
-	cudaMallocManaged(&buf, sizeof(Spinor<double>) * vol);
-	cudaMallocManaged(&noiseVec, sizeof(Spinor<double>) * vol);
 	cudaMallocManaged(&eobuf, sizeof(thrust::complex<double>) * vol);
 	cudaMallocManaged(&state, sizeof(curandState) * spinor_vol);
 
