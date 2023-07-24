@@ -18,8 +18,7 @@ class DiracOP {
 	public:
 		DiracOP();
 		~DiracOP(){;}
-		__host__  void applyD();
-		__host__  void applyDhat(cp<double> *inVec, cp<double> *outVec);
+
 		__host__ __device__ void setInVec(cp<T> *v){inVec = v;}
 		__host__ __device__ void setOutVec(cp<T> *v){outVec = v;}
 		__host__ __device__ void setDagger(MatrixType const Mtype){useDagger = Mtype;}
@@ -31,7 +30,7 @@ class DiracOP {
 		void *diagArgs[5]; // arguments for Dee, Doo, Deeinv, Dooinv
 		void *hoppingArgs[5]; // arguments for Deo, Doe
 		
-	private:
+	
 		Spinor<T> temp, temp2;
 		T *M;
 		
@@ -44,11 +43,17 @@ class DiracOP {
 
 };
 
+/*template <typename T>
+__device__ void D_ee(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, T *M, int *EO2I);
 template <typename T>
-__global__ void D_ee(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, T *M, int *EO2I);
+__device__ void D_oo(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, T *M, int *EO2I);
 template <typename T>
-__global__ void D_oo(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, T *M, int *EO2I);
+__device__ void D_eo(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN);
 template <typename T>
-__global__ void D_eo(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN);
-template <typename T>
-__global__ void D_oe(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN);
+__device__ void D_oe(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN);*/
+
+
+__device__ void D_ee(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, double *M, int *EO2N);
+__device__ void D_oo(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, double *M, int *EO2N);
+__device__ void D_eo(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN);
+__device__ void D_oe(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN);

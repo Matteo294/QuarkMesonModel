@@ -142,19 +142,11 @@ __global__ void gpuMagnetisation(myType *vecA, myType *result, int size) {
 
 // -------------------------------------------------------------------------------------------
 
-__global__ void setZeroGPU(thrust::complex<double> *v, int const vol){
-	cg::grid_group grid = cg::this_grid();
-	for (int i = grid.thread_rank(); i < vol; i += grid.size()) v[i] = 0.0;
-}
 
+/*
 __global__ void setZeroGPU_double(double *v, int const vol){
 	cg::grid_group grid = cg::this_grid();
 	for (int i = grid.thread_rank(); i < vol; i += grid.size()) v[i] = 0.0;
-}
-
-__global__ void copyVec(thrust::complex<double> *v1,thrust::complex<double> *v2, int const vol){
-	cg::grid_group grid = cg::this_grid();
-	for (int i = grid.thread_rank(); i < vol; i += grid.size()) v1[i] = v2[i];
 }
 
 __global__ void copyVec_double(double *v1, double *v2, int const vol){
@@ -196,4 +188,4 @@ __global__ void gpuTraces(double *vec, double *result) {
         }
     }
 
-}
+}*/

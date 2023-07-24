@@ -13,8 +13,6 @@
 #include <iostream>
 #include <algorithm>
 
-#include <cooperative_groups.h>
-
 //#include "HDF5.h"
 #include "toml.hpp"
 #include "params.h"
@@ -26,11 +24,16 @@
 #include "langevin_gpu_v2.cuh"
 
 // ----------------------------------------------------------
-#include "Dirac.cuh"
-#include "Spinor.cuh"
-#include "Lattice.cuh"
-#include "CGsolver.cuh"
-#include "FermionicDrift.cuh"
+//#include "Dirac.cuh"
+//#include "Spinor.cuh"
+//#include "Lattice.cuh"
+//#include "CGsolver.cuh"
+//#include "FermionicDrift.cuh"
+
+//#include <helper_cuda.h>  // helper function CUDA error checking and initialization
+//#include <helper_functions.h>  // helper for shared functions common to CUDA Samples
+#include <cooperative_groups.h>
+#include <cooperative_groups/reduce.h>
 // ----------------------------------------------------------
 
 
@@ -45,7 +48,6 @@ __constant__ double yukawa_coupling_gpu;
 __constant__ double fermion_mass_gpu;
 __constant__ thrust::complex<double> im_gpu;
 __constant__ double cutFraction_gpu;
-__global__ void copyScalarsIntoM(double* phi, thrust::complex<double>* M);
 // ----------------------------------------------------------
 
 
@@ -70,7 +72,7 @@ int main(int argc, char** argv) {
 	std::signal(SIGUSR2, signal_handler);
     srand(1234);
     
-    std::cout << "Nt: " << Sizes[0] << " Nx: " << Sizes[1] << "\n";  
+    std::cout << "Nt: " << Sizes[0] << " Nx: " << Sizes[1] << std::endl;  
 
 	if constexpr(nDim > 3)
 		std::cout << "#Due do technical limitations, coloured noise is *DISABLED* for nDim > 3.\n\n";
@@ -192,66 +194,49 @@ int main(int argc, char** argv) {
 	double const fermion_mass = toml::find<double>(fermionsSection, "fermion_mass");
 	double const yukawa_coupling = toml::find<double>(fermionsSection, "yukawa_coupling");
     
-	Spinor<double> in, out;
-	DiracOP<double> Dirac;
-	FermionicDrift fDrift(seed);
-	thrust::complex<double> *M;
+    
+	//Spinor<double> in, out;
+	//DiracOP<double> Dirac;
+	//FermionicDrift fDrift(seed);
 	double *fermionic_contribution;
-	CGsolver CG;
+	//CGsolver CG;
     double *trace; // trace D^-1
-	int myvol; // dynamic volume
+	int myvol = spinor_vol; // dynamic volume
+	
+	cudaDeviceSynchronize();
+    std::cout << "Errors1 ? " << cudaPeekAtLastError() << std::endl;
+    cudaDeviceSynchronize();
 
-	cudaMallocManaged(&M, sizeof(thrust::complex<double>) * vol);
-	cudaMallocManaged(&fermionic_contribution, sizeof(double) * vol);
-	cudaMallocManaged(&trace, sizeof(double));
+	//cudaMallocManaged(&fermionic_contribution, sizeof(double) * vol);
+	//cudaMallocManaged(&trace, sizeof(double));
     
-	Dirac.setM(ivec.data());
+	//Dirac.setM(ivec.data());
     
-    for(int i=0; i<vol; i++) {
+    /*for(int i=0; i<vol; i++) {
         for(int j=0; j<4; j++) {
             in.data()[4*i+j] = 0.0;
             out.data()[4*i+j] = 0.0;
         }
-    }
-    
-    int nBlocks = 0;
-	int nThreads = 0;
-	cudaOccupancyMaxPotentialBlockSize(&nBlocks, &nThreads, setZeroGPU);
-	cudaDeviceSynchronize();
-	auto dimGrid_zero = dim3(nBlocks, 1, 1);
-	auto dimBlock_zero = dim3(nThreads, 1, 1);
-    void *setZeroArgs[] = {(void*) &in, (void*) &myvol};
-    
-    nBlocks = 0;
-	nThreads = 0;
-	cudaOccupancyMaxPotentialBlockSize(&nBlocks, &nThreads, copyScalarsIntoM);
-	cudaDeviceSynchronize();
-	auto dimGrid_mesons = dim3(nBlocks, 1, 1);
-	auto dimBlock_mesons = dim3(nThreads, 1, 1);
-    void *copyMesonsArgs[] = {(void*) &in, (void*) &out};
+    }*/
+       
 
-	nBlocks = 0;
-	nThreads = 0;
+	/*int nBlocks = 0;
+	int nThreads = 0;
 	cudaOccupancyMaxPotentialBlockSize(&nBlocks, &nThreads, computeDrift);
 	cudaDeviceSynchronize();
 	auto dimGrid_drift = dim3(nBlocks, 1, 1);
-	auto dimBlock_drift = dim3(nThreads, 1, 1);
+	auto dimBlock_drift = dim3(nThreads, 1, 1);*/
+    
+    cudaDeviceSynchronize();
+    std::cout << "Errors2 ? " << cudaPeekAtLastError() << std::endl;
+    cudaDeviceSynchronize();
 
-	nBlocks = 0;
-	nThreads = 0;
-	cudaOccupancyMaxPotentialBlockSize(&nBlocks, &nThreads, copyVec_double);
-	cudaDeviceSynchronize();
-	auto dimGrid_copyDouble = dim3(nBlocks, 1, 1);
-	auto dimBlock_copyDouble = dim3(nThreads, 1, 1);
-    void *copyVecDoubleArgs[] = {(void*) &in, (void*) &out, (void*) &vol};
+	
+    
+    cudaDeviceSynchronize();
+    std::cout << "Errors22 ? " << cudaPeekAtLastError() << std::endl;
+    cudaDeviceSynchronize();
 
-	nBlocks = 0;
-	nThreads = 0;
-	cudaOccupancyMaxPotentialBlockSize(&nBlocks, &nThreads, gpuTraces);
-	cudaDeviceSynchronize();
-	auto dimGrid_traces = dim3(nBlocks, 1, 1);
-	auto dimBlock_traces = dim3(nThreads, 1, 1);
-    void *tracesArgs[] = {(void*) &fermionic_contribution, (void*) &trace};
 
 	// set up print files
 	std::ofstream datafile, tracefile;
@@ -308,26 +293,46 @@ int main(int argc, char** argv) {
 	cudaMemcpyToSymbol(lambda, &myLambda, sizeof(myType));
 	cudaMemcpyToSymbol(epsBar, &myEpsBar, sizeof(myType));
 	// -----------------------------------------------------------------
-	cudaMemcpyToSymbol(yukawa_coupling_gpu, &yukawa_coupling, sizeof(double));
-	cudaMemcpyToSymbol(fermion_mass_gpu, &fermion_mass, sizeof(double));
-	cudaMemcpyToSymbol(im_gpu, &im, sizeof(thrust::complex<double>));
-    cudaMemcpyToSymbol(cutFraction_gpu, &cutFraction, sizeof(double));
+	//cudaMemcpyToSymbol(yukawa_coupling_gpu, &yukawa_coupling, sizeof(double));
+	//cudaMemcpyToSymbol(fermion_mass_gpu, &fermion_mass, sizeof(double));
+	//cudaMemcpyToSymbol(im_gpu, &im, sizeof(thrust::complex<double>));
+    //cudaMemcpyToSymbol(cutFraction_gpu, &cutFraction, sizeof(double));
 	// -----------------------------------------------------------------
+    
+    /*for (int i=0; i<4*vol; i++) in.data()[i] = 1.0;
+    CG.solve(in.data(), out.data(), Dirac, MatrixType::Normal);
+    std::cout << out.data()[0] << " " << out.data()[2*vol + vol - 7] << "\n";*/
+    
+    /*int nBlocks = 0;
+	int nThreads = 0;
+	cudaOccupancyMaxPotentialBlockSize(&nBlocks, &nThreads, copyVec_double);
+	cudaDeviceSynchronize();
+	auto dimGrid_copyDouble = dim3(nBlocks, 1, 1);
+	auto dimBlock_copyDouble = dim3(nThreads, 1, 1);
+    void *copyVecDoubleArgs[] = {(void*) &in.data(), (void*) &out.data(), (void*) &vol};*/
+
+	/*int nBlocks = 0;
+	int nThreads = 0;
+	cudaOccupancyMaxPotentialBlockSize(&nBlocks, &nThreads, gpuTraces);
+	cudaDeviceSynchronize();
+	auto dimGrid_traces = dim3(nBlocks, 1, 1);
+	auto dimBlock_traces = dim3(nThreads, 1, 1);
+    void *tracesArgs[] = {(void*) &fermionic_contribution, (void*) &trace};*/
+    
+    cudaDeviceSynchronize();
+    std::cout << "Errors222 ? " << cudaPeekAtLastError() << std::endl;
+    cudaDeviceSynchronize();
 
 
 	// burn in a little bit, since the drift might be stronger at the beginning, since we are
 	// likely far from the equilibrium state
-	for (int burn = 0; burn < burnCount; ++burn) {
+	/*for (int burn = 0; burn < burnCount; ++burn) {
 		myType t = 0.0;
 		while (t < ExportTime) {
 			cn();
 
 			// ----------------------------------------------------------
-			/*copyMesonsArgs[0] = (void*) &(ivec.data());
-        	copyMesonsArgs[1] = (void*) &M;
-			cudaLaunchCooperativeKernel((void*)copyScalarsIntoM, dimGrid_mesons, dimBlock_mesons, copyMesonsArgs, 0, NULL);
-			cudaDeviceSynchronize();*/
-			fDrift.getForce(drift.data(), Dirac, M, CG, dimGrid_drift, dimBlock_drift);
+			//fDrift.getForce(drift.data(), Dirac, M, CG, dimGrid_drift, dimBlock_drift);
 			// ----------------------------------------------------------
 
 			kli.Run(kAll, kli_sMem);
@@ -342,7 +347,7 @@ int main(int argc, char** argv) {
 
 	int nMeasurements = 0;
 	int oldMeasurements = 0;
-	elapsedLangevinTime = 0.0;
+	elapsedLangevinTime = 0.0;*/
 	/*if (resumeRun == true) {
 		hdf.Open();
 		auto configName = hdf.NameOfLastConfig();
@@ -354,36 +359,33 @@ int main(int argc, char** argv) {
 		hdf.Close();
 	}*/
 
-	if (MeasureDriftCount > 0) {
-	myType epsSum = 0.0;
-	while (elapsedLangevinTime < MeasureDriftCount * ExportTime) {
-		myType t = 0.0;
-		while (t < ExportTime) {
-			cn();
+    
+	/*if (MeasureDriftCount > 0) {
+        myType epsSum = 0.0;
+        while (elapsedLangevinTime < MeasureDriftCount * ExportTime) {
+            myType t = 0.0;
+            while (t < ExportTime) {
+                cn();
 
-			// ----------------------------------------------------------
-			/*copyMesonsArgs[0] = (void*) &(ivec.data());
-        	copyMesonsArgs[1] = (void*) &M;
-			cudaLaunchCooperativeKernel((void*)copyScalarsIntoM, dimGrid_mesons, dimBlock_mesons, copyMesonsArgs, 0, NULL);
-			cudaDeviceSynchronize();*/
-			fDrift.getForce(drift.data(), Dirac, M, CG, dimGrid_drift, dimBlock_drift);
-			// ----------------------------------------------------------
+                // ----------------------------------------------------------
+                //fDrift.getForce(drift.data(), Dirac, M, CG, dimGrid_drift, dimBlock_drift);
+                // ----------------------------------------------------------
 
-			kli.Run(kAll, kli_sMem);
-			cudaDeviceSynchronize();
-			cudaMemcpy(h_eps, eps, sizeof(myType), cudaMemcpyDeviceToHost);
-			cudaDeviceSynchronize();
-			t += *h_eps;
-		}
-		elapsedLangevinTime += t;
+                kli.Run(kAll, kli_sMem);
+                cudaDeviceSynchronize();
+                cudaMemcpy(h_eps, eps, sizeof(myType), cudaMemcpyDeviceToHost);
+                cudaDeviceSynchronize();
+                t += *h_eps;
+            }
+            elapsedLangevinTime += t;
 
-		epsSum += *h_eps;
-		nMeasurements++;
-	}
-	epsSum /= nMeasurements;
-	std::cout << "#Average eps during drift measurement = " << epsSum << std::endl;
-	myEpsBar *= myEpsBar/epsSum;	// update epsBar so that the average step size is roughly the
-									// original value of epsBar provinded in the input file
+            epsSum += *h_eps;
+            nMeasurements++;
+        }
+        epsSum /= nMeasurements;
+        std::cout << "#Average eps during drift measurement = " << epsSum << std::endl;
+        myEpsBar *= myEpsBar/epsSum;	// update epsBar so that the average step size is roughly the
+                                        // original value of epsBar provinded in the input file
 	}
 	cudaMemcpyToSymbol(epsBar, &myEpsBar, sizeof(myType));
     
@@ -397,18 +399,14 @@ int main(int argc, char** argv) {
 	auto timeSliceFile = std::ofstream(timeSliceFileName);
 	auto timerStart = std::chrono::high_resolution_clock::now();
     
-    
-	while (elapsedLangevinTime < MaxLangevinTime) {
+    //elapsedLangevinTime = MaxLangevinTime;
+    while (elapsedLangevinTime < MaxLangevinTime) {
 		myType t = 0.0;
 		while (t < ExportTime) {
 			cn();
 
 			// ----------------------------------------------------------
-            /*copyMesonsArgs[0] = (void*) &(ivec.data());
-        	copyMesonsArgs[1] = (void*) &M;
-			cudaLaunchCooperativeKernel((void*)copyScalarsIntoM, dimGrid_mesons, dimBlock_mesons, copyMesonsArgs, 0, NULL);
-			cudaDeviceSynchronize();*/
-			fDrift.getForce(drift.data(), Dirac, M, CG, dimGrid_drift, dimBlock_drift);
+			//fDrift.getForce(drift.data(), Dirac, M, CG, dimGrid_drift, dimBlock_drift);
 			// ----------------------------------------------------------
 
 			kli.Run(kAll, kli_sMem);
@@ -444,13 +442,13 @@ int main(int argc, char** argv) {
 			std::cout << e / N << '\t';
 			sum2 += e*e;
 		}
-		std::cout << std::sqrt(sum2) / N << std::endl;
+		std::cout << std::sqrt(sum2) / N << std::endl;*/
 		
         
         // ------------------------------------------------------
-        setZeroArgs[0] = (void*) &in;
+        /*setZeroArgs[0] = (void*) &in;
         cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);        
-		cudaDeviceSynchronize();
+		cudaDeviceSynchronize();*/
 
         /*in.data()[0] = 1.0;
 		in.data()[1] = 1.0;
@@ -494,7 +492,7 @@ int main(int argc, char** argv) {
         // compute condensates from drifts as they are proportional
         
 
-        fDrift.getForce(drift.data(), Dirac, M, CG, dimGrid_drift, dimBlock_drift);        
+        /*fDrift.getForce(fermionic_contribution, Dirac, M, CG, dimGrid_drift, dimBlock_drift);        
         *trace = 0.0;
         
         //for(int i=0; i<4*vol; i++) traces[(int) i/vol] += fermionic_contribution[i];
@@ -507,10 +505,10 @@ int main(int argc, char** argv) {
             *trace = 0.0;
         }
 		
-        tracefile << (double) (*trace) << "," << (double) (avg[0] / vol) << "," << (double) (std::sqrt(sum2) / vol) << "\n";
+        tracefile << (double) (*trace) << "," << (double) (avg[0] / vol) << "," << (double) (std::sqrt(sum2) / vol) << "\n";*/
 		// ------------------------------------------------------
 
-		nMeasurements++;
+		/*nMeasurements++;
 		
 		// this explicit copy seems to peform slightly/marginally better
 		// TODO: needs further investigation
@@ -527,7 +525,7 @@ int main(int argc, char** argv) {
 		if (early_finish == true) {
 			std::cout << "#Early termination signal received.\n#Wrapping up.\n";
 			elapsedLangevinTime = MaxLangevinTime + 1.0;
-		}
+		}*/
 		/*std::stringstream ss;
 		ss << "data/cnfg_" << std::setfill('0') << std::setw(8) << 
 			(exportHDF == true ? nMeasurements : 1);
@@ -535,44 +533,35 @@ int main(int argc, char** argv) {
 		hdf.CreateGroup(ss.str());
 		hdf.WriteData(ss.str(), "fields", hostLattice);
 		hdf.Close();*/
-	}
-	auto timerStop  = std::chrono::high_resolution_clock::now();
+	//}
+        
+	/*auto timerStop  = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(timerStop - timerStart);
-	timeSliceFile.close();
+	timeSliceFile.close();*/
 	/*hdf.Open();
 	hdf.WriteSeeds("/seeds", "last", cn.GetState());
 	hdf.Close();*/
 
-	std::cout << "#numSms = " << kli.numSms << '\n';
+	/*std::cout << "#numSms = " << kli.numSms << '\n';
 	std::cout << "#blocks per SM = " << kli.numBlocksPerSm << '\n';
 	std::cout << "#theads = " << kli.numThreads << '\n';
 	std::cout << "#blocks = " << kli.numBlocks << '\n';
 
 	std::cout << "#Number of measurements: " << nMeasurements << '\n';
 
-	std::cout << "#Run time for main loop: " << duration.count() / 1000.0 << "s\n";
+	std::cout << "#Run time for main loop: " << duration.count() / 1000.0 << "s\n";*/
 
 	cudaFree(eps);
 	cudaFree(maxDrift);
 	free(h_eps);
 
 	// ------------------------------------------------
-	cudaFree(fermionic_contribution);
-    cudaFree(M);
-	cudaFree(trace);
+	//cudaFree(fermionic_contribution);
+	//cudaFree(trace);
 	// ------------------------------------------------
     
     
 	return 0;
 }
 
-__global__ void copyScalarsIntoM(double* phi, thrust::complex<double>* M){
-    int eo_i;
-    auto grid = cg::this_grid();
-    thrust::complex<double> const im {0.0, 1.0};
-	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
-        eo_i = convertNormalToEO(i);
-        M[eo_i] = phi[i];
-    }
-}
     

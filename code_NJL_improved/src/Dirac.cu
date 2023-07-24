@@ -8,31 +8,6 @@ extern __constant__ thrust::complex<double> im_gpu;
 template <typename T>
 __host__ DiracOP<T>::DiracOP() : inVec(nullptr), outVec(nullptr), M(nullptr)
 	{
-        
-		int numBlocks = 0;
-        int numThreads = 0;
-        cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, D_ee<T>);
-        dimGrid_Dee = dim3(numBlocks, 1, 1);    
-        dimBlock_Dee = dim3(numThreads, 1, 1);      
-
-        numBlocks = 0;
-        numThreads = 0;
-        cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, D_oo<T>);
-        dimGrid_Doo = dim3(numBlocks, 1, 1);    
-        dimBlock_Doo = dim3(numThreads, 1, 1);
-        
-        numBlocks = 0;
-        numThreads = 0;
-        cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, D_eo<T>);
-        dimGrid_Deo = dim3(numBlocks, 1, 1);    
-        dimBlock_Deo = dim3(numThreads, 1, 1);
-        
-        numBlocks = 0;
-        numThreads = 0;
-        cudaOccupancyMaxPotentialBlockSize(&numBlocks, &numThreads, D_oe<T>);
-        dimGrid_Doe = dim3(numBlocks, 1, 1);    
-        dimBlock_Doe = dim3(numThreads, 1, 1);
-
 
 		auto idx = eoToVec(0);
 		for(int i=0; i<vol; i++){
@@ -54,38 +29,20 @@ __host__ DiracOP<T>::DiracOP() : inVec(nullptr), outVec(nullptr), M(nullptr)
 		hoppingArgs[3] = (void*) &IUP.at;
 		hoppingArgs[4] = (void*) &IDN.at;
         
-        for(int i=0; i<vol; i++) EO2N.at[i] = convertEOtoNormal(i);
+        //for(int i=0; i<vol; i++) EO2N.at[i] = convertEOtoNormal(i);
 
     }
 
 
-template <typename T>
-__host__ void DiracOP<T>::applyD(){
 
-    cudaLaunchCooperativeKernel((void*)&D_ee<T>, dimGrid_Dee, dimBlock_Dee, diagArgs, 0, NULL);
-    cudaDeviceSynchronize();
-    
-    cudaLaunchCooperativeKernel((void*)&D_oo<T>, dimGrid_Doo, dimBlock_Doo, diagArgs, 0, NULL);
-    cudaDeviceSynchronize();
-
- 	cudaLaunchCooperativeKernel((void*)&D_eo<T>, dimGrid_Deo, dimBlock_Deo, hoppingArgs, 0, NULL);
-    cudaDeviceSynchronize();
-
-    cudaLaunchCooperativeKernel((void*)&D_oe<T>, dimGrid_Doe, dimBlock_Doe, hoppingArgs, 0, NULL);
-    cudaDeviceSynchronize();
-
-}
-
-
-template <typename T>
-__global__ void D_oo(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, T *M, int *EO2N){
+__device__ void D_oo(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, double *M, int *EO2N){
 
     auto grid = cg::this_grid();
 
-    thrust::complex<T> const g = static_cast<thrust::complex<T>> (yukawa_coupling_gpu);
-    thrust::complex<T> const two {2.0, 0.0};
-    thrust::complex<T> mass = static_cast<thrust::complex<T>> (fermion_mass_gpu);
-    thrust::complex<T> half {0.5, 0.0};
+    thrust::complex<double> const g = static_cast<thrust::complex<double>> (yukawa_coupling_gpu);
+    thrust::complex<double> const two {2.0, 0.0};
+    thrust::complex<double> mass = static_cast<thrust::complex<double>> (fermion_mass_gpu);
+    thrust::complex<double> half {0.5, 0.0};
 
     int Ni;
     for (int i = grid.thread_rank() + vol/2; i < vol; i += grid.size()) {
@@ -104,15 +61,14 @@ __global__ void D_oo(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, T 
     }
 }
 
-template <typename T>
-__global__ void D_ee(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, T *M, int *EO2N){
+__device__ void D_ee(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, double *M, int *EO2N){
 
     auto grid = cg::this_grid();
 
-    thrust::complex<T> const two {2.0, 0.0};
-    thrust::complex<T> const g = static_cast<thrust::complex<T>> (yukawa_coupling_gpu);
-    thrust::complex<T> const mass = static_cast<thrust::complex<T>> (fermion_mass_gpu);
-    thrust::complex<T> half {0.5, 0.0};
+    thrust::complex<double> const two {2.0, 0.0};
+    thrust::complex<double> const g = static_cast<thrust::complex<double>> (yukawa_coupling_gpu);
+    thrust::complex<double> const mass = static_cast<thrust::complex<double>> (fermion_mass_gpu);
+    thrust::complex<double> half {0.5, 0.0};
 
     int Ni;
     for (int i = grid.thread_rank(); i < vol/2; i += grid.size()) {
@@ -135,15 +91,14 @@ __global__ void D_ee(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, T 
 
 
 
-template <typename T>
-__global__ void D_eo(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN){
+__device__ void D_eo(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN){
 
     auto grid = cg::this_grid();
 
     int idx[2];
     int nt;
 
-    T sgn[2];
+    double sgn[2];
 
     for (int i = grid.thread_rank(); i < vol/2; i += grid.size()) {
 
@@ -162,9 +117,9 @@ __global__ void D_eo(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, my
     sgn[0] = (nt == (Sizes[0]-1)) ? -1.0 : 1.0;
     sgn[1] = (nt == 0) ? -1.0 : 1.0;
 
-    thrust::complex<T> psisum[2], psidiff[2];
+    thrust::complex<double> psisum[2], psidiff[2];
 
-    T constexpr half {0.5};
+    double constexpr half {0.5};
     
     if (useDagger == MatrixType::Dagger) {
         
@@ -198,15 +153,14 @@ __global__ void D_eo(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, my
 }
 
 
-template <typename T>
-__global__ void D_oe(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN){
+__device__ void D_oe(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN){
 
     auto grid = cg::this_grid();
 
     int idx[2];
-    T const half {0.5};
+    double const half {0.5};
 
-    T sgn[2];
+    double sgn[2];
     int nt;
 
     for (int j = grid.thread_rank(); j < vol/2; j += grid.size()) {
@@ -229,7 +183,7 @@ __global__ void D_oe(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, my
         sgn[0] = (nt == (Sizes[0]-1)) ? -1.0 : 1.0;
         sgn[1] = (nt == 0) ? -1.0 : 1.0;
 
-        thrust::complex<T> psisum[2], psidiff[2];
+        thrust::complex<double> psisum[2], psidiff[2];
         
 		i = j;
         if (useDagger == MatrixType::Dagger) {
@@ -262,6 +216,8 @@ __global__ void D_oe(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, my
                                             
 }
 
+
+//template<> void D_oo<double>(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, double *M, int *EO2N);
 
 template class DiracOP<double>;
 
