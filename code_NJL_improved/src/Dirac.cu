@@ -33,7 +33,33 @@ __host__ DiracOP<T>::DiracOP() : inVec(nullptr), outVec(nullptr), M(nullptr)
 
     }
 
+template <typename T>
+void DiracOP<T>::applyD(cp<double> *in, cp<double> *out, MatrixType MType){
+    int nBlocks = 0;
+	int nThreads = 0;
+	cudaOccupancyMaxPotentialBlockSize(&nBlocks, &nThreads, applyD_gpu);
+	cudaDeviceSynchronize();
+	auto dimGrid = dim3(nBlocks, 1, 1);
+	auto dimBlock = dim3(nThreads, 1, 1);
+	void *args[] = {(void*) &in, (void*) &out, (void*) &useDagger, (void*) &M, (void*) &EO2N.at, (void*) &IDN.at, (void*) &IUP.at};
+    cudaLaunchCooperativeKernel((void*) applyD_gpu, dimGrid, dimBlock, args, 0, NULL);
+	cudaDeviceSynchronize();
+}
 
+__global__ void applyD_gpu(cp<double> *in, cp<double> *out, MatrixType const useDagger, double *M, int *EO2N, my2dArray *IDN, my2dArray *IUP){
+    auto grid = cg::this_grid();
+    for (int i = grid.thread_rank(); i < 4*vol; i += grid.size()) {
+		out[i] = 0.0;
+	}
+	D_oo(in, out, useDagger, M, EO2N);
+	cg::sync(grid);	
+	D_ee(in, out, useDagger, M, EO2N);
+	cg::sync(grid);	
+	D_eo(in, out, useDagger, IUP, IDN);
+	cg::sync(grid);	
+	D_oe(in, out, useDagger, IUP, IDN);
+	cg::sync(grid);	
+}
 
 __device__ void D_oo(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, double *M, int *EO2N){
 

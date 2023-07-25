@@ -19,11 +19,7 @@ class DiracOP {
 		DiracOP();
 		~DiracOP(){;}
 
-		__host__ __device__ void setInVec(cp<T> *v){inVec = v;}
-		__host__ __device__ void setOutVec(cp<T> *v){outVec = v;}
-		__host__ __device__ void setDagger(MatrixType const Mtype){useDagger = Mtype;}
-		__host__ __device__ void setM(T *mesonsMat){M = mesonsMat;}
-
+		void applyD(cp<double> *in, cp<double> *out, MatrixType MType);
 		// Move into private:
 		dim3 dimGrid_Dee, dimGrid_Doo, dimGrid_Doe, dimGrid_Deo;
 		dim3 dimBlock_Dee, dimBlock_Doo, dimBlock_Doe, dimBlock_Deo;
@@ -53,6 +49,7 @@ template <typename T>
 __device__ void D_oe(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN);*/
 
 
+__global__ void applyD_gpu(cp<double> *in, cp<double> *out, MatrixType const useDagger, double *M, int *EO2N, my2dArray *IDN, my2dArray *IUP);
 __device__ void D_ee(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, double *M, int *EO2N);
 __device__ void D_oo(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, double *M, int *EO2N);
 __device__ void D_eo(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN);

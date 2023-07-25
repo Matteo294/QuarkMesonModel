@@ -116,34 +116,34 @@ __global__ void solve_kernel(cp<double>  *inVec, cp<double> *outVec,
         cg::sync(grid);
         
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        applyD(p, temp, myvol);
-        cg::sync(grid);
+        //applyD(p, temp, myvol);
+        //cg::sync(grid);
 
 		// Apply D dagger
 		if (Mtype == MatrixType::Normal) MatType = MatrixType::Dagger;
 		else MatType = MatrixType::Normal;
         cg::sync(grid);
-        /*D_oo(p, temp2, MatType, M, EO2N);
+        D_oo(p, temp2, MatType, M, EO2N);
         cg::sync(grid);
         D_ee(p, temp2, MatType, M, EO2N);
         cg::sync(grid);
         D_eo(p, temp2, MatType, IUP, IDN);
         cg::sync(grid);
         D_oe(p, temp2, MatType, IUP, IDN);
-        cg::sync(grid);*/
+        cg::sync(grid);
 
 		// Apply D
 		if (Mtype == MatrixType::Normal) MatType = MatrixType::Normal;
 		else MatType = MatrixType::Dagger;
         cg::sync(grid);
-        /*D_oo(temp2, temp, MatType, M, EO2N);
+        D_oo(temp2, temp, MatType, M, EO2N);
         cg::sync(grid);
         D_ee(temp2, temp, MatType, M, EO2N);
         cg::sync(grid);
         D_eo(temp2, temp, MatType, IUP, IDN);
         cg::sync(grid);
         D_oe(temp2, temp, MatType, IUP, IDN);
-        cg::sync(grid);*/
+        cg::sync(grid);
 
     
 		if (threadIdx.x == 0 && blockIdx.x == 0) *dot_res = 0.0;
