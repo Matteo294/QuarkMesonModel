@@ -12,7 +12,7 @@ class FermionicDrift{
     public:
         FermionicDrift(int const seed);
         ~FermionicDrift(){cudaFree(eobuf); cudaFree(state);}
-		void getForce(double *outVec, DiracOP<double>& D, cp<double> *M, CGsolver& CG, dim3 dimGrid_drift, dim3 dimBlock_drift);
+		void getForce(double *outVec, DiracOP<double>& D, CGsolver& CG, dim3 dimGrid_drift, dim3 dimBlock_drift);
         //void setDirac(DiracOP<double> *Dirac){D = Dirac;}
     private:
         Spinor<double> afterCG, buf, noiseVec;

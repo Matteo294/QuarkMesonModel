@@ -142,14 +142,45 @@ __global__ void gpuMagnetisation(myType *vecA, myType *result, int size) {
 
 // -------------------------------------------------------------------------------------------
 
+__device__ void gpuDotProduct(thrust::complex<double> *vecA, thrust::complex<double> *vecB, thrust::complex<double> *result, int size) {
+	cg::thread_block cta = cg::this_thread_block();
+	cg::grid_group grid = cg::this_grid();
+	extern __shared__ thrust::complex<double> tmp2[];
 
-/*
-__global__ void setZeroGPU_double(double *v, int const vol){
+	thrust::complex<double> temp_sum = 0.0;
+	for (int i = grid.thread_rank(); i < size; i += grid.size()) {
+		temp_sum += conj(vecA[i]) * vecB[i];
+	}
+
+	cg::thread_block_tile<32> tile32 = cg::tiled_partition<32>(cta);
+
+	temp_sum = cg::reduce(tile32, temp_sum, cg::plus<thrust::complex<double>>());
+
+	if (tile32.thread_rank() == 0) {
+		tmp2[tile32.meta_group_rank()] = temp_sum;
+	}
+
+	cg::sync(cta);
+
+	if (tile32.meta_group_rank() == 0) {
+		temp_sum = tile32.thread_rank() < tile32.meta_group_size() ? tmp2[tile32.thread_rank()] : 0.0;
+		temp_sum = cg::reduce(tile32, temp_sum, cg::plus<thrust::complex<double>>());
+
+		if (tile32.thread_rank() == 0) {
+		atomicAdd(reinterpret_cast<double*>(result), temp_sum.real());
+		atomicAdd(reinterpret_cast<double*>(result)+1, temp_sum.imag());
+		}
+	}
+}
+
+
+
+__global__ void setZero_kernel(cp<double> *v, int const vol){
 	cg::grid_group grid = cg::this_grid();
 	for (int i = grid.thread_rank(); i < vol; i += grid.size()) v[i] = 0.0;
 }
 
-__global__ void copyVec_double(double *v1, double *v2, int const vol){
+/*__global__ void copyVec_double(double *v1, double *v2, int const vol){
 	cg::grid_group grid = cg::this_grid();
 	for (int i = grid.thread_rank(); i < vol; i += grid.size()) v1[i] = v2[i];
 }

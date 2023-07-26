@@ -56,7 +56,6 @@ void CGsolver::solve(cp<double>  *inVec, cp<double> *outVec, DiracOP<double>& D,
 						(void*) &MatType, (void*)&dot_res, (void*)&rmodsq};
     cudaLaunchCooperativeKernel((void*) solve_kernel, dimGrid, dimBlock, solveArgs, sMemSize, NULL);
 	cudaDeviceSynchronize();
-    std::cout << "Errors3 ? " << cudaPeekAtLastError() << std::endl;
 }
 
 __device__ void setZeroGPU(thrust::complex<double> *v, int const vol){
@@ -103,8 +102,6 @@ __global__ void solve_kernel(cp<double>  *inVec, cp<double> *outVec,
 	auto MatType = Mtype;
 
 	cg::sync(grid); 
-
-	if (threadIdx.x == 0 && blockIdx.x == 0) printf("%f \n", *rmodsq);
 
     int k;
 	for(k=0; k<IterMax && sqrt(*rmodsq) > tolerance; k++){
@@ -155,7 +152,6 @@ __global__ void solve_kernel(cp<double>  *inVec, cp<double> *outVec,
 			*alpha = *rmodsq / *dot_res; 
 		}
 
-		if (threadIdx.x == 0 && blockIdx.x == 0) printf("alpha: %f \n", *alpha);
 
 		// x = x + alpha p
 		cg::sync(grid);
@@ -183,7 +179,6 @@ __global__ void solve_kernel(cp<double>  *inVec, cp<double> *outVec,
         gpuSumSpinors(r, p, p, *beta, myvol);
         cg::sync(grid);
 
-		if (threadIdx.x == 0 && blockIdx.x == 0) printf("%d, %f \n", k, *rmodsq);
 	
 	}
 
@@ -199,36 +194,7 @@ __device__ void gpuSumSpinors(cp<double> *s1, cp<double> *s2, cp<double> *res, t
 	}
 }
 
-__device__ void gpuDotProduct(thrust::complex<double> *vecA, thrust::complex<double> *vecB, thrust::complex<double> *result, int size) {
-	cg::thread_block cta = cg::this_thread_block();
-	cg::grid_group grid = cg::this_grid();
-	extern __shared__ thrust::complex<double> tmp2[];
 
-	thrust::complex<double> temp_sum = 0.0;
-	for (int i = grid.thread_rank(); i < size; i += grid.size()) {
-		temp_sum += conj(vecA[i]) * vecB[i];
-	}
-
-	cg::thread_block_tile<32> tile32 = cg::tiled_partition<32>(cta);
-
-	temp_sum = cg::reduce(tile32, temp_sum, cg::plus<thrust::complex<double>>());
-
-	if (tile32.thread_rank() == 0) {
-		tmp2[tile32.meta_group_rank()] = temp_sum;
-	}
-
-	cg::sync(cta);
-
-	if (tile32.meta_group_rank() == 0) {
-		temp_sum = tile32.thread_rank() < tile32.meta_group_size() ? tmp2[tile32.thread_rank()] : 0.0;
-		temp_sum = cg::reduce(tile32, temp_sum, cg::plus<thrust::complex<double>>());
-
-		if (tile32.thread_rank() == 0) {
-		atomicAdd(reinterpret_cast<double*>(result), temp_sum.real());
-		atomicAdd(reinterpret_cast<double*>(result)+1, temp_sum.imag());
-		}
-	}
-}
 
 
 

@@ -6,9 +6,9 @@ extern __constant__ thrust::complex<double> im_gpu;
 
 
 template <typename T>
-__host__ DiracOP<T>::DiracOP() : inVec(nullptr), outVec(nullptr), M(nullptr)
+__host__ DiracOP<T>::DiracOP() : M(nullptr)
 	{
-
+		// fill look-up tables
 		auto idx = eoToVec(0);
 		for(int i=0; i<vol; i++){
 			idx = eoToVec(i);
@@ -17,19 +17,7 @@ __host__ DiracOP<T>::DiracOP() : inVec(nullptr), outVec(nullptr), M(nullptr)
 			IDN.at[i][0] = toEOflat(PBC(idx[0]-1, Sizes[0]), idx[1]);
 			IDN.at[i][1] = toEOflat(idx[0], PBC(idx[1]-1, Sizes[1]));
 		}
-
-		diagArgs[0] = (void*) &inVec;
-		diagArgs[1] = (void*) &outVec;
-		diagArgs[2] = (void*) &useDagger;
-		diagArgs[3] = (void*) &M;
-        diagArgs[4] = (void*) &EO2N.at;
-		hoppingArgs[0] = (void*) &inVec;
-		hoppingArgs[1] = (void*) &outVec;
-		hoppingArgs[2] = (void*) &useDagger;
-		hoppingArgs[3] = (void*) &IUP.at;
-		hoppingArgs[4] = (void*) &IDN.at;
-        
-        //for(int i=0; i<vol; i++) EO2N.at[i] = convertEOtoNormal(i);
+        for(int i=0; i<vol; i++) EO2N.at[i] = convertEOtoNormal(i);
 
     }
 
@@ -41,6 +29,7 @@ void DiracOP<T>::applyD(cp<double> *in, cp<double> *out, MatrixType MType){
 	cudaDeviceSynchronize();
 	auto dimGrid = dim3(nBlocks, 1, 1);
 	auto dimBlock = dim3(nThreads, 1, 1);
+	auto useDagger = MType;
 	void *args[] = {(void*) &in, (void*) &out, (void*) &useDagger, (void*) &M, (void*) &EO2N.at, (void*) &IDN.at, (void*) &IUP.at};
     cudaLaunchCooperativeKernel((void*) applyD_gpu, dimGrid, dimBlock, args, 0, NULL);
 	cudaDeviceSynchronize();

@@ -12,17 +12,10 @@ FermionicDrift::FermionicDrift(int const seed) : gen(rd()), dist(0.0, 1.0)
 
 	int nBlocks = 0;
 	int nThreads = 0;
-	cudaOccupancyMaxPotentialBlockSize(&nBlocks, &nThreads, setZeroGPU);
+	cudaOccupancyMaxPotentialBlockSize(&nBlocks, &nThreads, setZero_kernel);
 	cudaDeviceSynchronize();
   	dimGrid_zero = dim3(nBlocks, 1, 1); 
   	dimBlock_zero = dim3(nThreads, 1, 1); 
-
-	nBlocks = 0;
-	nThreads = 0;
-	cudaOccupancyMaxPotentialBlockSize(&nBlocks, &nThreads, eoConv);
-	cudaDeviceSynchronize();
-  	dimGrid_conv = dim3(nBlocks, 1, 1); 
-  	dimBlock_conv = dim3(nThreads, 1, 1); 
 
 	nBlocks = 0;
 	nThreads = 0;
@@ -68,23 +61,20 @@ __global__ void random_setup_kernel(int const seed, curandState *state, int cons
 	}
 }
 
-void FermionicDrift::getForce(double *outVec, DiracOP<double>& D, cp<double> *M, CGsolver& CG, dim3 dimGrid_drift, dim3 dimBlock_drift){
+void FermionicDrift::getForce(double *outVec, DiracOP<double>& D, CGsolver& CG, dim3 dimGrid_drift, dim3 dimBlock_drift){
 	
 	cudaLaunchCooperativeKernel((void*)&fillNormalRND, dimGrid_rnd, dimBlock_rnd, rndArgs, 0, NULL);
 	cudaDeviceSynchronize();
 	
 	// set some spinors to zero
 	setZeroArgs[0] = (void*)&afterCG.data();
-	cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
+	cudaLaunchCooperativeKernel((void*)&setZero_kernel, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 	cudaDeviceSynchronize();
 
 	switch (CGmode){
 		case '0':
 			CG.solve(noiseVec.data(), buf.data(), D, MatrixType::Dagger);
-			D.setInVec(buf.data());
-			D.setOutVec(afterCG.data());
-			D.setDagger(MatrixType::Normal);
-			D.applyD();
+			D.applyD(buf.data(), afterCG.data(), MatrixType::Normal);
 			cudaDeviceSynchronize();
 			break;
 		case '1':
@@ -121,14 +111,6 @@ void FermionicDrift::getForce(double *outVec, DiracOP<double>& D, cp<double> *M,
 	 
 }
 
-__global__ void eoConv(cp<double> *eoVec, double *normalVec){
-	cg::grid_group grid = cg::this_grid();
-	int eo_i;
-	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
-		eo_i = convertNormalToEO(i);
-		normalVec[i] = eoVec[eo_i].real();
-	}
-}
 
 __global__ void computeDrift(cp<double> *afterCG,cp<double> *noise, double *outVec, int *N2EO){
 
@@ -137,7 +119,7 @@ __global__ void computeDrift(cp<double> *afterCG,cp<double> *noise, double *outV
 	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
 		//eo_i = convertNormalToEO(i);
         eo_i = N2EO[i];
-		outVec[i] = - cutFraction_gpu * cutFraction_gpu * yukawa_coupling_gpu * (   conj(afterCG[4*eo_i])*noise[4*eo_i]
+		outVec[i] = - yukawa_coupling_gpu * (   conj(afterCG[4*eo_i])*noise[4*eo_i]
                                                                 + conj(afterCG[4*eo_i+1])*noise[4*eo_i+1] 
                                                                 - conj(afterCG[4*eo_i+2])*noise[4*eo_i+2] 
                                                                 + conj(afterCG[4*eo_i+3])*noise[4*eo_i+3]).real();

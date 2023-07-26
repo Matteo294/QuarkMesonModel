@@ -28,7 +28,7 @@
 #include "Spinor.cuh"
 #include "Lattice.cuh"
 #include "CGsolver.cuh"
-//#include "FermionicDrift.cuh"
+#include "FermionicDrift.cuh"
 
 //#include <helper_cuda.h>  // helper function CUDA error checking and initialization
 //#include <helper_functions.h>  // helper for shared functions common to CUDA Samples
@@ -194,22 +194,16 @@ int main(int argc, char** argv) {
 	double const fermion_mass = toml::find<double>(fermionsSection, "fermion_mass");
 	double const yukawa_coupling = toml::find<double>(fermionsSection, "yukawa_coupling");
     
-    
 	Spinor<double> in, out;
 	DiracOP<double> Dirac;
-	//FermionicDrift fDrift(seed);
+	FermionicDrift fDrift(seed);
 	double *fermionic_contribution;
 	CGsolver CG;
     double *trace; // trace D^-1
 	int myvol = spinor_vol; // dynamic volume
 	
-	cudaDeviceSynchronize();
-    std::cout << "Errors1 ? " << cudaPeekAtLastError() << std::endl;
-    cudaDeviceSynchronize();
-
 	cudaMallocManaged(&fermionic_contribution, sizeof(double) * vol);
 	cudaMallocManaged(&trace, sizeof(double));
-    
     
     for(int i=0; i<vol; i++) {
         for(int j=0; j<4; j++) {
@@ -218,25 +212,13 @@ int main(int argc, char** argv) {
         }
     }
        
-
-	/*int nBlocks = 0;
+	int nBlocks = 0;
 	int nThreads = 0;
 	cudaOccupancyMaxPotentialBlockSize(&nBlocks, &nThreads, computeDrift);
 	cudaDeviceSynchronize();
 	auto dimGrid_drift = dim3(nBlocks, 1, 1);
-	auto dimBlock_drift = dim3(nThreads, 1, 1);*/
+	auto dimBlock_drift = dim3(nThreads, 1, 1);
     
-    cudaDeviceSynchronize();
-    std::cout << "Errors2 ? " << cudaPeekAtLastError() << std::endl;
-    cudaDeviceSynchronize();
-
-	
-    
-    cudaDeviceSynchronize();
-    std::cout << "Errors22 ? " << cudaPeekAtLastError() << std::endl;
-    cudaDeviceSynchronize();
-
-
 	// set up print files
 	std::ofstream datafile, tracefile;
 	datafile.open("data.csv");
@@ -286,8 +268,6 @@ int main(int argc, char** argv) {
 	std::cout << std::endl;		// force a flush so we can see something on the screen before
 								// actual computations start
 
-	//
-
 	cudaMemcpyToSymbol(m2, &my_m2, sizeof(myType));
 	cudaMemcpyToSymbol(lambda, &myLambda, sizeof(myType));
 	cudaMemcpyToSymbol(epsBar, &myEpsBar, sizeof(myType));
@@ -298,15 +278,7 @@ int main(int argc, char** argv) {
     cudaMemcpyToSymbol(cutFraction_gpu, &cutFraction, sizeof(double));
 	// -----------------------------------------------------------------
     
-    for (int i=0; i<4*vol; i++) in.data()[i] = 1.0;
-    CG.solve(in.data(), out.data(), Dirac, MatrixType::Normal);
-    std::cout << out.data()[0] << " " << out.data()[2*vol + vol - 7] << "\n";
-    
-    
-    cudaDeviceSynchronize();
-    std::cout << "Errors222 ? " << cudaPeekAtLastError() << std::endl;
-    cudaDeviceSynchronize();
-
+	Dirac.setScalar(ivec.data());
 
 	// burn in a little bit, since the drift might be stronger at the beginning, since we are
 	// likely far from the equilibrium state
@@ -316,7 +288,7 @@ int main(int argc, char** argv) {
 			cn();
 
 			// ----------------------------------------------------------
-			//fDrift.getForce(drift.data(), Dirac, M, CG, dimGrid_drift, dimBlock_drift);
+			fDrift.getForce(drift.data(), Dirac, CG, dimGrid_drift, dimBlock_drift);
 			// ----------------------------------------------------------
 
 			kli.Run(kAll, kli_sMem);
@@ -352,7 +324,7 @@ int main(int argc, char** argv) {
                 cn();
 
                 // ----------------------------------------------------------
-                //fDrift.getForce(drift.data(), Dirac, M, CG, dimGrid_drift, dimBlock_drift);
+                fDrift.getForce(drift.data(), Dirac, CG, dimGrid_drift, dimBlock_drift);
                 // ----------------------------------------------------------
 
                 kli.Run(kAll, kli_sMem);
@@ -390,7 +362,7 @@ int main(int argc, char** argv) {
 			cn();
 
 			// ----------------------------------------------------------
-			//fDrift.getForce(drift.data(), Dirac, M, CG, dimGrid_drift, dimBlock_drift);
+			fDrift.getForce(drift.data(), Dirac, CG, dimGrid_drift, dimBlock_drift);
 			// ----------------------------------------------------------
 
 			kli.Run(kAll, kli_sMem);
@@ -441,13 +413,8 @@ int main(int argc, char** argv) {
 			case '0':
 
 				CG.solve(in.data(), out.data(), Dirac, MatrixType::Normal);
-
 				myvol = spinor_vol;
-				/*setZeroArgs[0] = (void*) &in;
-				cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
-				cudaDeviceSynchronize();*/
-
-				Dirac.applyD(out.data(), in.data(), MatrixType::Normal);
+				Dirac.applyD(out.data(), in.data(), MatrixType::Dagger);
 				cudaDeviceSynchronize();
 
 				break;
@@ -457,7 +424,7 @@ int main(int argc, char** argv) {
 		for(int nt=0; nt<Sizes[0]; nt++){
 			corr = 0.0;
 			for(int nx=0; nx<Sizes[1]; nx++){
-				for(int j=0; j<4; j++) corr += in.data()[4*toEOflat(nt, nx)+j];
+				for(int j=0; j<4; j++) corr += in.data()[4*toEOflat(nt, nx) + j];
 			}
 			datafile << corr.real() << "\n";
 		}

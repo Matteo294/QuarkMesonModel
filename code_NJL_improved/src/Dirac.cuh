@@ -18,35 +18,14 @@ class DiracOP {
 	public:
 		DiracOP();
 		~DiracOP(){;}
-
+		void setScalar(T* phi){M = phi;}
 		void applyD(cp<double> *in, cp<double> *out, MatrixType MType);
-		// Move into private:
-		dim3 dimGrid_Dee, dimGrid_Doo, dimGrid_Doe, dimGrid_Deo;
-		dim3 dimBlock_Dee, dimBlock_Doo, dimBlock_Doe, dimBlock_Deo;
-		void *diagArgs[5]; // arguments for Dee, Doo, Deeinv, Dooinv
-		void *hoppingArgs[5]; // arguments for Deo, Doe
-		
-	
-		Spinor<T> temp, temp2;
 		T *M;
-		
-		MatrixType useDagger;
-		
-		cp<T> *inVec, *outVec;
 		LookUpTable IUP, IDN;
         LookUpTableConv EO2N;
 
 
 };
-
-/*template <typename T>
-__device__ void D_ee(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, T *M, int *EO2I);
-template <typename T>
-__device__ void D_oo(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, T *M, int *EO2I);
-template <typename T>
-__device__ void D_eo(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN);
-template <typename T>
-__device__ void D_oe(cp<T> *inVec, cp<T> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN);*/
 
 
 __global__ void applyD_gpu(cp<double> *in, cp<double> *out, MatrixType const useDagger, double *M, int *EO2N, my2dArray *IDN, my2dArray *IUP);
