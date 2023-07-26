@@ -9,6 +9,12 @@ FermionicDrift::FermionicDrift(int const seed) : gen(rd()), dist(0.0, 1.0)
 {
 	cudaMallocManaged(&eobuf, sizeof(thrust::complex<double>) * vol);
 	cudaMallocManaged(&state, sizeof(curandState) * spinor_vol);
+    
+    cudaMallocManaged(&buf, sizeof(Spinor<double>) * vol);
+    cudaMallocManaged(&noiseVec, sizeof(Spinor<double>) * vol);
+    cudaMallocManaged(&afterCG, sizeof(Spinor<double>) * vol);
+
+
 
 	int nBlocks = 0;
 	int nThreads = 0;
@@ -116,11 +122,6 @@ void FermionicDrift::getForce(double *outVec, DiracOP<double>& D, thrust::comple
 	cudaLaunchCooperativeKernel((void*)&computeDrift, dimGrid_drift, dimBlock_drift, driftArgs, 0, NULL);
 	cudaDeviceSynchronize();
 	
-	
-	/*convArgs[0] = (void*)&eobuf;
-	convArgs[1] = (void*)&outVec;
-	cudaLaunchCooperativeKernel((void*)&eoConv, dimGrid_conv, dimBlock_conv, convArgs, 0, NULL);
-	cudaDeviceSynchronize();*/
 	 
 }
 

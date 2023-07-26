@@ -65,11 +65,11 @@ __host__ void DiracOP<T>::applyD(){
     cudaLaunchCooperativeKernel((void*)&D_oo<T>, dimGrid_Doo, dimBlock_Doo, diagArgs, 0, NULL);
     cudaDeviceSynchronize();
 
- 	/*cudaLaunchCooperativeKernel((void*)&D_eo<T>, dimGrid_Deo, dimBlock_Deo, hoppingArgs, 0, NULL);
+ 	cudaLaunchCooperativeKernel((void*)&D_eo<T>, dimGrid_Deo, dimBlock_Deo, hoppingArgs, 0, NULL);
     cudaDeviceSynchronize();
 
     cudaLaunchCooperativeKernel((void*)&D_oe<T>, dimGrid_Doe, dimBlock_Doe, hoppingArgs, 0, NULL);
-    cudaDeviceSynchronize();*/
+    cudaDeviceSynchronize();
 
 }
 

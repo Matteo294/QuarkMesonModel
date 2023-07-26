@@ -91,24 +91,12 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
     copyArgs[0] = (void*) &p; copyArgs[1] = (void*) &r;
 	cudaLaunchCooperativeKernel((void*)&copyVec, dimGrid_zero, dimBlock_copy, copyArgs, 0, NULL);
 	cudaDeviceSynchronize();
-    /*for(int i=0; i<vol; i++) {
-        for(int j=0; j<4; j++){
-            temp[i].val[j] = 0.0;
-            temp2[i].val[j] = 0.0;
-            outVec[i].val[j] = 0.0;
-            r[i].val[j] = inVec[i].val[j];
-            p[i].val[j] = inVec[i].val[j];
-        }
-    }*/
-
 
 	*dot_res = 0.0;
 	myvol = 4*vol;
 	cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid_dot, dimBlock_dot, dotArgs, sizeof(thrust::complex<double>) * (32), NULL);
 	cudaDeviceSynchronize();
 	rmodsq = abs(*dot_res);
-
-	std::cout << "rmodsq: " << rmodsq << std::endl;
 
 
 	int k;
@@ -121,15 +109,9 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
 		setZeroArgs[0] = (void*) &temp2;
 		cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 		cudaDeviceSynchronize();
-        /*for(int i=0; i<vol; i++) {
-            for(int j=0; j<4; j++){
-                temp[i].val[j] = 0.0;
-                temp2[i].val[j] = 0.0;
-            }
-        }*/
 
 		// Apply D dagger
-		/*if (Mtype == MatrixType::Normal) D.setDagger(MatrixType::Dagger);
+		if (Mtype == MatrixType::Normal) D.setDagger(MatrixType::Dagger);
 		else D.setDagger(MatrixType::Normal);
 		D.setInVec(p);
 		D.setOutVec(temp2);
@@ -139,11 +121,8 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
 		else D.setDagger(MatrixType::Dagger);
 		D.setInVec(temp2);
 		D.setOutVec(temp);
-		D.applyD();*/
-		for (int i = 0; i < vol; i++){
-			for(int j=0; j<4; j++) temp[i].val[j] = ((thrust::complex<double>) (4*i+j+0.1)/100.) * p[i].val[j];
-		}
-		
+		D.applyD();
+
 		dotArgs[0] = (void*) &p; dotArgs[1] = (void*) &temp;
 
 		*dot_res = 0.0;
@@ -151,10 +130,6 @@ void CGsolver::solve(Spinor<double>  *inVec, Spinor<double> *outVec, DiracOP<dou
 		cudaLaunchCooperativeKernel((void*)&gpuDotProduct, dimGrid_dot, dimBlock_dot, dotArgs, sizeof(thrust::complex<double>) * (32), NULL);
 		cudaDeviceSynchronize();
 		alpha = rmodsq / *dot_res; 
-
-		std::cout << "alpha: " << alpha << std::endl;
-
-
 
 		// x = x + alpha p
 		sumArgs[0] = (void*) &outVec;

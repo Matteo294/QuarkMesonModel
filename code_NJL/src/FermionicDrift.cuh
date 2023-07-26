@@ -11,7 +11,7 @@
 class FermionicDrift{
     public:
         FermionicDrift(int const seed);
-        ~FermionicDrift(){cudaFree(eobuf); cudaFree(state);}
+        ~FermionicDrift(){cudaFree(eobuf); cudaFree(state); cudaFree(afterCG); cudaFree(noiseVec); cudaFree(buf);}
 		void getForce(double *outVec, DiracOP<double>& D, thrust::complex<double> *M, CGsolver& CG, dim3 dimGrid_drift, dim3 dimBlock_drift);
         //void setDirac(DiracOP<double> *Dirac){D = Dirac;}
     private:

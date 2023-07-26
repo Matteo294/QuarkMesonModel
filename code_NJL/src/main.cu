@@ -314,14 +314,6 @@ int main(int argc, char** argv) {
 	cudaMemcpyToSymbol(im_gpu, &im, sizeof(thrust::complex<double>));
 	// -----------------------------------------------------------------
 
-
-	for(int i=0; i<vol; i++){
-		for(int j=0; j<4; j++){
-			in[i].val[j] = 1.0;
-		}
-	}
-	CG.solve(in, out, Dirac, MatrixType::Normal);
-
 	// burn in a little bit, since the drift might be stronger at the beginning, since we are
 	// likely far from the equilibrium state
 	for (int burn = 0; burn < burnCount; ++burn) {
