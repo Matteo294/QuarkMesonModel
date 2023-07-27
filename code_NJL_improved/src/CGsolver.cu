@@ -106,17 +106,11 @@ __global__ void solve_kernel(cp<double>  *inVec, cp<double> *outVec,
     int k;
 	for(k=0; k<IterMax && sqrt(*rmodsq) > tolerance; k++){
 
-		cg::sync(grid);
 		setZeroGPU(temp, myvol);
         cg::sync(grid);
         setZeroGPU(temp2, myvol);
-        cg::sync(grid);
-        
-        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        //applyD(p, temp, myvol);
-        //cg::sync(grid);
 
-		// Apply D dagger
+  		// Apply D dagger
 		if (Mtype == MatrixType::Normal) MatType = MatrixType::Dagger;
 		else MatType = MatrixType::Normal;
         cg::sync(grid);
@@ -127,7 +121,6 @@ __global__ void solve_kernel(cp<double>  *inVec, cp<double> *outVec,
         D_eo(p, temp2, MatType, IUP, IDN);
         cg::sync(grid);
         D_oe(p, temp2, MatType, IUP, IDN);
-        cg::sync(grid);
 
 		// Apply D
 		if (Mtype == MatrixType::Normal) MatType = MatrixType::Normal;
@@ -140,7 +133,6 @@ __global__ void solve_kernel(cp<double>  *inVec, cp<double> *outVec,
         D_eo(temp2, temp, MatType, IUP, IDN);
         cg::sync(grid);
         D_oe(temp2, temp, MatType, IUP, IDN);
-        cg::sync(grid);
 
     
 		if (threadIdx.x == 0 && blockIdx.x == 0) *dot_res = 0.0;
@@ -156,13 +148,11 @@ __global__ void solve_kernel(cp<double>  *inVec, cp<double> *outVec,
 		// x = x + alpha p
 		cg::sync(grid);
         gpuSumSpinors(outVec, p, outVec, *alpha, myvol);
-        cg::sync(grid);
 		
 		// r = r - alpha A p
 		if (threadIdx.x == 0 && blockIdx.x == 0) *alpha = - *alpha;
 		cg::sync(grid);
         gpuSumSpinors(r, temp, r, *alpha, myvol);
-        cg::sync(grid);
 
         if (threadIdx.x == 0 && blockIdx.x == 0) *dot_res = 0.0;
 		cg::sync(grid);

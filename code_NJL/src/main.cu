@@ -465,7 +465,7 @@ int main(int argc, char** argv) {
 		
         
         // ------------------------------------------------------
-        /*setZeroArgs[0] = (void*) &in;
+        setZeroArgs[0] = (void*) &in;
         cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);        
 		cudaDeviceSynchronize();
 
@@ -506,7 +506,7 @@ int main(int argc, char** argv) {
 				for(int j=0; j<4; j++) corr += in[toEOflat(nt, nx)].val[j];
 			}
 			datafile << corr.real() << "\n";
-		}*/
+		}
         
         // compute condensates from drifts as they are proportional
         *trace = 0.0;

@@ -13,7 +13,7 @@
 #include <iostream>
 #include <algorithm>
 
-//#include "HDF5.h"
+#include "HDF5.h"
 #include "toml.hpp"
 #include "params.h"
 #include "Laplace.h"
@@ -218,6 +218,14 @@ int main(int argc, char** argv) {
 	cudaDeviceSynchronize();
 	auto dimGrid_drift = dim3(nBlocks, 1, 1);
 	auto dimBlock_drift = dim3(nThreads, 1, 1);
+    
+    nBlocks = 0;
+	nThreads = 0;
+	cudaOccupancyMaxPotentialBlockSize(&nBlocks, &nThreads, gpuTraces);
+	cudaDeviceSynchronize();
+	auto dimGrid_traces = dim3(nBlocks, 1, 1);
+	auto dimBlock_traces = dim3(nThreads, 1, 1);
+    void *tracesArgs[] = {(void*) &fermionic_contribution, (void*) &trace};
     
 	// set up print files
 	std::ofstream datafile, tracefile;
@@ -429,10 +437,10 @@ int main(int argc, char** argv) {
 			datafile << corr.real() << "\n";
 		}
         
-        // compute condensates from drifts as they are proportional
+        // -->  compute condensates from drifts as they are proportional
         
 
-        /*fDrift.getForce(fermionic_contribution, Dirac, M, CG, dimGrid_drift, dimBlock_drift);        
+        fDrift.getForce(drift.data(), Dirac, CG, dimGrid_drift, dimBlock_drift);        
         *trace = 0.0;
         
         //for(int i=0; i<4*vol; i++) traces[(int) i/vol] += fermionic_contribution[i];
@@ -445,7 +453,7 @@ int main(int argc, char** argv) {
             *trace = 0.0;
         }
 		
-        tracefile << (double) (*trace) << "," << (double) (avg[0] / vol) << "," << (double) (std::sqrt(sum2) / vol) << "\n";*/
+        tracefile << (double) (*trace) << "," << (double) (avg[0] / vol) << "," << (double) (std::sqrt(sum2) / vol) << "\n";
 		// ------------------------------------------------------
 
 		nMeasurements++;

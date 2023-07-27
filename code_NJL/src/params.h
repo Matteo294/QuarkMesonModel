@@ -22,7 +22,7 @@ int constexpr nVectorComponents = 1;
 
 using dimArray = std::array<int, nDim>;
 
-dimArray constexpr Sizes = {256, 256};
+dimArray constexpr Sizes = {128, 128};
 int const vol = Sizes[0]*Sizes[1];
 
 template <int N>

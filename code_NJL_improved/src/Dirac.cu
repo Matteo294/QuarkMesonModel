@@ -68,10 +68,10 @@ __device__ void D_oo(cp<double> *inVec, cp<double> *outVec, MatrixType const use
             outVec[4*i+2]   += (two + mass + g * M[Ni]) * inVec[4*i+2];
             outVec[4*i+3]   += (two + mass + g * M[Ni]) * inVec[4*i+3];
         } else{
-            outVec[4*i]     += (two + mass + g * (M[Ni])) * inVec[4*i];
-            outVec[4*i+1]   += (two + mass + g * (M[Ni])) * inVec[4*i+1];
-            outVec[4*i+2]   += (two + mass + g * (M[Ni])) * inVec[4*i+2];
-            outVec[4*i+3]   += (two + mass + g * (M[Ni])) * inVec[4*i+3];
+            outVec[4*i]     += (two + mass + g * M[Ni]) * inVec[4*i];
+            outVec[4*i+1]   += (two + mass + g * M[Ni]) * inVec[4*i+1];
+            outVec[4*i+2]   += (two + mass + g * M[Ni]) * inVec[4*i+2];
+            outVec[4*i+3]   += (two + mass + g * M[Ni]) * inVec[4*i+3];
         }
     }
 }
@@ -94,10 +94,10 @@ __device__ void D_ee(cp<double> *inVec, cp<double> *outVec, MatrixType const use
             outVec[4*i+2]   += (two + mass + g * M[Ni]) * inVec[4*i+2];
             outVec[4*i+3]   += (two + mass + g * M[Ni]) * inVec[4*i+3];
         } else {
-            outVec[4*i]     += (two + mass + g * (M[Ni])) * inVec[4*i];
-            outVec[4*i+1]   += (two + mass + g * (M[Ni])) * inVec[4*i+1];
-            outVec[4*i+2]   += (two + mass + g * (M[Ni])) * inVec[4*i+2];
-            outVec[4*i+3]   += (two + mass + g * (M[Ni])) * inVec[4*i+3];
+            outVec[4*i]     += (two + mass + g * M[Ni]) * inVec[4*i];
+            outVec[4*i+1]   += (two + mass + g * M[Ni]) * inVec[4*i+1];
+            outVec[4*i+2]   += (two + mass + g * M[Ni]) * inVec[4*i+2];
+            outVec[4*i+3]   += (two + mass + g * M[Ni]) * inVec[4*i+3];
         }
     }
 
