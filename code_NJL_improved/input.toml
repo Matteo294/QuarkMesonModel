@@ -15,7 +15,7 @@ MeasureDriftCount = 20
 
 [io]
 configFileName = "test.hdf"
-export = "false"
+export = "true"
 timeSliceFileName = "slice.dat"
 
 [random]

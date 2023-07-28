@@ -153,10 +153,10 @@ int main(int argc, char** argv) {
 		resumeRun = toml::find<bool>(ioSection, "resume");
 	} catch (std::exception& e) {}
 
-	//auto hdf = HDF{outFileName, resumeRun};
-	//hdf.Close();
+	auto hdf = HDF{outFileName, resumeRun};
+	hdf.Close();
 
-	/*if (resumeRun == true) {
+	if (resumeRun == true) {
 		hdf.Open();
 		if (hdf.NumberOfConfigs() == -1) {	// if there are no configs in the file, we cannot
 			resumeRun = false;				// read from it
@@ -184,7 +184,7 @@ int main(int argc, char** argv) {
 
 		hdf.CreateGroup("/data");
 		hdf.Close();
-	}*/
+	}
 	//
 
 	// ----------------------------------------------------------
@@ -312,7 +312,7 @@ int main(int argc, char** argv) {
 	int nMeasurements = 0;
 	int oldMeasurements = 0;
 	elapsedLangevinTime = 0.0;
-	/*if (resumeRun == true) {
+	if (resumeRun == true) {
 		hdf.Open();
 		auto configName = hdf.NameOfLastConfig();
 //		std::cout << "name of last config " << configName << '\n';
@@ -321,7 +321,7 @@ int main(int argc, char** argv) {
 		configName.erase(0, configName.find('_') + 1);
 		oldMeasurements = std::stoi(configName);
 		hdf.Close();
-	}*/
+	}
 
     
 	if (MeasureDriftCount > 0) {
@@ -443,7 +443,6 @@ int main(int argc, char** argv) {
         fDrift.getForce(drift.data(), Dirac, CG, dimGrid_drift, dimBlock_drift);        
         *trace = 0.0;
         
-        //for(int i=0; i<4*vol; i++) traces[(int) i/vol] += fermionic_contribution[i];
 		cudaLaunchCooperativeKernel((void*) &gpuTraces, dimGrid_traces, dimBlock_traces, tracesArgs, 32 * sizeof(double), NULL);
 		cudaDeviceSynchronize();
         
@@ -474,21 +473,21 @@ int main(int argc, char** argv) {
 			std::cout << "#Early termination signal received.\n#Wrapping up.\n";
 			elapsedLangevinTime = MaxLangevinTime + 1.0;
 		}
-		/*std::stringstream ss;
+		std::stringstream ss;
 		ss << "data/cnfg_" << std::setfill('0') << std::setw(8) << 
 			(exportHDF == true ? nMeasurements : 1);
 		hdf.Open();
 		hdf.CreateGroup(ss.str());
 		hdf.WriteData(ss.str(), "fields", hostLattice);
-		hdf.Close();*/
+		hdf.Close();
 	}
         
 	auto timerStop  = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(timerStop - timerStart);
 	timeSliceFile.close();
-	/*hdf.Open();
+	hdf.Open();
 	hdf.WriteSeeds("/seeds", "last", cn.GetState());
-	hdf.Close();*/
+	hdf.Close();
 
 	std::cout << "#numSms = " << kli.numSms << '\n';
 	std::cout << "#blocks per SM = " << kli.numBlocksPerSm << '\n';
