@@ -225,7 +225,7 @@ int main(int argc, char** argv) {
 	cudaDeviceSynchronize();
 	auto dimGrid_traces = dim3(nBlocks, 1, 1);
 	auto dimBlock_traces = dim3(nThreads, 1, 1);
-    void *tracesArgs[] = {(void*) &fermionic_contribution, (void*) &trace};
+    void *tracesArgs[] = {(void*) &drift.data(), (void*) &trace};
     
 	// set up print files
 	std::ofstream datafile, tracefile;
@@ -399,15 +399,15 @@ int main(int argc, char** argv) {
 		timeSliceFile << '\n';
 		
 
-		std::cout << elapsedLangevinTime << '\t' << *h_eps << '\t';
+		std::cout << elapsedLangevinTime << '\t' << *h_eps << '\n';
 		myType sum2 = 0.0;
-		for (auto e : avg) {
+		/*for (auto e : avg) {
 			if (useMass == "false") e /= sq2Kappa;
 			std::cout << e / N << '\t';
 			sum2 += e*e;
-		}
-		std::cout << std::sqrt(sum2) / N << std::endl;
-		
+		}*/
+		std::cout 	<< "magnetization: " << (double) abs(avg[0]) / N <<
+					  " condensate: " << (double) abs(*trace) / N << std::endl << std::endl;
         
         // ------------------------------------------------------
 		for(int i=0; i<4*vol; i++) in.data()[i] = 0.0;
@@ -452,7 +452,7 @@ int main(int argc, char** argv) {
             *trace = 0.0;
         }
 		
-        tracefile << (double) (*trace) << "," << (double) (avg[0] / vol) << "," << (double) (std::sqrt(sum2) / vol) << "\n";
+        tracefile << (double) (*trace) / vol << "," << (double) (avg[0] / vol) << "," << (double) (std::sqrt(sum2) / vol) << "\n";
 		// ------------------------------------------------------
 
 		nMeasurements++;

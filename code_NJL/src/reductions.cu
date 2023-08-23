@@ -113,7 +113,7 @@ __global__ void gpuMagnetisation(myType *vecA, myType *result, int size) {
 								// it to zero outside the kernel, but that looks ugly
 		myType temp_sum = 0.0;
 		for (int i = grid.thread_rank(); i < size; i += grid.size()) {
-			temp_sum += abs(vecA[i + comp * size]);
+			temp_sum += vecA[i + comp * size];
 		}
 
 		cg::thread_block_tile<32> tile32 = cg::tiled_partition<32>(cta);

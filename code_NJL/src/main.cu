@@ -378,6 +378,7 @@ int main(int argc, char** argv) {
 			cudaDeviceSynchronize();
             auto err = cudaPeekAtLastError();
             if (err != 0) std::cout << "CUDA ERROR: " << err << std::endl;
+			
 			// ----------------------------------------------------------
 
 			kli.Run(kAll, kli_sMem);
@@ -461,11 +462,11 @@ int main(int argc, char** argv) {
 			std::cout << e / N << '\t';
 			sum2 += e*e;
 		}
-		std::cout << std::sqrt(sum2) / N << std::endl;
+		std::cout << std::sqrt(sum2) / N;
 		
         
         // ------------------------------------------------------
-        setZeroArgs[0] = (void*) &in;
+        /*setZeroArgs[0] = (void*) &in;
         cudaLaunchCooperativeKernel((void*)&setZeroGPU, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);        
 		cudaDeviceSynchronize();
 
@@ -506,7 +507,7 @@ int main(int argc, char** argv) {
 				for(int j=0; j<4; j++) corr += in[toEOflat(nt, nx)].val[j];
 			}
 			datafile << corr.real() << "\n";
-		}
+		}*/
         
         // compute condensates from drifts as they are proportional
         *trace = 0.0;
@@ -520,8 +521,10 @@ int main(int argc, char** argv) {
         } else {
             *trace = 0.0;
         }
+
+		std::cout << " Tr: " << (double) (*trace) / vol << std::endl;
 		
-        tracefile << (double) (*trace) << "," << (double) (avg[0] / vol) << "," << (double) (std::sqrt(sum2) / vol) << "\n";
+        tracefile << (double) (*trace) / vol << "," << (double) (avg[0] / vol) << "," << (double) (std::sqrt(sum2) / vol) << "\n";
 		// ------------------------------------------------------
 
 		nMeasurements++;

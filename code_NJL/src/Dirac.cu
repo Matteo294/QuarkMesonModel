@@ -84,7 +84,9 @@ __global__ void D_oo(Spinor<T> *inVec, Spinor<T> *outVec, MatrixType const useDa
     thrust::complex<T> mass = static_cast<thrust::complex<T>> (fermion_mass_gpu);
     thrust::complex<T> half {0.5, 0.0};
 
+
     for (int i = grid.thread_rank() + vol/2; i < vol; i += grid.size()) {
+
         if (useDagger == MatrixType::Dagger){
             outVec[i].val[0] += (two + mass + g * conj(M[i])) * inVec[i].val[0];
             outVec[i].val[1] += (two + mass + g * conj(M[i])) * inVec[i].val[1];
@@ -108,6 +110,7 @@ __global__ void D_ee(Spinor<T> *inVec, Spinor<T> *outVec, MatrixType const useDa
     thrust::complex<T> const g = static_cast<thrust::complex<T>> (yukawa_coupling_gpu);
     thrust::complex<T> const mass = static_cast<thrust::complex<T>> (fermion_mass_gpu);
     thrust::complex<T> half {0.5, 0.0};
+
 
     for (int i = grid.thread_rank(); i < vol/2; i += grid.size()) {
     
