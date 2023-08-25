@@ -29,7 +29,8 @@ def get_chi2(cfgs: np.ndarray):
     V = np.prod(cfgs.shape[1:])
     axis = tuple([i+1 for i in range(len(cfgs.shape)-1)])
     mags = cfgs.mean(axis=axis)
-    return jackknife(V * (mags**2 - mags.mean()**2))
+    #return jackknife(V * (mags**2 - mags.mean()**2))
+    return jackknife(V * ((mags - mags.mean())**2))
 
 #only valid for 2D, since it only accounts for correlations in the same dimensions
 #phi(x)phi(x+r) with r=0,0,0,1... but not r=1,1,0,0
