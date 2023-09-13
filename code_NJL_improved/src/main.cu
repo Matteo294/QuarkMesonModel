@@ -410,7 +410,7 @@ int main(int argc, char** argv) {
 					  " condensate: " << (double) abs(*trace) / N << std::endl << std::endl;
         
         // ------------------------------------------------------
-		for(int i=0; i<4*vol; i++) in.data()[i] = 0.0;
+		/*for(int i=0; i<4*vol; i++) in.data()[i] = 0.0;
         in.data()[0] = 1.0;
 		in.data()[1] = 1.0;
 		in.data()[2] = 1.0;
@@ -435,7 +435,7 @@ int main(int argc, char** argv) {
 				for(int j=0; j<4; j++) corr += in.data()[4*toEOflat(nt, nx) + j];
 			}
 			datafile << corr.real() << "\n";
-		}
+		}*/
         
         // -->  compute condensates from drifts as they are proportional
         
