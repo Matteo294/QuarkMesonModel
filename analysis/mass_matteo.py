@@ -46,7 +46,12 @@ def get_phys_quark_mass_via_timeslices(Sq_t,volume):
     global Nt 
     Nt = int(volume[0])
     corr = np.average(Sq_t, axis=0)
-    return fitToSinh(corr, 1, Nt, plot=False)
+    try:
+    	val, err = fitToSinh(corr, 1, Nt, plot=False)
+    except:
+    	val = 0
+    	err = 0
+    return [val, err]
   
 '''
 data = read_csv(sys.argv[1])
