@@ -4,34 +4,43 @@ from scipy.optimize import curve_fit as fit
 import numpy as np
 import ctypes
 
+from correlations import *
+from read_in_data import *
+
 lib_path = "/home/matteo/Downloads/ac/build/"
 
-class dataset:
+class Dataset:
     
     # mode can be either 0 (no rescaling of params) or 1 (rescaling params / block spin)
-    def add_data(self, folder, param, mode):
+    def add_data(self, folder, param, mode, Nt):
         fields_data = read_csv(folder + '/traces.csv')
         mass_data = read_csv(folder + '/data.csv')
         S_t = get_time_slices_from_timeslicefile(folder + "/slice.dat", field_axis=0, return_all=False)
         data_Sq_t = read_csv(folder + "/data.csv")
         Sq_t = data_Sq_t['corr'].to_numpy(np.dtype('f8')).reshape((-1, Nt))
-        toml_params = get_toml_params(folder + '/input.toml')
+        toml_params = self.get_toml_params(folder + '/input.toml')
+
+        volume = (self.Nt, self.Nx)
         
         # magnetisation
-        blob = ComputeStatistics(data['sigma'])
+        blob = ComputeStatistics(fields_data['sigma'])
         self.phi.append((blob.average, blob.sigmaF))
         avgxxx = blob.average
+        avgxxxerr = blob.sigmaF
         # condensate
-        blob = ComputeStatistics(data['tr'])
-        self.cond.append((blob.average, blob.sigmaF))
+        blob = ComputeStatistics(fields_data['tr'])
+        self.condensate.append((blob.average, blob.sigmaF))
         # susceptibility
-        blob = ComputeStatistics((data['sigma'] - avgxxx)**2)
+        blob = ComputeStatistics((fields_data['sigma'] - avgxxx)**2)
         self.chi2.append((blob.average, blob.sigmaF))
+        chi2 = blob.average
+        chi2err = blob.sigmaF
         # renormalised bosonic mass
-        val, err = get_ren_mass_right_via_timeslices(S_t,volume)
+        val, err = get_ren_mass_right_via_timeslices(S_t, volume)
+        #val, err = get_ren_mass_right_via_timeslices2(S_t, volume, chi2, chi2err)
         self.m_phi_r.append((val, err))
         # physical quark mass
-        val, err = get_phys_quark_mass_via_timeslices(Sq_t,volume)
+        val, err = get_phys_quark_mass_via_timeslices(Sq_t, volume)
         self.m_q_phys.append((val, err))
         # parameter value
         p = toml_params[param[0]][param[1]]
@@ -40,6 +49,15 @@ class dataset:
             if param[1] == "mass":
                 p /= s*s
         self.parameters.append(p)
+       
+    def clear_data(self):
+        self.phi = [] # <phi>
+        self.abs_phi = [] # <|phi|>
+        self.condensate = [] # <psibar psi>
+        self.chi2 = [] # susceptiblity or second connected moment
+        self.m_phi_r = [] # renormalised mesons mass
+        self.m_q_phys = [] # physical quark mass
+        self.parameters = [] # x parameter
     
     def sort_data(self, data):
         arr = [(p, val) for p, val in zip(self.parameters, data)]
@@ -51,17 +69,14 @@ class dataset:
             sorted_val.append(x[1])
         return sorted_p, sorted_val
     
-    def get_toml_params(filename):
-        params = toml.load("data/" + f + "/input.toml")
+    def get_toml_params(self, filename):
+        params = toml.load(filename)
         return params
         
-    def __init__(self, name):
-        self.phi = [] # <phi>
-        self.abs_phi = [] # <|phi|>
-        self.chi2 = [] # susceptiblity or second connected moment
-        self.m_phi_r = [] # renormalised mesons mass
-        self.m_q_phys = [] # physical quark mass
-        self.parameters = [] # x parameter
+    def __init__(self, Nt, Nx):
+        self.Nt = Nt
+        self.Nx = Nx
+        self.clear_data()
     
 
 
@@ -107,3 +122,27 @@ def get_phys_quark_mass_via_timeslices(Sq_t, volume):
     	err = 0
     del Nt
     return [val, err]
+
+
+def get_ren_mass_right_via_timeslices2(S_t, volume, chi2, chi_err):
+
+    Nt = volume[0]
+    Nx = volume[1]
+    
+    a = np.arange(0, Nt)
+    a[a>int(Nt/2)] = Nt-a[a>int(Nt/2)]
+
+
+    connected_corr_t, connected_corr_t_err = get_connected_2pt_fct(S_t)
+    #chi2 = Nx * np.sum( connected_corr_t)
+    mu2 = 2 * Nx * np.sum( connected_corr_t * a**2)
+    
+    ren_mass2 = 2*2 * chi2/mu2
+    ren_mass = np.sqrt( ren_mass2 )
+        
+    #chi_err = Nx * np.sqrt( np.sum( connected_corr_t_err**2 ))
+    mu_err = 2*Nx * np.sqrt( np.sum( (a**2 * connected_corr_t_err)**2  )   )
+    mass2_err = ren_mass2 * np.sqrt( (chi_err/chi2)**2 + (mu_err/mu2)**2 )
+    mass_err = ren_mass *0.5 *mass2_err/ren_mass2
+
+    return ren_mass, mass_err
