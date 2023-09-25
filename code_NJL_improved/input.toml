@@ -1,7 +1,7 @@
 [physics]
-useMass = "true"
-mass = 0.2
-g = 0.0
+useMass = "false"
+mass = -1.0 
+g = 0.5
 kappa = 0.0
 lambda = 0.0
 cutFraction = 0.0
@@ -10,8 +10,8 @@ cutFraction = 0.0
 averageEpsilon = 0.01
 MaxLangevinTime = 1000.0
 ExportTime = 1.0
-burnCount = 20
-MeasureDriftCount = 20
+burnCount = 1000 
+MeasureDriftCount = 0
 
 [io]
 configFileName = "test.hdf"
@@ -22,5 +22,5 @@ timeSliceFileName = "slice.dat"
 seed = 1234
 
 [fermions]
-yukawa_coupling = 0.2
+yukawa_coupling = 0.3
 fermion_mass = 0.2

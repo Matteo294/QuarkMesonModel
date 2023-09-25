@@ -190,6 +190,7 @@ int main(int argc, char** argv) {
 	// ----------------------------------------------------------
     int const spinor_vol = 4 * vol;
 
+	myType sum2 = 0.0;
 	auto const& fermionsSection = toml::find(inputData, "fermions");
 	double const fermion_mass = toml::find<double>(fermionsSection, "fermion_mass");
 	double const yukawa_coupling = toml::find<double>(fermionsSection, "yukawa_coupling");
@@ -226,6 +227,14 @@ int main(int argc, char** argv) {
 	auto dimGrid_traces = dim3(nBlocks, 1, 1);
 	auto dimBlock_traces = dim3(nThreads, 1, 1);
     void *tracesArgs[] = {(void*) &drift.data(), (void*) &trace};
+
+	nBlocks = 0;
+	nThreads = 0;
+	cudaOccupancyMaxPotentialBlockSize(&nBlocks, &nThreads, setZero_kernel);
+	cudaDeviceSynchronize();
+	auto dimGrid_setZero = dim3(nBlocks, 1, 1);
+	auto dimBlock_setZero = dim3(nThreads, 1, 1);
+    void *setZeroArgs[] = {(void*) &in.data(), (void*) &spinor_vol};
     
 	// set up print files
 	std::ofstream datafile, tracefile;
@@ -305,6 +314,9 @@ int main(int argc, char** argv) {
 			cudaDeviceSynchronize();
 			t += *h_eps;
 		}
+		/*cudaLaunchCooperativeKernel((void*)gpuMagnetisation, kli.dimGrid, kli.dimBlock, kMagnetisation, kli_sMem, NULL);
+		cudaDeviceSynchronize();
+		tracefile << (double) (*trace) / vol << "," << (double) (avg[0] / vol) << "," << (double) (std::sqrt(sum2) / vol) << "\n";*/
 	}
 	
 	std::cout << "Thermalization done!" << std::endl;
@@ -342,6 +354,10 @@ int main(int argc, char** argv) {
                 t += *h_eps;
             }
             elapsedLangevinTime += t;
+		
+			/*cudaLaunchCooperativeKernel((void*)gpuMagnetisation, kli.dimGrid, kli.dimBlock,	kMagnetisation, kli_sMem, NULL);
+			cudaDeviceSynchronize();
+			tracefile << (double) (*trace) / vol << "," << (double) (avg[0] / vol) << "," << (double) (std::sqrt(sum2) / vol) << "\n";*/
 
             epsSum += *h_eps;
             nMeasurements++;
@@ -400,7 +416,7 @@ int main(int argc, char** argv) {
 		
 
 		std::cout << elapsedLangevinTime << '\t' << *h_eps << '\n';
-		myType sum2 = 0.0;
+		sum2 = 0.0;
 		/*for (auto e : avg) {
 			if (useMass == "false") e /= sq2Kappa;
 			std::cout << e / N << '\t';
@@ -410,7 +426,11 @@ int main(int argc, char** argv) {
 					  " condensate: " << (double) abs(*trace) / N << std::endl << std::endl;
         
         // ------------------------------------------------------
-		/*for(int i=0; i<4*vol; i++) in.data()[i] = 0.0;
+		setZeroArgs[0] = (void*) &in.data();
+		cudaLaunchCooperativeKernel((void*) &setZero_kernel, dimGrid_setZero, dimBlock_setZero, setZeroArgs, 0, NULL);
+		cudaDeviceSynchronize();
+
+		// Set source
         in.data()[0] = 1.0;
 		in.data()[1] = 1.0;
 		in.data()[2] = 1.0;
@@ -435,7 +455,7 @@ int main(int argc, char** argv) {
 				for(int j=0; j<4; j++) corr += in.data()[4*toEOflat(nt, nx) + j];
 			}
 			datafile << corr.real() << "\n";
-		}*/
+		}
         
         // -->  compute condensates from drifts as they are proportional
         
