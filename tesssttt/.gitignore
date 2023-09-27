@@ -1,7 +1,0 @@
-build
-run
-.vscode
-*.o
-*.d
-*.log
-out
