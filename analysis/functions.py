@@ -12,12 +12,12 @@ lib_path = "/home/matteo/Downloads/ac/build/"
 class Dataset:
     
     # mode can be either 0 (no rescaling of params) or 1 (rescaling params / block spin)
-    def add_data(self, folder, param, mode, Nt):
+    def add_data(self, folder, param, mode):
         fields_data = read_csv(folder + '/traces.csv')
         mass_data = read_csv(folder + '/data.csv')
         S_t = get_time_slices_from_timeslicefile(folder + "/slice.dat", field_axis=0, return_all=False)
         data_Sq_t = read_csv(folder + "/data.csv")
-        Sq_t = data_Sq_t['corr'].to_numpy(np.dtype('f8')).reshape((-1, Nt))
+        Sq_t = data_Sq_t['corr'].to_numpy(np.dtype('f8')).reshape((-1, self.Nt))
         toml_params = self.get_toml_params(folder + '/input.toml')
 
         volume = (self.Nt, self.Nx)
