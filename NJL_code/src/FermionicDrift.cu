@@ -71,37 +71,10 @@ void FermionicDrift::getForce(double *outVec, DiracOP<double>& D, CGsolver& CG, 
 	cudaLaunchCooperativeKernel((void*)&setZero_kernel, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 	cudaDeviceSynchronize();
 
-	switch (CGmode){
-		case '0':
 			CG.solve(noiseVec.data(), buf.data(), D, MatrixType::Dagger);
 			D.applyD(buf.data(), afterCG.data(), MatrixType::Normal);
 			cudaDeviceSynchronize();
-			break;
-		case '1':
 			
-			//Dirac_d.D_oo_inv(psiField.pos.begin() + lattice.vol/2, temp2.begin());
-			//Dirac_d.D_eo(temp2.begin(), temp1.begin());
-			/*D.setInVec(); D.setOutVec();
-			cudaLaunchCooperativeKernel((void*)&D_oo_inv<T>, dimGrid_Doo_inv, dimBlock_Doo_inv, diagArgs, 0, NULL);
-    		cudaDeviceSynchronize();
-			cudaLaunchCooperativeKernel((void*)&D_eo<T>, dimGrid_Deo, dimBlock_Deo, diagArgs, 0, NULL);
-    		cudaDeviceSynchronize();
-
-			spinorDiff(psiField.pos.begin(), psiField.pos.begin() + lattice.vol/2, temp1.begin(), temp2.begin());
-			
-			CGdouble.solve_Dhat(temp2.begin(), temp2.end(), temp3.begin());
-			for(int i=0; i<lattice.vol/2; i++) std::fill(psiField.pos[i].val.begin(), psiField.pos[i].val.begin(), 0.0);
-			Dirac_d.applyDhatTo(temp3.begin(), psiField.pos.begin(), MatrixType::Dagger);
-
-			std::fill(temp1.begin(), temp1.end(), Spinor_d());
-			Dirac_d.D_oe(psiField.pos.begin(), temp1.begin());
-
-			spinorDiff(psiField.pos.begin() + lattice.vol/2, psiField.pos.end(), temp1.begin(), temp3.begin());
-
-			for(int i=lattice.vol/2; i<lattice.vol; i++) std::fill(psiField.pos[i].val.begin(), psiField.pos[i].val.end(), 0.0);
-			Dirac_d.D_oo_inv(temp3.begin(), psiField.pos.begin() + lattice.vol/2);*/
-			break;
-		}
 		
 	driftArgs[0] = (void*) &afterCG.data();
 	driftArgs[1] = (void*) &noiseVec.data();

@@ -173,6 +173,12 @@ int main(int argc, char** argv) {
 	CGsolver CG;
     double *trace; // trace D^-1
 	//int myvol = spinor_vol; // dynamic volume
+
+	/*for(int nt=0; nt<Sizes[0]; nt++){
+		for(int nx=0; nx<Sizes[1]; nx++){
+			std::cout << nt << " " << nx << " " << nt*Sizes[1] + nx << " " << convertNormalToEO(nt*Sizes[1] + nx)  << " " << Dirac.EO2N.at[convertNormalToEO(nt*Sizes[1] + nx)] << std::endl;
+		}
+	}*/
 	
 	cudaMallocManaged(&fermionic_contribution, sizeof(double) * vol);
 	cudaMallocManaged(&trace, sizeof(double));
@@ -422,6 +428,11 @@ int main(int argc, char** argv) {
 		in.data()[1] = 1.0;
 		in.data()[2] = 1.0;
 		in.data()[3] = 1.0;
+
+		for(int i=0; i<spinor_vol; i++){
+			in.data()[i] = 1.0;
+			ivec.data()[i] = i;
+		}
         
         switch (CGmode) {
 			
@@ -433,6 +444,9 @@ int main(int argc, char** argv) {
 				cudaDeviceSynchronize();
 
 				break;
+		}
+		for(int i=0; i<spinor_vol; i++){
+			std::cout << in.data()[convertNormalToEO(i/4)+i%4 ] << " " << std::endl;
 		}
 		
 
