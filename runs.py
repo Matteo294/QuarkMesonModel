@@ -7,78 +7,16 @@ import subprocess
 cluster = sys.argv[1]
 
 configurations = []
+#masses = [-1.0 + n * 0.1 for n in range(21)]
+yukawa = [0.2, 0.5]
+vals = [10.0, 50.0, 100.0, 500.0]
 
-s = 1.0
-
-configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0*s*s, "kappa": 0.00, "lambda": 0.00, "cutFraction": s}, \
-                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 20}, \
+for p in vals:
+    configurations.append({ "physics": {"useMass": "true", "mass": 0.2, "g": 0.0, "kappa": 0.3, "lambda": 0.02, "cutFraction": 0.0}, \
+                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 200, "MeasureDriftCount": 20}, \
                         "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
                         "random": {"seed": 1234}, \
-                        "fermions": {"yukawa_coupling": 0.0*s, "fermion_mass": 0.5*s} })
-
-configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0*s*s, "kappa": 0.00, "lambda": 0.00, "cutFraction": s}, \
-                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 20}, \
-                        "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
-                        "random": {"seed": 1234}, \
-                        "fermions": {"yukawa_coupling": 0.01*s, "fermion_mass": 0.5*s} })
-
-configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0*s*s, "kappa": 0.00, "lambda": 0.00, "cutFraction": s}, \
-                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 20}, \
-                        "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
-                        "random": {"seed": 1234}, \
-                        "fermions": {"yukawa_coupling": 0.1*s, "fermion_mass": 0.5*s} })
-
-configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0*s*s, "kappa": 0.00, "lambda": 0.00, "cutFraction": s}, \
-                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 20}, \
-                        "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
-                        "random": {"seed": 1234}, \
-                        "fermions": {"yukawa_coupling": 0.5*s, "fermion_mass": 0.5*s} })
-
-configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0*s*s, "kappa": 0.00, "lambda": 0.00, "cutFraction": s}, \
-                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 20}, \
-                        "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
-                        "random": {"seed": 1234}, \
-                        "fermions": {"yukawa_coupling": 1.0*s, "fermion_mass": 0.5*s} })
-
-configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0*s*s, "kappa": 0.00, "lambda": 0.00, "cutFraction": s}, \
-                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 20}, \
-                        "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
-                        "random": {"seed": 1234}, \
-                        "fermions": {"yukawa_coupling": 5.0*s, "fermion_mass": 0.5*s} })
-
-configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0*s*s, "kappa": 0.00, "lambda": 0.00, "cutFraction": s}, \
-                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 20}, \
-                        "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
-                        "random": {"seed": 1234}, \
-                        "fermions": {"yukawa_coupling": 10.0*s, "fermion_mass": 0.5*s} })
-
-configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0*s*s, "kappa": 0.00, "lambda": 0.00, "cutFraction": s}, \
-                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 20}, \
-                        "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
-                        "random": {"seed": 1234}, \
-                        "fermions": {"yukawa_coupling": 50.0*s, "fermion_mass": 0.5*s} })
-
-configurations.append({ "physics": {"useMass": "true", "mass": 0.5*s*s, "g": 1.0*s*s, "kappa": 0.00, "lambda": 0.00, "cutFraction": s}, \
-                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 50, "MeasureDriftCount": 20}, \
-                        "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
-                        "random": {"seed": 1234}, \
-                        "fermions": {"yukawa_coupling": 100.0*s, "fermion_mass": 0.5*s} })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                        "fermions": {"yukawa_coupling": p, "fermion_mass": p} })
 
 
 n_old_confs = max([int(d.replace("conf", "")) for d in os.listdir("./") if "conf" in d], default=0)
@@ -97,7 +35,7 @@ for count, conf in enumerate(configurations):
     process.wait()
     
     # Copy files into new folder
-    process = subprocess.Popen("cp -r code_NJL/*" + " " + dirname + "/", shell=True, stdout=subprocess.PIPE)
+    process = subprocess.Popen("cp -r NJL_code/*" + " " + dirname + "/", shell=True, stdout=subprocess.PIPE)
     process.wait()
     
      # Enter directory for this configuration
@@ -122,7 +60,7 @@ for count, conf in enumerate(configurations):
         filename = "runitp.sh"
         for line in fileinput.input(filename, inplace=1):
             if "cd" in line:
-                line = line.replace("cd QuarkMesonModel/code_NJL", "cd QuarkMesonModel/" + dirname)
+                line = line.replace("cd QuarkMesonModel/NJL_code", "cd QuarkMesonModel/" + dirname)
             sys.stdout.write(line)
         process = subprocess.Popen("qsub runitp.sh", shell=True, stdout=subprocess.PIPE)
         process.wait()
