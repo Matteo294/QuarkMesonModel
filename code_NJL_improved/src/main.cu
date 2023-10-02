@@ -13,7 +13,6 @@
 #include <iostream>
 #include <algorithm>
 
-#include "HDF5.h"
 #include "toml.hpp"
 #include "params.h"
 #include "Laplace.h"
@@ -48,6 +47,7 @@ __constant__ double yukawa_coupling_gpu;
 __constant__ double fermion_mass_gpu;
 __constant__ thrust::complex<double> im_gpu;
 __constant__ double cutFraction_gpu;
+__constant__ double sq2Kappa_gpu;
 // ----------------------------------------------------------
 
 
@@ -69,6 +69,7 @@ void signal_handler(int signal) {
 }
 
 int main(int argc, char** argv) {
+
 	std::signal(SIGUSR2, signal_handler);
     srand(1234);
     
@@ -88,7 +89,7 @@ int main(int argc, char** argv) {
 
 	auto ivec  = ManagedVector<myType>{N * nVectorComponents};
 	for (auto &e : ivec)
-		e = static_cast<myType>(1.5 - 2.0*drand48());
+		e = static_cast<myType>(0.5 - 2.0*drand48()); // little bias in the negative direction
 //		e = static_cast<myType>(drand48());
 
 	auto drift = ManagedVector<myType>{N * nVectorComponents};
@@ -153,47 +154,17 @@ int main(int argc, char** argv) {
 		resumeRun = toml::find<bool>(ioSection, "resume");
 	} catch (std::exception& e) {}
 
-	auto hdf = HDF{outFileName, resumeRun};
-	hdf.Close();
-
-	if (resumeRun == true) {
-		hdf.Open();
-		if (hdf.NumberOfConfigs() == -1) {	// if there are no configs in the file, we cannot
-			resumeRun = false;				// read from it
-			std::cout << "#No configurations found in the HDF file.\n#Not resuming.\n";
-		}
-		hdf.Close();
-	}
-
-	if (resumeRun == false) {
-		hdf.Open();
-		hdf.CreateGroup("/seeds");
-		hdf.CreateGroup("/params");
-		hdf.CreateGroup("/params/raw");
-		hdf.WriteH5_Attribute("/params/raw/", "mass", my_m2);
-		hdf.WriteH5_Attribute("/params/raw/", "g", myLambda);
-//		hdf.WriteH5_Attribute("/params/raw/", "external_field0", external_field);
-//		hdf.WriteH5_Attribute("/params/raw/", "shift", phi.GetShift() * sqrt(2.0*phi.Kappa()));
-
-		hdf.CreateGroup("/params/dimensionless");
-		hdf.WriteH5_Attribute("/params/dimensionless/", "kappa", kappa);
-		hdf.WriteH5_Attribute("/params/dimensionless/", "lambda", Lambda);
-//		hdf.WriteH5_Attribute("/params/dimensionless/", "external_field",
-//				external_field / sqrt(2.0 * phi.Kappa()));
-//		hdf.WriteH5_Attribute("/params/dimensionless/", "shift", phi.GetShift());
-
-		hdf.CreateGroup("/data");
-		hdf.Close();
-	}
-	//
-
 	// ----------------------------------------------------------
     int const spinor_vol = 4 * vol;
 
 	myType sum2 = 0.0;
 	auto const& fermionsSection = toml::find(inputData, "fermions");
 	double const fermion_mass = toml::find<double>(fermionsSection, "fermion_mass");
-	double const yukawa_coupling = toml::find<double>(fermionsSection, "yukawa_coupling");
+	double yukawa_coupling;
+	if (useMass == "true") 
+		yukawa_coupling = toml::find<double>(fermionsSection, "yukawa_coupling");
+	else 
+		yukawa_coupling = toml::find<double>(fermionsSection, "yukawa_coupling") / sq2Kappa;
     
 	Spinor<double> in, out;
 	DiracOP<double> Dirac;
@@ -201,7 +172,7 @@ int main(int argc, char** argv) {
 	double *fermionic_contribution;
 	CGsolver CG;
     double *trace; // trace D^-1
-	int myvol = spinor_vol; // dynamic volume
+	//int myvol = spinor_vol; // dynamic volume
 	
 	cudaMallocManaged(&fermionic_contribution, sizeof(double) * vol);
 	cudaMallocManaged(&trace, sizeof(double));
@@ -293,6 +264,7 @@ int main(int argc, char** argv) {
 	cudaMemcpyToSymbol(fermion_mass_gpu, &fermion_mass, sizeof(double));
 	cudaMemcpyToSymbol(im_gpu, &im, sizeof(thrust::complex<double>));
     cudaMemcpyToSymbol(cutFraction_gpu, &cutFraction, sizeof(double));
+    cudaMemcpyToSymbol(sq2Kappa_gpu, &sq2Kappa, sizeof(double));
 	// -----------------------------------------------------------------
     
 	Dirac.setScalar(ivec.data());
@@ -324,17 +296,6 @@ int main(int argc, char** argv) {
 	int nMeasurements = 0;
 	int oldMeasurements = 0;
 	elapsedLangevinTime = 0.0;
-	if (resumeRun == true) {
-		hdf.Open();
-		auto configName = hdf.NameOfLastConfig();
-//		std::cout << "name of last config " << configName << '\n';
-		hdf.ReadData("/data/", configName + "/fields", ivec);
-		hdf.ReadSeeds("/seeds/", "last", cn.GetState());
-		configName.erase(0, configName.find('_') + 1);
-		oldMeasurements = std::stoi(configName);
-		hdf.Close();
-	}
-
     
 	if (MeasureDriftCount > 0) {
         myType epsSum = 0.0;
@@ -380,6 +341,9 @@ int main(int argc, char** argv) {
 	auto timerStart = std::chrono::high_resolution_clock::now();
     
     //elapsedLangevinTime = MaxLangevinTime;
+
+	double avg_magnetisation = 0.0;
+	int nConfig = 0;
     while (elapsedLangevinTime < MaxLangevinTime) {
 		myType t = 0.0;
 		while (t < ExportTime) {
@@ -415,17 +379,40 @@ int main(int argc, char** argv) {
 		timeSliceFile << '\n';
 		
 
-		std::cout << elapsedLangevinTime << '\t' << *h_eps << '\n';
+		std::cout << elapsedLangevinTime << '\t' << *h_eps << '\t';
 		sum2 = 0.0;
-		/*for (auto e : avg) {
-			if (useMass == "false") e /= sq2Kappa;
+		for (auto& e : avg) {
+			if (useMass == "false") {e /= sq2Kappa;}
 			std::cout << e / N << '\t';
 			sum2 += e*e;
-		}*/
-		std::cout 	<< "magnetization: " << (double) abs(avg[0]) / N <<
-					  " condensate: " << (double) abs(*trace) / N << std::endl << std::endl;
+		}
+
+		// this explicit copy seems to peform slightly/marginally better
+		// TODO: needs further investigation
+		cudaMemcpy(hostLattice.data(), ivec.data(), N*nVectorComponents*sizeof(myType),
+				cudaMemcpyDeviceToHost);
+		cudaDeviceSynchronize();
+    
         
-        // ------------------------------------------------------
+		// if the user provided kappa as input, we rescale the output field to dimensionless format
+		if (useMass == "false")
+			for (auto& e : hostLattice){
+				// divide or multiply...?
+				e /= sq2Kappa;
+				//std::cout << e / N << '\t';
+			}
+		if (early_finish == true) {
+			std::cout << "#Early termination signal received.\n#Wrapping up.\n";
+			elapsedLangevinTime = MaxLangevinTime + 1.0;
+		}
+		std::stringstream ss;
+		ss << "data/cnfg_" << std::setfill('0') << std::setw(8) << 
+			(exportHDF == true ? nMeasurements : 1);
+
+		std::cout 	<< "magnetization: " << (double) abs(avg[0]) / N <<
+					  " condensate: " << (double) abs(*trace) / N <<  " " << sqrt(sum2) / N << std::endl << std::endl;
+        
+        // -------------------- extract fermion mass ----------------------------------
 		setZeroArgs[0] = (void*) &in.data();
 		cudaLaunchCooperativeKernel((void*) &setZero_kernel, dimGrid_setZero, dimBlock_setZero, setZeroArgs, 0, NULL);
 		cudaDeviceSynchronize();
@@ -441,12 +428,13 @@ int main(int argc, char** argv) {
 			case '0':
 
 				CG.solve(in.data(), out.data(), Dirac, MatrixType::Normal);
-				myvol = spinor_vol;
+				//myvol = spinor_vol;
 				Dirac.applyD(out.data(), in.data(), MatrixType::Dagger);
 				cudaDeviceSynchronize();
 
 				break;
 		}
+		
 
 		thrust::complex<double> corr = 0.0;
 		for(int nt=0; nt<Sizes[0]; nt++){
@@ -476,38 +464,16 @@ int main(int argc, char** argv) {
 		// ------------------------------------------------------
 
 		nMeasurements++;
+		nConfig ++;
+		avg_magnetisation += avg[0];
 		
-		// this explicit copy seems to peform slightly/marginally better
-		// TODO: needs further investigation
-		cudaMemcpy(hostLattice.data(), ivec.data(), N*nVectorComponents*sizeof(myType),
-				cudaMemcpyDeviceToHost);
-		cudaDeviceSynchronize();
-    
-        
-		// if the user provided kappa as input, we rescale the output field to dimensionless format
-		if (useMass == "false")
-			for (auto& e : hostLattice)
-				// divide or multiply...?
-				e /= sq2Kappa;
-		if (early_finish == true) {
-			std::cout << "#Early termination signal received.\n#Wrapping up.\n";
-			elapsedLangevinTime = MaxLangevinTime + 1.0;
-		}
-		std::stringstream ss;
-		ss << "data/cnfg_" << std::setfill('0') << std::setw(8) << 
-			(exportHDF == true ? nMeasurements : 1);
-		hdf.Open();
-		hdf.CreateGroup(ss.str());
-		hdf.WriteData(ss.str(), "fields", hostLattice);
-		hdf.Close();
 	}
+
+	std::cout << "Final abs. magnetisation: " << (double) avg_magnetisation / (double) nMeasurements / (double) vol << std::endl;
         
 	auto timerStop  = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(timerStop - timerStart);
 	timeSliceFile.close();
-	hdf.Open();
-	hdf.WriteSeeds("/seeds", "last", cn.GetState());
-	hdf.Close();
 
 	std::cout << "#numSms = " << kli.numSms << '\n';
 	std::cout << "#blocks per SM = " << kli.numBlocksPerSm << '\n';
@@ -526,6 +492,8 @@ int main(int argc, char** argv) {
 	cudaFree(fermionic_contribution);
 	cudaFree(trace);
 	// ------------------------------------------------
+
+	std::cout << "Errors? " << cudaPeekAtLastError() << std::endl;
     
     
 	return 0;

@@ -3,6 +3,7 @@
 extern __constant__ double yukawa_coupling_gpu;
 extern __constant__ double fermion_mass_gpu;
 extern __constant__ thrust::complex<double> im_gpu;
+extern __constant__ double sq2Kappa_gpu;
 
 
 template <typename T>
