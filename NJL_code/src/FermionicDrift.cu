@@ -7,7 +7,6 @@ extern __constant__ double cutFraction_gpu;
 
 FermionicDrift::FermionicDrift(int const seed) : gen(rd()), dist(0.0, 1.0)
 {
-	cudaMallocManaged(&eobuf, sizeof(cp<double>) * vol);
 	cudaMallocManaged(&state, sizeof(curandState) * spinor_vol);
 
 	int nBlocks = 0;
@@ -38,20 +37,13 @@ FermionicDrift::FermionicDrift(int const seed) : gen(rd()), dist(0.0, 1.0)
 	setZeroArgs[0] = (void*) &afterCG.data();
     setZeroArgs[1] = (void*) &spinor_vol;
 
-	convArgs[0] = (void*) &eobuf;
-    convArgs[1] = (void*) &eobuf;
-    
 	driftArgs[0] = (void*) &afterCG.data();
     driftArgs[1] = (void*) &noiseVec.data();
     driftArgs[2] = (void*) &noiseVec.data();
-    driftArgs[3] = (void*) &N2EO.at; 
 
 	rndArgs[0] = (void*) &noiseVec.data();
 	rndArgs[1] = (void*) &state;
 	rndArgs[2] = (void*) &spinor_vol;
-    
-    for(int i=0; i<vol; i++) N2EO.at[i] = convertNormalToEO(i);
-
 }
 
 __global__ void random_setup_kernel(int const seed, curandState *state, int const vol) {
@@ -71,9 +63,9 @@ void FermionicDrift::getForce(double *outVec, DiracOP<double>& D, CGsolver& CG, 
 	cudaLaunchCooperativeKernel((void*)&setZero_kernel, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
 	cudaDeviceSynchronize();
 
-			CG.solve(noiseVec.data(), buf.data(), D, MatrixType::Dagger);
-			D.applyD(buf.data(), afterCG.data(), MatrixType::Normal);
-			cudaDeviceSynchronize();
+    CG.solve(noiseVec.data(), buf.data(), D, MatrixType::Dagger);
+    D.applyD(buf.data(), afterCG.data(), MatrixType::Normal);
+    cudaDeviceSynchronize();
 			
 		
 	driftArgs[0] = (void*) &afterCG.data();
@@ -85,16 +77,14 @@ void FermionicDrift::getForce(double *outVec, DiracOP<double>& D, CGsolver& CG, 
 }
 
 
-__global__ void computeDrift(cp<double> *afterCG,cp<double> *noise, double *outVec, int *N2EO){
+__global__ void computeDrift(cp<double> *afterCG,cp<double> *noise, double *outVec){
 
 	cg::grid_group grid = cg::this_grid();
-	int eo_i;
 	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
-        eo_i = N2EO[i];
-		outVec[i] = - yukawa_coupling_gpu * ( conj(afterCG[4*eo_i+0])*noise[4*eo_i+0]
-                                            + conj(afterCG[4*eo_i+1])*noise[4*eo_i+1] 
-                                            + conj(afterCG[4*eo_i+2])*noise[4*eo_i+2] 
-                                            + conj(afterCG[4*eo_i+3])*noise[4*eo_i+3]).real();
+		outVec[i] = - yukawa_coupling_gpu * ( conj(afterCG[4*i+0])*noise[4*i+0]
+                                            + conj(afterCG[4*i+1])*noise[4*i+1] 
+                                            + conj(afterCG[4*i+2])*noise[4*i+2] 
+                                            + conj(afterCG[4*i+3])*noise[4*i+3]).real();
 	}
 
 }

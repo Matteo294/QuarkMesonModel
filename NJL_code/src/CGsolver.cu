@@ -52,7 +52,6 @@ void CGsolver::solve(cp<double>  *inVec, cp<double> *outVec, DiracOP<double>& D,
 						(void*) &temp.data(), (void*) &temp2.data(), (void*) &r.data(), (void*) &p.data(), 
 						(void*) &alpha, (void*)&beta,
 						(void*) &D.M, 
-						(void*) &D.EO2N, (void*) &D.IUP, (void*)&D.IDN,
 						(void*) &MatType, (void*)&dot_res, (void*)&rmodsq};
     cudaLaunchCooperativeKernel((void*) solve_kernel, dimGrid, dimBlock, solveArgs, sMemSize, NULL);
 	cudaDeviceSynchronize();
@@ -72,8 +71,7 @@ __device__ void copyVec(thrust::complex<double> *v1,thrust::complex<double> *v2,
 __global__ void solve_kernel(cp<double>  *inVec, cp<double> *outVec, 
                              cp<double> *temp, cp<double> *temp2, cp<double> *r, cp<double> *p,
 							 cp<double> *alpha, cp<double> *beta,
-							 double *M, 
-							 int *EO2N, my2dArray *IUP, my2dArray *IDN,  
+							 double *M,
 							 MatrixType Mtype, cp<double> *dot_res, double *rmodsq)
 {
         
@@ -114,26 +112,15 @@ __global__ void solve_kernel(cp<double>  *inVec, cp<double> *outVec,
 		if (Mtype == MatrixType::Normal) MatType = MatrixType::Dagger;
 		else MatType = MatrixType::Normal;
         cg::sync(grid);
-        D_oo(p, temp2, MatType, M, EO2N);
+        applyDiagonal(p, temp2, MatType, M);
         cg::sync(grid);
-        D_ee(p, temp2, MatType, M, EO2N);
-        cg::sync(grid);
-        D_eo(p, temp2, MatType, IUP, IDN);
-        cg::sync(grid);
-        D_oe(p, temp2, MatType, IUP, IDN);
 
 		// Apply D
 		if (Mtype == MatrixType::Normal) MatType = MatrixType::Normal;
 		else MatType = MatrixType::Dagger;
         cg::sync(grid);
-        D_oo(temp2, temp, MatType, M, EO2N);
+        applyDiagonal(temp2, temp, MatType, M);
         cg::sync(grid);
-        D_ee(temp2, temp, MatType, M, EO2N);
-        cg::sync(grid);
-        D_eo(temp2, temp, MatType, IUP, IDN);
-        cg::sync(grid);
-        D_oe(temp2, temp, MatType, IUP, IDN);
-
     
 		if (threadIdx.x == 0 && blockIdx.x == 0) *dot_res = 0.0;
         cg::sync(grid);

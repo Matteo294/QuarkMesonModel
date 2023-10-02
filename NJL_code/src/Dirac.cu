@@ -7,20 +7,7 @@ extern __constant__ double sq2Kappa_gpu;
 
 
 template <typename T>
-__host__ DiracOP<T>::DiracOP() : M(nullptr)
-	{
-		// fill look-up tables
-		auto idx = eoToVec(0);
-		for(int i=0; i<vol; i++){
-			idx = eoToVec(i);
-			IUP.at[i][0] = toEOflat(PBC(idx[0]+1, Sizes[0]), idx[1]);
-			IUP.at[i][1] = toEOflat(idx[0], PBC(idx[1]+1, Sizes[1]));
-			IDN.at[i][0] = toEOflat(PBC(idx[0]-1, Sizes[0]), idx[1]);
-			IDN.at[i][1] = toEOflat(idx[0], PBC(idx[1]-1, Sizes[1]));
-		}
-        for(int i=0; i<vol; i++) EO2N.at[i] = convertEOtoNormal(i);
-
-    }
+__host__ DiracOP<T>::DiracOP() : M(nullptr) {}
 
 template <typename T>
 void DiracOP<T>::applyD(cp<double> *in, cp<double> *out, MatrixType MType){
@@ -31,7 +18,7 @@ void DiracOP<T>::applyD(cp<double> *in, cp<double> *out, MatrixType MType){
 	auto dimGrid = dim3(nBlocks, 1, 1);
 	auto dimBlock = dim3(nThreads, 1, 1);
 	auto useDagger = MType;
-	void *args[] = {(void*) &in, (void*) &out, (void*) &useDagger, (void*) &M, (void*) &EO2N.at, (void*) &IDN.at, (void*) &IUP.at};
+	void *args[] = {(void*) &in, (void*) &out, (void*) &useDagger, (void*) &M};
     cudaLaunchCooperativeKernel((void*) applyD_gpu, dimGrid, dimBlock, args, 0, NULL);
 	cudaDeviceSynchronize();
 }
@@ -41,73 +28,44 @@ __global__ void applyD_gpu(cp<double> *in, cp<double> *out, MatrixType const use
     for (int i = grid.thread_rank(); i < 4*vol; i += grid.size()) {
 		out[i] = 0.0;
 	}
-	D_oo(in, out, useDagger, M, EO2N);
+	applyDiagonal(in, out, useDagger, M);
+    cg::sync(grid);
+	/*D_oo(in, out, useDagger, M, EO2N);
 	cg::sync(grid);	
 	D_ee(in, out, useDagger, M, EO2N);
 	cg::sync(grid);	
-	D_eo(in, out, useDagger, IUP, IDN);
+	//D_eo(in, out, useDagger, IUP, IDN);
 	cg::sync(grid);	
-	D_oe(in, out, useDagger, IUP, IDN);
-	cg::sync(grid);	
+	//D_oe(in, out, useDagger, IUP, IDN);
+	cg::sync(grid);	*/
 }
 
-__device__ void D_oo(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, double *M, int *EO2N){
-
+__device__ void applyDiagonal(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, double *M){
     auto grid = cg::this_grid();
-
-    thrust::complex<double> const g = static_cast<thrust::complex<double>> (yukawa_coupling_gpu);
-    thrust::complex<double> const two {2.0, 0.0};
-    thrust::complex<double> mass = static_cast<thrust::complex<double>> (fermion_mass_gpu);
-    thrust::complex<double> half {0.5, 0.0};
-
-    int Ni;
-    for (int i = grid.thread_rank() + vol/2; i < vol; i += grid.size()) {
-        Ni = EO2N[i];
-        if (useDagger == MatrixType::Dagger){
-            outVec[4*i]     += (two + mass + g * M[Ni]) * inVec[4*i];
-            outVec[4*i+1]   += (two + mass + g * M[Ni]) * inVec[4*i+1];
-            outVec[4*i+2]   += (two + mass + g * M[Ni]) * inVec[4*i+2];
-            outVec[4*i+3]   += (two + mass + g * M[Ni]) * inVec[4*i+3];
-        } else{
-            outVec[4*i]     += (two + mass + g * M[Ni]) * inVec[4*i];
-            outVec[4*i+1]   += (two + mass + g * M[Ni]) * inVec[4*i+1];
-            outVec[4*i+2]   += (two + mass + g * M[Ni]) * inVec[4*i+2];
-            outVec[4*i+3]   += (two + mass + g * M[Ni]) * inVec[4*i+3];
-        }
-    }
-}
-
-__device__ void D_ee(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, double *M, int *EO2N){
-
-    auto grid = cg::this_grid();
-
+    
     thrust::complex<double> const two {2.0, 0.0};
     thrust::complex<double> const g = static_cast<thrust::complex<double>> (yukawa_coupling_gpu);
     thrust::complex<double> const mass = static_cast<thrust::complex<double>> (fermion_mass_gpu);
     thrust::complex<double> half {0.5, 0.0};
-
-    int Ni;
-    for (int i = grid.thread_rank(); i < vol/2; i += grid.size()) {
-        Ni = EO2N[i];
+    
+    for (int i = grid.thread_rank(); i < vol; i += grid.size()) {
         if (useDagger == MatrixType::Dagger){
-            outVec[4*i]     += (two + mass + g * M[Ni]) * inVec[4*i];
-            outVec[4*i+1]   += (two + mass + g * M[Ni]) * inVec[4*i+1];
-            outVec[4*i+2]   += (two + mass + g * M[Ni]) * inVec[4*i+2];
-            outVec[4*i+3]   += (two + mass + g * M[Ni]) * inVec[4*i+3];
-        } else {
-            outVec[4*i]     += (two + mass + g * M[Ni]) * inVec[4*i];
-            outVec[4*i+1]   += (two + mass + g * M[Ni]) * inVec[4*i+1];
-            outVec[4*i+2]   += (two + mass + g * M[Ni]) * inVec[4*i+2];
-            outVec[4*i+3]   += (two + mass + g * M[Ni]) * inVec[4*i+3];
+            outVec[4*i]     += (two + mass + g * M[i]) * inVec[4*i];
+            outVec[4*i+1]   += (two + mass + g * M[i]) * inVec[4*i+1];
+            outVec[4*i+2]   += (two + mass + g * M[i]) * inVec[4*i+2];
+            outVec[4*i+3]   += (two + mass + g * M[i]) * inVec[4*i+3];
+        } else{
+            outVec[4*i]     += (two + mass + g * M[i]) * inVec[4*i];
+            outVec[4*i+1]   += (two + mass + g * M[i]) * inVec[4*i+1];
+            outVec[4*i+2]   += (two + mass + g * M[i]) * inVec[4*i+2];
+            outVec[4*i+3]   += (two + mass + g * M[i]) * inVec[4*i+3];
         }
     }
-
 }
 
 
 
-
-__device__ void D_eo(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN){
+/*__device__ void D_eo(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN){
 
     auto grid = cg::this_grid();
 
@@ -230,7 +188,7 @@ __device__ void D_oe(cp<double> *inVec, cp<double> *outVec, MatrixType const use
         }
     }
                                             
-}
+}*/
 
 
 //template<> void D_oo<double>(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, double *M, int *EO2N);

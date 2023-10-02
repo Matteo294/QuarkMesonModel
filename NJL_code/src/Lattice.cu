@@ -17,32 +17,14 @@ __host__ __device__ unsigned int PBC(int const n, int const N){
 	return (n+N) % N;
 }
 
-__host__ __device__ unsigned int toEOflat(int const nt, int const nx){
-	int const s = (Sizes[0]*Sizes[1])/2;
-	int eo = (nt+nx) % 2;
-	return (nx/2) + (nt*Sizes[1]/2) + eo*s;
+
+__host__ __device__ unsigned int vecToFlat(int const nt, int const nx){
+    return nt*Sizes[1] + nx;
 }
 
-__host__ __device__ my2dArray eoToVec(int n){
+__host__ __device__ my2dArray flatToVec(int n){
 	my2dArray idx; // nt, nx
-	int alpha = 0;
-	if (n >= Sizes[0]*Sizes[1]/2) {
-		alpha = 1;
-		n -= Sizes[0]*Sizes[1]/2;
-	}
-	idx[0] = n / (Sizes[1]/2);
-	if (idx[0] % 2) idx[1] = 2*((n % (Sizes[1]/2))) + (1-alpha);
-	else idx[1] = 2*((n % (Sizes[1]/2))) + alpha; 
+	idx[0] = n / Sizes[1];
+    idx[1] = n % Sizes[1];
 	return idx;
-}
-
-__host__ __device__ int convertEOtoNormal(int n){
-	my2dArray idx = eoToVec(n);
-	return idx[1] + Sizes[1]*idx[0];
-}
-
-__host__ __device__  int convertNormalToEO(int n){
-	int nt = n / Sizes[1];
-	int nx = n % Sizes[1];
-	return toEOflat(nt, nx);
 }

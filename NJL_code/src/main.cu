@@ -429,10 +429,10 @@ int main(int argc, char** argv) {
 		in.data()[2] = 1.0;
 		in.data()[3] = 1.0;
 
-		for(int i=0; i<spinor_vol; i++){
+		/*for(int i=0; i<spinor_vol; i++){
 			in.data()[i] = 1.0;
 			ivec.data()[i] = i;
-		}
+		}*/
         
         switch (CGmode) {
 			
@@ -445,16 +445,17 @@ int main(int argc, char** argv) {
 
 				break;
 		}
-		for(int i=0; i<spinor_vol; i++){
+		
+		/*for(int i=0; i<spinor_vol; i++){
 			std::cout << in.data()[convertNormalToEO(i/4)+i%4 ] << " " << std::endl;
-		}
+		}*/
 		
 
 		thrust::complex<double> corr = 0.0;
 		for(int nt=0; nt<Sizes[0]; nt++){
 			corr = 0.0;
 			for(int nx=0; nx<Sizes[1]; nx++){
-				for(int j=0; j<4; j++) corr += in.data()[4*toEOflat(nt, nx) + j];
+				for(int j=0; j<4; j++) corr += in.data()[4*vecToFlat(nt, nx) + j];
 			}
 			datafile << corr.real() << "\n";
 		}
