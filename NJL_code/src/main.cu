@@ -274,10 +274,23 @@ int main(int argc, char** argv) {
 	// -----------------------------------------------------------------
     
 	Dirac.setScalar(ivec.data());
+    
+    for(int i=0; i<spinor_vol; i++) in.data()[i] = 1.0;
+    for(int i=0; i<spinor_vol; i++) ivec.data()[i] = i;
+
+    CG.solve(in.data(), out.data(), Dirac, MatrixType::Normal);
+    Dirac.applyD(out.data(), in.data(), MatrixType::Dagger);
+    cudaDeviceSynchronize();
+    
+    for(int i=0; i<spinor_vol; i++) std::cout << in.data()[i] << std::endl;
+
+
+
+    std::cout << "Succesful? " << cudaPeekAtLastError() << std::endl;
 
 	// burn in a little bit, since the drift might be stronger at the beginning, since we are
 	// likely far from the equilibrium state
-	for (int burn = 0; burn < burnCount; ++burn) {
+	/*for (int burn = 0; burn < burnCount; ++burn) {
 		myType t = 0.0;
 		while (t < ExportTime) {
 			cn();
@@ -292,9 +305,6 @@ int main(int argc, char** argv) {
 			cudaDeviceSynchronize();
 			t += *h_eps;
 		}
-		/*cudaLaunchCooperativeKernel((void*)gpuMagnetisation, kli.dimGrid, kli.dimBlock, kMagnetisation, kli_sMem, NULL);
-		cudaDeviceSynchronize();
-		tracefile << (double) (*trace) / vol << "," << (double) (avg[0] / vol) << "," << (double) (std::sqrt(sum2) / vol) << "\n";*/
 	}
 	
 	std::cout << "Thermalization done!" << std::endl;
@@ -321,10 +331,6 @@ int main(int argc, char** argv) {
                 t += *h_eps;
             }
             elapsedLangevinTime += t;
-		
-			/*cudaLaunchCooperativeKernel((void*)gpuMagnetisation, kli.dimGrid, kli.dimBlock,	kMagnetisation, kli_sMem, NULL);
-			cudaDeviceSynchronize();
-			tracefile << (double) (*trace) / vol << "," << (double) (avg[0] / vol) << "," << (double) (std::sqrt(sum2) / vol) << "\n";*/
 
             epsSum += *h_eps;
             nMeasurements++;
@@ -429,11 +435,6 @@ int main(int argc, char** argv) {
 		in.data()[2] = 1.0;
 		in.data()[3] = 1.0;
 
-		/*for(int i=0; i<spinor_vol; i++){
-			in.data()[i] = 1.0;
-			ivec.data()[i] = i;
-		}*/
-        
         switch (CGmode) {
 			
 			case '0':
@@ -445,10 +446,6 @@ int main(int argc, char** argv) {
 
 				break;
 		}
-		
-		/*for(int i=0; i<spinor_vol; i++){
-			std::cout << in.data()[convertNormalToEO(i/4)+i%4 ] << " " << std::endl;
-		}*/
 		
 
 		thrust::complex<double> corr = 0.0;
@@ -484,7 +481,7 @@ int main(int argc, char** argv) {
 		
 	}
 
-	std::cout << "Final abs. magnetisation: " << (double) avg_magnetisation / (double) nMeasurements / (double) vol << std::endl;
+	//std::cout << "Final abs. magnetisation: " << (double) avg_magnetisation / (double) nMeasurements / (double) vol << std::endl;
         
 	auto timerStop  = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(timerStop - timerStart);
@@ -497,7 +494,7 @@ int main(int argc, char** argv) {
 
 	std::cout << "#Number of measurements: " << nMeasurements << '\n';
 
-	std::cout << "#Run time for main loop: " << duration.count() / 1000.0 << "s\n";
+	std::cout << "#Run time for main loop: " << duration.count() / 1000.0 << "s\n";*/
 
 	cudaFree(eps);
 	cudaFree(maxDrift);

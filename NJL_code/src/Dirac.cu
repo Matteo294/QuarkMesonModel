@@ -23,7 +23,7 @@ void DiracOP<T>::applyD(cp<double> *in, cp<double> *out, MatrixType MType){
 	cudaDeviceSynchronize();
 }
 
-__global__ void applyD_gpu(cp<double> *in, cp<double> *out, MatrixType const useDagger, double *M, int *EO2N, my2dArray *IDN, my2dArray *IUP){
+__global__ void applyD_gpu(cp<double> *in, cp<double> *out, MatrixType const useDagger, double *M){
     auto grid = cg::this_grid();
     for (int i = grid.thread_rank(); i < 4*vol; i += grid.size()) {
 		out[i] = 0.0;

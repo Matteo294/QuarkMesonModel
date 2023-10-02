@@ -27,7 +27,7 @@ class DiracOP {
 };
 
 
-__global__ void applyD_gpu(cp<double> *in, cp<double> *out, MatrixType const useDagger, double *M, int *EO2N, my2dArray *IDN, my2dArray *IUP);
+__global__ void applyD_gpu(cp<double> *in, cp<double> *out, MatrixType const useDagger, double *M);
 __device__ void applyDiagonal(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, double *M);
 /*__device__ void D_ee(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, double *M, int *EO2N);
 __device__ void D_oo(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, double *M, int *EO2N);
