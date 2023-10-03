@@ -53,38 +53,49 @@ __global__ void random_setup_kernel(int const seed, curandState *state, int cons
 	}
 }
 
-void FermionicDrift::getForce(double *outVec, DiracOP<double>& D, CGsolver& CG, dim3 dimGrid_drift, dim3 dimBlock_drift){
+void FermionicDrift::getForce(double *outVec, DiracOP<double>& D, CGsolver& CG, dim3 dimGrid_drift, dim3 dimBlock_drift, int const Nvectors){
 	
-	cudaLaunchCooperativeKernel((void*)&fillNormalRND, dimGrid_rnd, dimBlock_rnd, rndArgs, 0, NULL);
-	cudaDeviceSynchronize();
-	
-	// set some spinors to zero
-	setZeroArgs[0] = (void*)&afterCG.data();
-	cudaLaunchCooperativeKernel((void*)&setZero_kernel, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
-	cudaDeviceSynchronize();
+	for(int n = 0; n < Nvectors; n++) {
+        cudaLaunchCooperativeKernel((void*)&fillNormalRND, dimGrid_rnd, dimBlock_rnd, rndArgs, 0, NULL);
+        cudaDeviceSynchronize();
+        
+        // set some spinors to zero
+        setZeroArgs[0] = (void*)&afterCG.data();
+        cudaLaunchCooperativeKernel((void*)&setZero_kernel, dimGrid_zero, dimBlock_zero, setZeroArgs, 0, NULL);
+        cudaDeviceSynchronize();
 
-    CG.solve(noiseVec.data(), buf.data(), D, MatrixType::Dagger);
-    D.applyD(buf.data(), afterCG.data(), MatrixType::Normal);
-    cudaDeviceSynchronize();
-			
-		
-	driftArgs[0] = (void*) &afterCG.data();
-	driftArgs[1] = (void*) &noiseVec.data();
-	driftArgs[2] = (void*) &outVec;
-	cudaLaunchCooperativeKernel((void*)&computeDrift, dimGrid_drift, dimBlock_drift, driftArgs, 0, NULL);
-	cudaDeviceSynchronize();
+        CG.solve(noiseVec.data(), buf.data(), D, MatrixType::Dagger);
+        D.applyD(buf.data(), afterCG.data(), MatrixType::Normal);
+        cudaDeviceSynchronize();
+                
+        DriftState mode;
+        driftArgs[0] = (void*) &afterCG.data();
+        driftArgs[1] = (void*) &noiseVec.data();
+        driftArgs[2] = (void*) &outVec;
+        driftArgs[3] = (void*) &mode;
+        driftArgs[4] = (void*) &Nvectors;
+        
+        if (n == 0) mode = DriftState::Init;
+        else if (n == (Nvectors - 1)) mode = DriftState::End;
+        else mode = DriftState::Other;
+        
+        cudaLaunchCooperativeKernel((void*)&computeDrift, dimGrid_drift, dimBlock_drift, driftArgs, 0, NULL);
+        cudaDeviceSynchronize();
+    }
 	 
 }
 
 
-__global__ void computeDrift(cp<double> *afterCG,cp<double> *noise, double *outVec){
+__global__ void computeDrift(cp<double> *afterCG,cp<double> *noise, double *outVec, DriftState const mode, int const Nvectors){
 
 	cg::grid_group grid = cg::this_grid();
 	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
-		outVec[i] = - yukawa_coupling_gpu * ( conj(afterCG[4*i+0])*noise[4*i+0]
+        if (mode == DriftState::Init) outVec[i] = 0.0;
+		outVec[i] += - yukawa_coupling_gpu * ( conj(afterCG[4*i+0])*noise[4*i+0]
                                             + conj(afterCG[4*i+1])*noise[4*i+1] 
                                             + conj(afterCG[4*i+2])*noise[4*i+2] 
                                             + conj(afterCG[4*i+3])*noise[4*i+3]).real();
+        if (mode == DriftState::End) outVec[i] /= Nvectors;
 	}
 
 }

@@ -287,7 +287,7 @@ int main(int argc, char** argv) {
 			cn();
 
 			// ----------------------------------------------------------
-			fDrift.getForce(drift.data(), Dirac, CG, dimGrid_drift, dimBlock_drift);
+			fDrift.getForce(drift.data(), Dirac, CG, dimGrid_drift, dimBlock_drift, 1);
 			// ----------------------------------------------------------
 
 			kli.Run(kAll, kli_sMem);
@@ -312,7 +312,7 @@ int main(int argc, char** argv) {
                 cn();
 
                 // ----------------------------------------------------------
-                fDrift.getForce(drift.data(), Dirac, CG, dimGrid_drift, dimBlock_drift);
+                fDrift.getForce(drift.data(), Dirac, CG, dimGrid_drift, dimBlock_drift, 10);
                 // ----------------------------------------------------------
 
                 kli.Run(kAll, kli_sMem);
@@ -353,7 +353,7 @@ int main(int argc, char** argv) {
 			cn();
 
 			// ----------------------------------------------------------
-			fDrift.getForce(drift.data(), Dirac, CG, dimGrid_drift, dimBlock_drift);
+			fDrift.getForce(drift.data(), Dirac, CG, dimGrid_drift, dimBlock_drift, 10);
 			// ----------------------------------------------------------
 
 			kli.Run(kAll, kli_sMem);
@@ -451,7 +451,7 @@ int main(int argc, char** argv) {
         // -->  compute condensates from drifts as they are proportional
         
 
-        fDrift.getForce(drift.data(), Dirac, CG, dimGrid_drift, dimBlock_drift);        
+        fDrift.getForce(drift.data(), Dirac, CG, dimGrid_drift, dimBlock_drift, 10);        
         *trace = 0.0;
         
 		cudaLaunchCooperativeKernel((void*) &gpuTraces, dimGrid_traces, dimBlock_traces, tracesArgs, 32 * sizeof(double), NULL);

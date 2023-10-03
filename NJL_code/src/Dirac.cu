@@ -30,14 +30,8 @@ __global__ void applyD_gpu(cp<double> *in, cp<double> *out, MatrixType const use
 	}
 	applyDiagonal(in, out, useDagger, M);
     cg::sync(grid);
-	/*D_oo(in, out, useDagger, M, EO2N);
-	cg::sync(grid);	
-	D_ee(in, out, useDagger, M, EO2N);
-	cg::sync(grid);	
-	//D_eo(in, out, useDagger, IUP, IDN);
-	cg::sync(grid);	
-	//D_oe(in, out, useDagger, IUP, IDN);
-	cg::sync(grid);	*/
+    applyHopping(in, out, useDagger);
+    cg::sync(grid);
 }
 
 __device__ void applyDiagonal(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, double *M){
@@ -61,6 +55,82 @@ __device__ void applyDiagonal(cp<double> *inVec, cp<double> *outVec, MatrixType 
             outVec[4*i+3]   += (two + mass + g * M[i]) * inVec[4*i+3];
         }
     }
+}
+
+__device__ void applyHopping(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger){
+
+    auto grid = cg::this_grid();
+
+    int idx[2];
+    int nt, nx;
+    int IUP[2], IDN[2]; // neighbours up and down gor both directions
+
+    double sgn[2];
+
+    for (int i = grid.thread_rank(); i < vol/2; i += grid.size()) {
+
+        nt = idx[0];
+        nx = idx[1];
+        
+        if (nt == (Sizes[0] - 1)){
+            sgn[0] = -1.0;
+            sgn[1] = 1.0;
+            IUP[0] = 0;
+            IDN[0] = nt - 1;
+        } else if (nt == 0) {
+            sgn[0] = 1.0;
+            sgn[1] = -1.0;
+            IUP[0] = nt + 1;
+            IDN[0] = Sizes[0] - 1;
+        } else {
+            sgn[0] = 1.0;
+            sgn[1] = 1.0;
+            IUP[0] = nt + 1;
+            IDN[0] = nt - 1;
+        }
+        
+        if (nx == (Sizes[1] - 1)){
+            IUP[1] = 0;
+            IDN[1] = nx - 1;
+        } else if (nx == 0) {
+            IUP[1] = nx + 1;
+            IDN[1] = Sizes[1] - 1;
+        } else {
+            IUP[1] = nx + 1;
+            IDN[1] = nx - 1;
+        }
+
+        thrust::complex<double> psisum[2], psidiff[2];
+
+        double constexpr half {0.5};
+        
+        if (useDagger == MatrixType::Dagger) {
+            
+            psisum[0]  = inVec[4*IUP[1] + 0] + inVec[4*IUP[1] + 1];
+            psisum[1]  = inVec[4*IUP[1] + 2] + inVec[4*IUP[1] + 3];
+            psidiff[0] = inVec[4*IDN[1] + 0] - inVec[4*IDN[1] + 1];
+            psidiff[1] = inVec[4*IDN[1] + 2] - inVec[4*IDN[1] + 3];
+
+            outVec[4*i + 0] -=  sgn[0] * inVec[4*IUP[0] + 0] + half*psidiff[0] + half*psisum[0];
+            outVec[4*i + 2] -=  sgn[0] * inVec[4*IUP[0] + 2] + half*psidiff[1] + half*psisum[1];
+            outVec[4*i + 1] -=  sgn[1] * inVec[4*IDN[0] + 1] - half*psidiff[0] + half*psisum[0];
+            outVec[4*i + 3] -=  sgn[1] * inVec[4*IDN[0] + 3] - half*psidiff[1] + half*psisum[1];
+
+        } else {
+
+            psisum[0]  = inVec[4*IDN[1] + 0] + inVec[4*IDN[1] + 1];
+            psisum[1]  = inVec[4*IDN[1] + 2] + inVec[4*IDN[1] + 3];
+            psidiff[0] = inVec[4*IUP[1] + 0] - inVec[4*IUP[1] + 1];
+            psidiff[1] = inVec[4*IUP[1] + 2] - inVec[4*IUP[1] + 3];
+
+            outVec[4*i + 0] -=  sgn[1] * inVec[4*IDN[0] + 0] + half*psisum[0] + half*psidiff[0];
+            outVec[4*i + 2] -=  sgn[1] * inVec[4*IDN[0] + 2] + half*psisum[1] + half*psidiff[1];
+            outVec[4*i + 1] -=  sgn[0] * inVec[4*IUP[0] + 1] + half*psisum[0] - half*psidiff[0];
+            outVec[4*i + 3] -=  sgn[0] * inVec[4*IUP[0] + 3] + half*psisum[1] - half*psidiff[1];
+
+        }
+    }                            
+
 }
 
 

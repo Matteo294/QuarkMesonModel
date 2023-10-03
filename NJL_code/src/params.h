@@ -6,6 +6,7 @@
 #include <thrust/complex.h>
 
 enum class MatrixType {Normal, Dagger};
+enum class DriftState {Init, End, Other};
 
 thrust::complex<double> const im {0.0, 1.0};
 
