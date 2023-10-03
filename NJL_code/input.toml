@@ -1,10 +1,10 @@
 [physics]
-useMass = "true"
-mass = 1.0 
-g = 0.5
-kappa = 0.28
-lambda = 0.02
-cutFraction = 0.0
+useMass = "false"
+mass = 0.2
+g = 1.8
+kappa = 0.2
+lambda = 0.0
+cutFraction = 1.0
 
 [langevin]
 averageEpsilon = 0.01
@@ -22,5 +22,5 @@ timeSliceFileName = "slice.dat"
 seed = 1234
 
 [fermions]
-yukawa_coupling = 1.0
-fermion_mass = 1.0
+yukawa_coupling = 0.6
+fermion_mass = 0.75
