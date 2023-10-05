@@ -7,10 +7,10 @@ lambda = 0.0
 cutFraction = 1.0
 
 [langevin]
-averageEpsilon = 0.001
-MaxLangevinTime = 100.0
-ExportTime = 0.1
-burnCount = 500 
+averageEpsilon = 0.005
+MaxLangevinTime = 1000.0
+ExportTime = 0.5
+burnCount = 400 
 MeasureDriftCount = 50
 
 [io]
