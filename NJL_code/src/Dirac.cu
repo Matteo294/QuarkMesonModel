@@ -7,7 +7,17 @@ extern __constant__ double sq2Kappa_gpu;
 
 
 template <typename T>
-__host__ DiracOP<T>::DiracOP() : M(nullptr) {}
+__host__ DiracOP<T>::DiracOP() : M(nullptr) {
+    
+    my2dArray idx;
+    for(int i=0; i<vol; i++){
+        idx = flatToVec(i);
+        IUP.at[i][0] = 4*vecToFlat(PBC(idx[0]+1, Sizes[0]), idx[1]);
+        IUP.at[i][1] = 4*vecToFlat(idx[0], PBC(idx[1]+1, Sizes[1]));
+        IDN.at[i][0] = 4*vecToFlat(PBC(idx[0]-1, Sizes[0]), idx[1]);
+        IDN.at[i][1] = 4*vecToFlat(idx[0], PBC(idx[1]-1, Sizes[1]));
+    }
+}
 
 template <typename T>
 void DiracOP<T>::applyD(cp<double> *in, cp<double> *out, MatrixType MType){
@@ -18,12 +28,12 @@ void DiracOP<T>::applyD(cp<double> *in, cp<double> *out, MatrixType MType){
 	auto dimGrid = dim3(nBlocks, 1, 1);
 	auto dimBlock = dim3(nThreads, 1, 1);
 	auto useDagger = MType;
-	void *args[] = {(void*) &in, (void*) &out, (void*) &useDagger, (void*) &M};
+	void *args[] = {(void*) &in, (void*) &out, (void*) &useDagger, (void*) &M, (void*) &IDN.at, (void*) &IUP.at};
     cudaLaunchCooperativeKernel((void*) applyD_gpu, dimGrid, dimBlock, args, 0, NULL);
 	cudaDeviceSynchronize();
 }
 
-__global__ void applyD_gpu(cp<double> *in, cp<double> *out, MatrixType const useDagger, double *M){
+__global__ void applyD_gpu(cp<double> *in, cp<double> *out, MatrixType const useDagger, double *M, my2dArray *IUP, my2dArray *IDN){
     auto grid = cg::this_grid();
     for (int i = grid.thread_rank(); i < 4*vol; i += grid.size()) {
 		out[i] = 0.0;
@@ -31,7 +41,7 @@ __global__ void applyD_gpu(cp<double> *in, cp<double> *out, MatrixType const use
 	cg::sync(grid);
 	//applyDiagonal(in, out, useDagger, M);
     cg::sync(grid);
-    applyHopping(in, out, useDagger);
+    applyHopping(in, out, useDagger, IUP, IDN);
     cg::sync(grid);
 }
 
@@ -58,12 +68,12 @@ __device__ void applyDiagonal(cp<double> *inVec, cp<double> *outVec, MatrixType 
     }
 }
 
-__device__ void applyHopping(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger){
+__device__ void applyHopping(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN){
 
     auto grid = cg::this_grid();
 
     int nt, nx;
-    int IUP[2], IDN[2]; // neighbours up and down gor both directions
+    //int IUP[2], IDN[2]; // neighbours up and down gor both directions
     double sgn[2]; // anti-periodic boundary conditions
 	cp<double> psisum[2], psidiff[2];
     for (int i = grid.thread_rank(); i < vol; i += grid.size()) {
@@ -71,77 +81,27 @@ __device__ void applyHopping(cp<double> *inVec, cp<double> *outVec, MatrixType c
         auto idx = flatToVec(i);
 
         nt = idx[0];
-        nx= idx[1];
+        nx = idx[1];
         
-        if (nt == (Sizes[0] - 1)){
-            sgn[0] = -1.0;
-            sgn[1] = 1.0;
-            IUP[0] = 0;
-            IDN[0] = nt - 1;
-        } else if (nt == 0) {
-            sgn[0] = 1.0;
-            sgn[1] = -1.0;
-            IUP[0] = nt + 1;
-            IDN[0] = Sizes[0] - 1;
-        } else {
-            sgn[0] = 1.0;
-            sgn[1] = 1.0;
-            IUP[0] = nt + 1;
-            IDN[0] = nt - 1;
-        }
+        sgn[0] = (nt == (Sizes[0] - 1)) ? -1.0 : 1.0;
+        sgn[1] = (nt == 0) ? -1.0 : 1.0;
         
-        if (nx == (Sizes[1] - 1)){
-            IUP[1] = 0;
-            IDN[1] = nx - 1;
-        } else if (nx == 0) {
-            IUP[1] = nx + 1;
-            IDN[1] = Sizes[1] - 1;
-        } else {
-            IUP[1] = nx + 1;
-            IDN[1] = nx - 1;
-        }
 		if (useDagger == MatrixType::Normal) {
             //flavour 1
-			outVec[4*i + 0] +=  -sgn[1] * inVec[4*vecToFlat(IDN[0], nx) + 0] - 0.5 * (inVec[4*vecToFlat(nt, IUP[1]) + 0] - inVec[4*vecToFlat(nt, IUP[1]) + 1]) - 0.5 * (inVec[4*vecToFlat(nt, IDN[1] + 0)] + inVec[4*vecToFlat(nt, IDN[1]) + 1]); // f1s1
-            outVec[4*i + 1] +=  -sgn[0] * inVec[4*IUP[0] + 1] + 0.5 * (inVec[4*IUP[1] + 0] - inVec[4*IUP[1] + 1]) - 0.5 * (inVec[4*IDN[1] + 0] + inVec[4*IDN[1] + 1]); // f1s2
+			outVec[4*i + 0] +=  -sgn[1] * inVec[IDN[i][0] + 0] - 0.5 * (inVec[IUP[i][1] + 0] - inVec[IUP[i][1] + 1]) - 0.5 * (inVec[IDN[i][1] + 0] + inVec[IDN[i][1] + 1]); // f1s1
+            outVec[4*i + 1] +=  -sgn[0] * inVec[IUP[i][0] + 1] + 0.5 * (inVec[IUP[i][1] + 0] - inVec[IUP[i][1] + 1]) - 0.5 * (inVec[IDN[i][1] + 0] + inVec[IDN[i][1] + 1]); // f1s2
             // flavour 2
-            outVec[4*i + 2] +=  -sgn[1] * inVec[4*IDN[0] + 2] - 0.5 * (inVec[4*IUP[1] + 2] - inVec[4*IUP[1] + 3]) - 0.5 * (inVec[4*IDN[1] + 2] + inVec[4*IDN[1] + 3]); // f2s1
-            outVec[4*i + 3] +=  -sgn[0] * inVec[4*IUP[0] + 3] + 0.5 * (inVec[4*IUP[1] + 2] - inVec[4*IUP[1] + 3]) - 0.5 * (inVec[4*IDN[1] + 2] + inVec[4*IDN[1] + 3]); // f2s2
+            outVec[4*i + 2] +=  -sgn[1] * inVec[IDN[i][0] + 2] - 0.5 * (inVec[IUP[i][1] + 2] - inVec[IUP[i][1] + 3]) - 0.5 * (inVec[IDN[i][1] + 2] + inVec[IDN[i][1] + 3]); // f2s1
+            outVec[4*i + 3] +=  -sgn[0] * inVec[IUP[i][0] + 3] + 0.5 * (inVec[IUP[i][1] + 2] - inVec[IUP[i][1] + 3]) - 0.5 * (inVec[IDN[i][1] + 2] + inVec[IDN[i][1] + 3]); // f2s2
 
         } else if (useDagger == MatrixType::Dagger) {
             // flavour 1
-            outVec[4*i + 0] +=  -sgn[0] * inVec[4*IUP[0] + 0] - 0.5 * (inVec[4*IDN[1] + 0] - inVec[4*IDN[1] + 1]) - 0.5 * (inVec[4*IUP[1] + 0] + inVec[4*IUP[1] + 1]); // f1s1
-            outVec[4*i + 1] +=  -sgn[1] * inVec[4*IDN[0] + 1] + 0.5 * (inVec[4*IDN[1] + 0] - inVec[4*IDN[1] + 1]) - 0.5 * (inVec[4*IUP[1] + 0] + inVec[4*IUP[1] + 1]); // f1s2
+            outVec[4*i + 0] +=  -sgn[0] * inVec[IUP[i][0] + 0] - 0.5 * (inVec[IDN[i][1] + 0] - inVec[IDN[i][1] + 1]) - 0.5 * (inVec[IUP[i][1] + 0] + inVec[IUP[i][1] + 1]); // f1s1
+            outVec[4*i + 1] +=  -sgn[1] * inVec[IDN[i][0] + 1] + 0.5 * (inVec[IDN[i][1] + 0] - inVec[IDN[i][1] + 1]) - 0.5 * (inVec[IUP[i][1] + 0] + inVec[IUP[i][1] + 1]); // f1s2
             // flavour 2
-            outVec[4*i + 2] +=  -sgn[0] * inVec[4*IUP[0] + 2] - 0.5 * (inVec[4*IDN[1] + 2] - inVec[4*IDN[1] + 3]) - 0.5 * (inVec[4*IUP[1] + 2] + inVec[4*IUP[1] + 3]); // f2s1
-            outVec[4*i + 3] +=  -sgn[1] * inVec[4*IDN[0] + 3] + 0.5 * (inVec[4*IDN[1] + 2] - inVec[4*IDN[1] + 3]) - 0.5 * (inVec[4*IUP[1] + 2] + inVec[4*IUP[1] + 3]); // f2s2
+            outVec[4*i + 2] +=  -sgn[0] * inVec[IUP[i][0] + 2] - 0.5 * (inVec[IDN[i][1] + 2] - inVec[IDN[i][1] + 3]) - 0.5 * (inVec[IUP[i][1] + 2] + inVec[IUP[i][1] + 3]); // f2s1
+            outVec[4*i + 3] +=  -sgn[1] * inVec[IDN[i][0] + 3] + 0.5 * (inVec[IDN[i][1] + 2] - inVec[IDN[i][1] + 3]) - 0.5 * (inVec[IUP[i][1] + 2] + inVec[IUP[i][1] + 3]); // f2s2
         }
-
-        /*if (useDagger == MatrixType::Dagger) {
-        
-            psisum[0]  = inVec[4*IUP[1] + 0] + inVec[4*IUP[1] + 1];
-            psisum[1]  = inVec[4*IUP[1] + 2] + inVec[4*IUP[1] + 3];
-            psidiff[0] = inVec[4*IDN[1] + 0] - inVec[4*IDN[1] + 1];
-            psidiff[1] = inVec[4*IDN[1] + 2] - inVec[4*IDN[1] + 3];
-
-            outVec[4*i + 0] -=  sgn[0] * inVec[4*IUP[0] + 0] + 0.5*psidiff[0] + 0.5*psisum[0];
-            outVec[4*i + 2] -=  sgn[0] * inVec[4*IUP[0] + 2] + 0.5*psidiff[1] + 0.5*psisum[1];
-            outVec[4*i + 1] -=  sgn[1] * inVec[4*IDN[0] + 1] - 0.5*psidiff[0] + 0.5*psisum[0];
-            outVec[4*i + 3] -=  sgn[1] * inVec[4*IDN[0] + 3] - 0.5*psidiff[1] + 0.5*psisum[1];
-
-        } else {
-
-            psisum[0]  = inVec[4*IDN[1] + 0] + inVec[4*IDN[1] + 1];
-            psisum[1]  = inVec[4*IDN[1] + 2] + inVec[4*IDN[1] + 3];
-            psidiff[0] = inVec[4*IUP[1] + 0] - inVec[4*IUP[1] + 1];
-            psidiff[1] = inVec[4*IUP[1] + 2] - inVec[4*IUP[1] + 3];
-
-            outVec[4*i + 0] -=  sgn[1] * inVec[4*IDN[0] + 0] + 0.5*psisum[0] + 0.5*psidiff[0];
-            outVec[4*i + 2] -=  sgn[1] * inVec[4*IDN[0] + 2] + 0.5*psisum[1] + 0.5*psidiff[1];
-            outVec[4*i + 1] -=  sgn[0] * inVec[4*IUP[0] + 1] + 0.5*psisum[0] - 0.5*psidiff[0];
-            outVec[4*i + 3] -=  sgn[0] * inVec[4*IUP[0] + 3] + 0.5*psisum[1] - 0.5*psidiff[1];
-
-        }*/
         
     }  
 
