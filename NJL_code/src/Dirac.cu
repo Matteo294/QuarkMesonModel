@@ -30,8 +30,8 @@ __global__ void applyD_gpu(cp<double> *in, cp<double> *out, MatrixType const use
 	}
 	applyDiagonal(in, out, useDagger, M);
     cg::sync(grid);
-    applyHopping(in, out, useDagger);
-    cg::sync(grid);
+    //applyHopping(in, out, useDagger);
+    //cg::sync(grid);
 }
 
 __device__ void applyDiagonal(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, double *M){
@@ -61,13 +61,14 @@ __device__ void applyHopping(cp<double> *inVec, cp<double> *outVec, MatrixType c
 
     auto grid = cg::this_grid();
 
-    int idx[2];
     int nt, nx;
     int IUP[2], IDN[2]; // neighbours up and down gor both directions
 
     double sgn[2];
 
-    for (int i = grid.thread_rank(); i < vol/2; i += grid.size()) {
+    for (int i = grid.thread_rank(); i < 4*vol; i += grid.size()) {
+
+        auto idx = flatToVec(i);
 
         nt = idx[0];
         nx = idx[1];

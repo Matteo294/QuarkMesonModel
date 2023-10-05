@@ -1,14 +1,14 @@
 [physics]
 useMass = "false"
 mass = 0.2
-g = 1.8
+g = 0.0
 kappa = 0.2
-lambda = 0.00
+lambda = 0.02
 cutFraction = 1.0
 
 [langevin]
-averageEpsilon = 0.01
-MaxLangevinTime = 5000.0
+averageEpsilon = 0.2
+MaxLangevinTime = 1000.0
 ExportTime = 1.0
 burnCount = 200 
 MeasureDriftCount = 50
