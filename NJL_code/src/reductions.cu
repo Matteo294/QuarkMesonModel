@@ -180,7 +180,7 @@ __global__ void setZero_kernel(cp<double> *v, int const vol){
 	for (int i = grid.thread_rank(); i < vol; i += grid.size()) v[i] = 0.0;
 }
 
-/*__global__ void gpuTraces(double *vec, double *result, int const vol) {
+__global__ void gpuTraces(double *vec, double *result, int const vol) {
 	cg::thread_block cta = cg::this_thread_block();
 	cg::grid_group grid = cg::this_grid();
 	extern __shared__ double tmpTr[];
@@ -213,4 +213,4 @@ __global__ void setZero_kernel(cp<double> *v, int const vol){
         }
     }
 
-}*/
+}

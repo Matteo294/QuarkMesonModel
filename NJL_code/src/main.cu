@@ -48,6 +48,7 @@ __constant__ double fermion_mass_gpu;
 __constant__ thrust::complex<double> im_gpu;
 __constant__ double cutFraction_gpu;
 __constant__ double sq2Kappa_gpu;
+__constant__ double mode_gpu;
 // ----------------------------------------------------------
 
 
@@ -89,7 +90,7 @@ int main(int argc, char** argv) {
 
 	auto ivec  = ManagedVector<myType>{N * nVectorComponents};
 	for (auto &e : ivec)
-		e = static_cast<myType>(0.5 - 2.0*drand48()); // little bias in the negative direction
+		e = static_cast<myType>(1.0 - 2.0*drand48()); // little bias in the negative direction
 //		e = static_cast<myType>(drand48());
 
 	auto drift = ManagedVector<myType>{N * nVectorComponents};
@@ -165,22 +166,14 @@ int main(int argc, char** argv) {
 		yukawa_coupling = toml::find<double>(fermionsSection, "yukawa_coupling");
 	else 
 		yukawa_coupling = toml::find<double>(fermionsSection, "yukawa_coupling") / sq2Kappa;
+    double mode = toml::find<double>(fermionsSection, "driftMode");
     
 	Spinor<double> in, out;
 	DiracOP<double> Dirac;
 	FermionicDrift fDrift(seed);
-	double *fermionic_contribution;
 	CGsolver CG;
     double *trace; // trace D^-1
-	//int myvol = spinor_vol; // dynamic volume
-
-	/*for(int nt=0; nt<Sizes[0]; nt++){
-		for(int nx=0; nx<Sizes[1]; nx++){
-			std::cout << nt << " " << nx << " " << nt*Sizes[1] + nx << " " << convertNormalToEO(nt*Sizes[1] + nx)  << " " << Dirac.EO2N.at[convertNormalToEO(nt*Sizes[1] + nx)] << std::endl;
-		}
-	}*/
 	
-	cudaMallocManaged(&fermionic_contribution, sizeof(double) * vol);
 	cudaMallocManaged(&trace, sizeof(double));
     
     for(int i=0; i<vol; i++) {
@@ -197,13 +190,13 @@ int main(int argc, char** argv) {
 	auto dimGrid_drift = dim3(nBlocks, 1, 1);
 	auto dimBlock_drift = dim3(nThreads, 1, 1);
     
-    /*nBlocks = 0;
+    nBlocks = 0;
 	nThreads = 0;
 	cudaOccupancyMaxPotentialBlockSize(&nBlocks, &nThreads, gpuTraces);
 	cudaDeviceSynchronize();
 	auto dimGrid_traces = dim3(nBlocks, 1, 1);
 	auto dimBlock_traces = dim3(nThreads, 1, 1);
-    void *tracesArgs[] = {(void*) &drift.data(), (void*) &trace, (void*) &spinor_vol};*/
+    void *tracesArgs[] = {(void*) &drift.data(), (void*) &trace, (void*) &spinor_vol};
 
 	nBlocks = 0;
 	nThreads = 0;
@@ -271,6 +264,7 @@ int main(int argc, char** argv) {
 	cudaMemcpyToSymbol(im_gpu, &im, sizeof(thrust::complex<double>));
     cudaMemcpyToSymbol(cutFraction_gpu, &cutFraction, sizeof(double));
     cudaMemcpyToSymbol(sq2Kappa_gpu, &sq2Kappa, sizeof(double));
+    //cudaMemcpyToSymbol(mode_gpu, &mode, sizeof(double));
 	// -----------------------------------------------------------------
     
 	Dirac.setScalar(ivec.data());
@@ -287,7 +281,7 @@ int main(int argc, char** argv) {
 			cn();
 
 			// ----------------------------------------------------------
-			fDrift.getForce(drift.data(), Dirac, CG, dimGrid_drift, dimBlock_drift, 1);
+			fDrift.getForce(drift.data(), Dirac, CG, dimGrid_drift, dimBlock_drift);
 			// ----------------------------------------------------------
 
 			kli.Run(kAll, kli_sMem);
@@ -312,7 +306,7 @@ int main(int argc, char** argv) {
                 cn();
 
                 // ----------------------------------------------------------
-                fDrift.getForce(drift.data(), Dirac, CG, dimGrid_drift, dimBlock_drift, 1);
+                fDrift.getForce(drift.data(), Dirac, CG, dimGrid_drift, dimBlock_drift);
                 // ----------------------------------------------------------
 
                 kli.Run(kAll, kli_sMem);
@@ -353,7 +347,7 @@ int main(int argc, char** argv) {
 			cn();
 
 			// ----------------------------------------------------------
-			fDrift.getForce(drift.data(), Dirac, CG, dimGrid_drift, dimBlock_drift, 1);
+			fDrift.getForce(drift.data(), Dirac, CG, dimGrid_drift, dimBlock_drift);
 			// ----------------------------------------------------------
 
 			kli.Run(kAll, kli_sMem);
@@ -411,14 +405,14 @@ int main(int argc, char** argv) {
 		std::stringstream ss;
 		ss << "data/cnfg_" << std::setfill('0') << std::setw(8) << 
 			(exportHDF == true ? nMeasurements : 1);
-
-		nMeasurements++;
+            
+        nMeasurements++;
 		nConfig ++;
 		avg_magnetisation += abs(avg[0]);
 
-		std::cout 	<< "magnetization: " << (double) abs(avg[0]) / N <<
-					  " condensate: " << (double) abs(*trace) / N  / 4.0<<  " " << sqrt(sum2) / N << 
-					  " partial avg. " << (double) avg_magnetisation / nMeasurements / N << std::endl << std::endl;
+		std::cout 	<< "abs. mag: " << (double) abs(avg[0]) / N << " \t "
+                    << "cond: " << (double) abs(*trace) / N << " \t "
+                    << "partial avg: " << (double) avg_magnetisation / (double) nMeasurements / (double) vol << "\n";
         
         // -------------------- extract fermion mass ----------------------------------
 		setZeroArgs[0] = (void*) &in.data();
@@ -456,31 +450,22 @@ int main(int argc, char** argv) {
         // -->  compute condensates from drifts as they are proportional
         
 
-        fDrift.getForce(drift.data(), Dirac, CG, dimGrid_drift, dimBlock_drift, 1);        
+        fDrift.getForce(drift.data(), Dirac, CG, dimGrid_drift, dimBlock_drift);        
+		
         *trace = 0.0;
         
-		/*cudaLaunchCooperativeKernel((void*) &gpuTraces, dimGrid_traces, dimBlock_traces, tracesArgs, 32 * sizeof(double), NULL);
+		cudaLaunchCooperativeKernel((void*) &gpuTraces, dimGrid_traces, dimBlock_traces, tracesArgs, 32 * sizeof(double), NULL);
 		cudaDeviceSynchronize();
-        
+       	//std::cout << "Trace: " << *trace << std::endl; 
         if (yukawa_coupling != 0.0) { 
             *trace /= yukawa_coupling;
         } else {
             *trace = 0.0;
         }
 		
-        tracefile << (double) (*trace) / vol / 4.0 << "," << (double) (avg[0] / vol) << "," << (double) (std::sqrt(sum2) / vol) << "\n";*/
-   		
-		/*for(int i=0; i<spinor_vol; i++) in.data()[i] = 1.0;
-	    for(int i=0; i<vol; i++) std::cout << ivec.data()[i] << '\t';
-
-    	CG.solve(in.data(), out.data(), Dirac, MatrixType::Normal);
-    	Dirac.applyD(out.data(), in.data(), MatrixType::Dagger);
-    	cudaDeviceSynchronize();
-   
-   		std::cout << std::endl;
-   		for(int i=0; i<spinor_vol; i++) std::cout << in.data()[i] << '\t';
-		std::cout << std::endl << std::endl;*/
+        tracefile << (double) (*trace) / vol / 4.0 << "," << (double) (avg[0] / vol) << "," << (double) (std::sqrt(sum2) / vol) << "\n";
 		// ------------------------------------------------------
+
 		
 	}
 
@@ -504,7 +489,6 @@ int main(int argc, char** argv) {
 	free(h_eps);
 
 	// ------------------------------------------------
-	cudaFree(fermionic_contribution);
 	cudaFree(trace);
 	// ------------------------------------------------
 

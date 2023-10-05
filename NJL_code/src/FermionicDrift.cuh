@@ -12,7 +12,7 @@ class FermionicDrift{
     public:
         FermionicDrift(int const seed);
         ~FermionicDrift(){cudaFree(state);}
-		void getForce(double *outVec, DiracOP<double>& D, CGsolver& CG, dim3 dimGrid_drift, dim3 dimBlock_drift, int const Nvectors);
+		void getForce(double *outVec, DiracOP<double>& D, CGsolver& CG, dim3 dimGrid_drift, dim3 dimBlock_drift);
         //void setDirac(DiracOP<double> *Dirac){D = Dirac;}
     private:
         Spinor<double> afterCG, buf, noiseVec;
@@ -23,7 +23,7 @@ class FermionicDrift{
 		dim3 dimGrid_conv, dimBlock_conv;
 		dim3 dimGrid_rnd, dimBlock_rnd;
         void *setZeroArgs[2];
-		void *driftArgs[5];
+		void *driftArgs[4];
 		void *rndArgs[3];
 		int const spinor_vol = 4*vol;
 		curandState *state;
@@ -31,7 +31,7 @@ class FermionicDrift{
 
 };
 
-__global__ void computeDrift(cp<double> *afterCG, cp<double> *noise, double *outVec,  DriftState const mode, int const Nvectors);
+__global__ void computeDrift(cp<double> *afterCG, cp<double> *noise, double *outVec,  DriftMode const mode);
 
 __global__ void fillNormalRND(cp<double> *vec, curandState *dev_state, int const vol);
 

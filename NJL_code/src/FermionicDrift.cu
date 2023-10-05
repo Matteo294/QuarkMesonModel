@@ -4,6 +4,7 @@
 extern __constant__ double yukawa_coupling_gpu;
 extern __constant__ thrust::complex<double> im_gpu;
 extern __constant__ double cutFraction_gpu;
+//extern __constant__ double mode_gpu;
 
 FermionicDrift::FermionicDrift(int const seed) : gen(rd()), dist(0.0, 1.0)
 {
@@ -53,9 +54,9 @@ __global__ void random_setup_kernel(int const seed, curandState *state, int cons
 	}
 }
 
-void FermionicDrift::getForce(double *outVec, DiracOP<double>& D, CGsolver& CG, dim3 dimGrid_drift, dim3 dimBlock_drift, int const Nvectors){
+void FermionicDrift::getForce(double *outVec, DiracOP<double>& D, CGsolver& CG, dim3 dimGrid_drift, dim3 dimBlock_drift){
 	
-	for(int n = 0; n < Nvectors; n++) {
+	
         cudaLaunchCooperativeKernel((void*)&fillNormalRND, dimGrid_rnd, dimBlock_rnd, rndArgs, 0, NULL);
         cudaDeviceSynchronize();
         
@@ -68,34 +69,34 @@ void FermionicDrift::getForce(double *outVec, DiracOP<double>& D, CGsolver& CG, 
         D.applyD(buf.data(), afterCG.data(), MatrixType::Normal);
         cudaDeviceSynchronize();
                 
-        DriftState mode;
+        DriftMode mode;
         driftArgs[0] = (void*) &afterCG.data();
         driftArgs[1] = (void*) &noiseVec.data();
         driftArgs[2] = (void*) &outVec;
         driftArgs[3] = (void*) &mode;
-        driftArgs[4] = (void*) &Nvectors;
         
-        if (n == 0) mode = DriftState::Init;
-        else if (n == (Nvectors - 1)) mode = DriftState::End;
-        else mode = DriftState::Other;
+        mode = DriftMode::Normal;
         
         cudaLaunchCooperativeKernel((void*)&computeDrift, dimGrid_drift, dimBlock_drift, driftArgs, 0, NULL);
         cudaDeviceSynchronize();
-    }
 	 
 }
 
 
-__global__ void computeDrift(cp<double> *afterCG,cp<double> *noise, double *outVec, DriftState const mode, int const Nvectors){
+__global__ void computeDrift(cp<double> *afterCG,cp<double> *noise, double *outVec, DriftMode const mode){
 
 	cg::grid_group grid = cg::this_grid();
 	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
-        if (mode == DriftState::Init) outVec[i] = 0.0;
-		outVec[i] += - yukawa_coupling_gpu * ( conj(afterCG[4*i+0])*noise[4*i+0]
-                                            + conj(afterCG[4*i+1])*noise[4*i+1] 
-                                            + conj(afterCG[4*i+2])*noise[4*i+2] 
-                                            + conj(afterCG[4*i+3])*noise[4*i+3]).real();
-        if (mode == DriftState::End) outVec[i] /= Nvectors;
+		//if (mode_gpu == 0) 
+            outVec[i] = - yukawa_coupling_gpu * (  conj(afterCG[4*i+0])*noise[4*i+0]
+                                                                            + conj(afterCG[4*i+1])*noise[4*i+1] 
+                                                                            + conj(afterCG[4*i+2])*noise[4*i+2] 
+                                                                            + conj(afterCG[4*i+3])*noise[4*i+3]).real();
+        /*else if (mode_gpu == 1) 
+            outVec[i] = - cutFraction_gpu*cutFraction_gpu * yukawa_coupling_gpu * (  conj(afterCG[4*i+0])*noise[4*i+0]
+                                                                            + conj(afterCG[4*i+1])*noise[4*i+1] 
+                                                                            + conj(afterCG[4*i+2])*noise[4*i+2] 
+                                                                            + conj(afterCG[4*i+3])*noise[4*i+3]).real();*/
 	}
 
 }

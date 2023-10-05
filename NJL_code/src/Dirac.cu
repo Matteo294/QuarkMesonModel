@@ -30,8 +30,8 @@ __global__ void applyD_gpu(cp<double> *in, cp<double> *out, MatrixType const use
 	}
 	applyDiagonal(in, out, useDagger, M);
     cg::sync(grid);
-    //applyHopping(in, out, useDagger);
-    //cg::sync(grid);
+    applyHopping(in, out, useDagger);
+    cg::sync(grid);
 }
 
 __device__ void applyDiagonal(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, double *M){
@@ -63,10 +63,9 @@ __device__ void applyHopping(cp<double> *inVec, cp<double> *outVec, MatrixType c
 
     int nt, nx;
     int IUP[2], IDN[2]; // neighbours up and down gor both directions
+    double sgn[2]; // anti-periodic boundary conditions
 
-    double sgn[2];
-
-    for (int i = grid.thread_rank(); i < 4*vol; i += grid.size()) {
+    for (int i = grid.thread_rank(); i < vol; i += grid.size()) {
 
         auto idx = flatToVec(i);
 
@@ -101,34 +100,22 @@ __device__ void applyHopping(cp<double> *inVec, cp<double> *outVec, MatrixType c
             IDN[1] = nx - 1;
         }
 
-        thrust::complex<double> psisum[2], psidiff[2];
-
-        double constexpr half {0.5};
+        cp<double> s1[2], s2[2];
         
         if (useDagger == MatrixType::Dagger) {
-            
-            psisum[0]  = inVec[4*IUP[1] + 0] + inVec[4*IUP[1] + 1];
-            psisum[1]  = inVec[4*IUP[1] + 2] + inVec[4*IUP[1] + 3];
-            psidiff[0] = inVec[4*IDN[1] + 0] - inVec[4*IDN[1] + 1];
-            psidiff[1] = inVec[4*IDN[1] + 2] - inVec[4*IDN[1] + 3];
-
-            outVec[4*i + 0] -=  sgn[0] * inVec[4*IUP[0] + 0] + half*psidiff[0] + half*psisum[0];
-            outVec[4*i + 2] -=  sgn[0] * inVec[4*IUP[0] + 2] + half*psidiff[1] + half*psisum[1];
-            outVec[4*i + 1] -=  sgn[1] * inVec[4*IDN[0] + 1] - half*psidiff[0] + half*psisum[0];
-            outVec[4*i + 3] -=  sgn[1] * inVec[4*IDN[0] + 3] - half*psidiff[1] + half*psisum[1];
+            outVec[4*i + 0] -=  sgn[0] * inVec[4*IDN[0] + 0] - 0.5 * (inVec[4*IUP[1] + 0] - inVec[4*IUP[1] + 1]) - 0.5 * (inVec[4*IDN[1] + 0] + inVec[4*IDN[1] + 1]); // f1s1
+            outVec[4*i + 1] -=  sgn[1] * inVec[4*IUP[0] + 1] + 0.5 * (inVec[4*IUP[1] + 0] - inVec[4*IUP[1] + 1]) - 0.5 * (inVec[4*IDN[1] + 0] + inVec[4*IDN[1] + 1]); // f1s2
+            // flavour 2
+            outVec[4*i + 2] -=  sgn[0] * inVec[4*IDN[0] + 2] - 0.5 * (inVec[4*IUP[1] + 2] - inVec[4*IUP[1] + 3]) - 0.5 * (inVec[4*IDN[1] + 2] + inVec[4*IDN[1] + 3]); // f2s1
+            outVec[4*i + 3] -=  sgn[1] * inVec[4*IUP[0] + 3] + 0.5 * (inVec[4*IUP[1] + 2] - inVec[4*IUP[1] + 3]) - 0.5 * (inVec[4*IDN[1] + 2] + inVec[4*IDN[1] + 3]); // f2s2
 
         } else {
-
-            psisum[0]  = inVec[4*IDN[1] + 0] + inVec[4*IDN[1] + 1];
-            psisum[1]  = inVec[4*IDN[1] + 2] + inVec[4*IDN[1] + 3];
-            psidiff[0] = inVec[4*IUP[1] + 0] - inVec[4*IUP[1] + 1];
-            psidiff[1] = inVec[4*IUP[1] + 2] - inVec[4*IUP[1] + 3];
-
-            outVec[4*i + 0] -=  sgn[1] * inVec[4*IDN[0] + 0] + half*psisum[0] + half*psidiff[0];
-            outVec[4*i + 2] -=  sgn[1] * inVec[4*IDN[0] + 2] + half*psisum[1] + half*psidiff[1];
-            outVec[4*i + 1] -=  sgn[0] * inVec[4*IUP[0] + 1] + half*psisum[0] - half*psidiff[0];
-            outVec[4*i + 3] -=  sgn[0] * inVec[4*IUP[0] + 3] + half*psisum[1] - half*psidiff[1];
-
+            // flavour 1
+            outVec[4*i + 0] +=  -sgn[0] * inVec[4*IUP[0] + 0] - 0.5 * (inVec[4*IDN[1] + 0] - inVec[4*IDN[1] + 1]) - 0.5 * (inVec[4*IUP[1] + 0] + inVec[4*IUP[1] + 1]); // f1s1
+            outVec[4*i + 1] +=  -sgn[1] * inVec[4*IDN[0] + 1] + 0.5 * (inVec[4*IDN[1] + 0] - inVec[4*IDN[1] + 1]) - 0.5 * (inVec[4*IUP[1] + 0] + inVec[4*IUP[1] + 1]); // f1s2
+            // flavour 2
+            outVec[4*i + 2] +=  -sgn[0] * inVec[4*IUP[0] + 2] - 0.5 * (inVec[4*IDN[1] + 2] - inVec[4*IDN[1] + 3]) - 0.5 * (inVec[4*IUP[1] + 2] + inVec[4*IUP[1] + 3]); // f2s1
+            outVec[4*i + 3] +=  -sgn[1] * inVec[4*IDN[0] + 3] + 0.5 * (inVec[4*IDN[1] + 2] - inVec[4*IDN[1] + 3]) - 0.5 * (inVec[4*IUP[1] + 2] + inVec[4*IUP[1] + 3]); // f2s2
         }
     }                            
 

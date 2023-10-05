@@ -14,5 +14,5 @@ __global__ void gpuMagnetisation(myType *vecA, myType *result, int size);
 
 // --------------------------------------------------------------------------------------
 __global__ void setZero_kernel(cp<double> *v, int const vol);
-//__global__ void gpuTraces(double *vecA, double *result, int const vol);
+__global__ void gpuTraces(double *vecA, double *result, int const vol);
 // --------------------------------------------------------------------------------------
