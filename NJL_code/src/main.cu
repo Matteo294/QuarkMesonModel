@@ -269,22 +269,21 @@ int main(int argc, char** argv) {
     
 	Dirac.setScalar(ivec.data());
 
-	for(int i=0; i<vol; i++) {
+	/*for(int i=0; i<vol; i++) {
 		in.data()[4*i] = 2*i;
 		in.data()[4*i+1] = 2*i + 1;
 		in.data()[4*i+2] = 0;
 		in.data()[4*i+3] = 0;
 	}
-	std::cout << "aaaaaaaaaa \n";
-	for(int i=0; i<4*vol; i++) std::cout << in.data()[i] << std::endl;
-				//CG.solve(in.data(), out.data(), Dirac, MatrixType::Normal);
-				Dirac.applyD(in.data(), out.data(), MatrixType::Normal);
+				CG.solve(in.data(), out.data(), Dirac, MatrixType::Normal);
+				Dirac.applyD(out.data(), in.data(), MatrixType::Dagger);
 				cudaDeviceSynchronize();
-
+				//Dirac.applyD(in.data(), out.data(), MatrixType::Normal);
+				//cudaDeviceSynchronize();
 	std::cout << "Results CG: \n";
-	for(int i=0; i<vol; i++) {
-		std::cout << out.data()[4*i] << "\n" << in.data()[4*i+1] << "\n";
-	}
+	for(int i=0; i<4*vol; i++) {
+		std::cout << in.data()[i] << "\n";
+	}*/
 	
 	// burn in a little bit, since the drift might be stronger at the beginning, since we are
 	// likely far from the equilibrium state

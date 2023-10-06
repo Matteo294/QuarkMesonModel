@@ -52,6 +52,7 @@ void CGsolver::solve(cp<double>  *inVec, cp<double> *outVec, DiracOP<double>& D,
 						(void*) &temp.data(), (void*) &temp2.data(), (void*) &r.data(), (void*) &p.data(), 
 						(void*) &alpha, (void*)&beta,
 						(void*) &D.M, 
+						(void*) &D.IUP.at, (void*) &D.IDN.at,
 						(void*) &MatType, (void*)&dot_res, (void*)&rmodsq};
     cudaLaunchCooperativeKernel((void*) solve_kernel, dimGrid, dimBlock, solveArgs, sMemSize, NULL);
 	cudaDeviceSynchronize();
@@ -72,6 +73,7 @@ __global__ void solve_kernel(cp<double>  *inVec, cp<double> *outVec,
                              cp<double> *temp, cp<double> *temp2, cp<double> *r, cp<double> *p,
 							 cp<double> *alpha, cp<double> *beta,
 							 double *M,
+							 my2dArray *IUP, my2dArray *IDN,
 							 MatrixType Mtype, cp<double> *dot_res, double *rmodsq)
 {
         
@@ -114,6 +116,8 @@ __global__ void solve_kernel(cp<double>  *inVec, cp<double> *outVec,
         cg::sync(grid);
         applyDiagonal(p, temp2, MatType, M);
         cg::sync(grid);
+		applyHopping(p, temp2, MatType, IUP, IDN);
+		cg::sync(grid);
 
 		// Apply D
 		if (Mtype == MatrixType::Normal) MatType = MatrixType::Normal;
@@ -121,12 +125,14 @@ __global__ void solve_kernel(cp<double>  *inVec, cp<double> *outVec,
         cg::sync(grid);
         applyDiagonal(temp2, temp, MatType, M);
         cg::sync(grid);
+		applyHopping(temp2, temp, MatType, IUP, IDN);
+		cg::sync(grid);
     
 		if (threadIdx.x == 0 && blockIdx.x == 0) *dot_res = 0.0;
         cg::sync(grid);
         gpuDotProduct(p, temp, dot_res, myvol);
         cg::sync(grid);
-        
+		
 		if (threadIdx.x == 0 && blockIdx.x == 0) {
 			*alpha = *rmodsq / *dot_res; 
 		}

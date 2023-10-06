@@ -21,6 +21,7 @@ __global__ void solve_kernel(cp<double>  *inVec, cp<double> *outVec,
                              cp<double> *temp, cp<double> *temp2, cp<double> *r, cp<double> *p,
                              cp<double> *alpha, cp<double> *beta,
 							 double *M,
+							 my2dArray *IUP, my2dArray *IDN,
 							 MatrixType Mtype, cp<double> *dot_res, double *rmodsq);
 __device__ void gpuSumSpinors(cp<double> *s1, cp<double> *s2, cp<double> *res, cp<double> c, int size); //  = s1 + c * s2;
 __device__ void gpuDotProduct(cp<double> *vecA, cp<double> *vecB, cp<double> *result, int size);

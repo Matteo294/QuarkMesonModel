@@ -28,7 +28,7 @@ void DiracOP<T>::applyD(cp<double> *in, cp<double> *out, MatrixType MType){
 	auto dimGrid = dim3(nBlocks, 1, 1);
 	auto dimBlock = dim3(nThreads, 1, 1);
 	auto useDagger = MType;
-	void *args[] = {(void*) &in, (void*) &out, (void*) &useDagger, (void*) &M, (void*) &IDN.at, (void*) &IUP.at};
+	void *args[] = {(void*) &in, (void*) &out, (void*) &useDagger, (void*) &M, (void*) &IUP.at, (void*) &IDN.at};
     cudaLaunchCooperativeKernel((void*) applyD_gpu, dimGrid, dimBlock, args, 0, NULL);
 	cudaDeviceSynchronize();
 }
@@ -39,7 +39,7 @@ __global__ void applyD_gpu(cp<double> *in, cp<double> *out, MatrixType const use
 		out[i] = 0.0;
 	}
 	cg::sync(grid);
-	//applyDiagonal(in, out, useDagger, M);
+	applyDiagonal(in, out, useDagger, M);
     cg::sync(grid);
     applyHopping(in, out, useDagger, IUP, IDN);
     cg::sync(grid);
