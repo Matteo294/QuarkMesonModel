@@ -11,7 +11,7 @@ enum class DriftMode {Normal, Rescaled};
 thrust::complex<double> const im {0.0, 1.0};
 
 constexpr char CGmode = '0';
-constexpr double tolerance = 1e-12;
+constexpr double tolerance = 1e-8;
 constexpr int IterMax = 1000;
 
 template <typename T>

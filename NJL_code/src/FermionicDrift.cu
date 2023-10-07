@@ -4,7 +4,7 @@
 extern __constant__ double yukawa_coupling_gpu;
 extern __constant__ thrust::complex<double> im_gpu;
 extern __constant__ double cutFraction_gpu;
-//extern __constant__ double mode_gpu;
+extern __constant__ double drftMoode_gpu;
 
 FermionicDrift::FermionicDrift(int const seed) : gen(rd()), dist(0.0, 1.0)
 {
@@ -73,9 +73,6 @@ void FermionicDrift::getForce(double *outVec, DiracOP<double>& D, CGsolver& CG, 
         driftArgs[0] = (void*) &afterCG.data();
         driftArgs[1] = (void*) &noiseVec.data();
         driftArgs[2] = (void*) &outVec;
-        driftArgs[3] = (void*) &mode;
-        
-        mode = DriftMode::Normal;
         
         cudaLaunchCooperativeKernel((void*)&computeDrift, dimGrid_drift, dimBlock_drift, driftArgs, 0, NULL);
         cudaDeviceSynchronize();
@@ -83,20 +80,20 @@ void FermionicDrift::getForce(double *outVec, DiracOP<double>& D, CGsolver& CG, 
 }
 
 
-__global__ void computeDrift(cp<double> *afterCG,cp<double> *noise, double *outVec, DriftMode const mode){
+__global__ void computeDrift(cp<double> *afterCG,cp<double> *noise, double *outVec){
 
 	cg::grid_group grid = cg::this_grid();
 	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
-		//if (mode_gpu == 0) 
+		if (driftMode_gpu == DriftMode::Normal) 
             outVec[i] = - yukawa_coupling_gpu * (  conj(afterCG[4*i+0])*noise[4*i+0]
                                                                             + conj(afterCG[4*i+1])*noise[4*i+1] 
                                                                             + conj(afterCG[4*i+2])*noise[4*i+2] 
                                                                             + conj(afterCG[4*i+3])*noise[4*i+3]).real();
-        /*else if (mode_gpu == 1) 
+        else if (mode_gpu == DriftMode::Rescaled) 
             outVec[i] = - cutFraction_gpu*cutFraction_gpu * yukawa_coupling_gpu * (  conj(afterCG[4*i+0])*noise[4*i+0]
                                                                             + conj(afterCG[4*i+1])*noise[4*i+1] 
                                                                             + conj(afterCG[4*i+2])*noise[4*i+2] 
-                                                                            + conj(afterCG[4*i+3])*noise[4*i+3]).real();*/
+                                                                            + conj(afterCG[4*i+3])*noise[4*i+3]).real();
 	}
 
 }

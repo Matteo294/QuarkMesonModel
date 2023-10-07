@@ -31,7 +31,7 @@ class FermionicDrift{
 
 };
 
-__global__ void computeDrift(cp<double> *afterCG, cp<double> *noise, double *outVec,  DriftMode const mode);
+__global__ void computeDrift(cp<double> *afterCG, cp<double> *noise, double *outVec);
 
 __global__ void fillNormalRND(cp<double> *vec, curandState *dev_state, int const vol);
 

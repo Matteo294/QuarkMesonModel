@@ -48,7 +48,7 @@ __constant__ double fermion_mass_gpu;
 __constant__ thrust::complex<double> im_gpu;
 __constant__ double cutFraction_gpu;
 __constant__ double sq2Kappa_gpu;
-__constant__ double mode_gpu;
+__constant__ double drftMode_gpu;
 // ----------------------------------------------------------
 
 
@@ -166,7 +166,7 @@ int main(int argc, char** argv) {
 		yukawa_coupling = toml::find<double>(fermionsSection, "yukawa_coupling");
 	else 
 		yukawa_coupling = toml::find<double>(fermionsSection, "yukawa_coupling") / sq2Kappa;
-    double mode = toml::find<double>(fermionsSection, "driftMode");
+    auto driftMode = toml::find<int>(fermionsSection, "driftMode") == 0 ? DriftMode::Normal : DriftMode::Rescaled;
     
 	Spinor<double> in, out;
 	DiracOP<double> Dirac;
@@ -264,26 +264,26 @@ int main(int argc, char** argv) {
 	cudaMemcpyToSymbol(im_gpu, &im, sizeof(thrust::complex<double>));
     cudaMemcpyToSymbol(cutFraction_gpu, &cutFraction, sizeof(double));
     cudaMemcpyToSymbol(sq2Kappa_gpu, &sq2Kappa, sizeof(double));
-    //cudaMemcpyToSymbol(mode_gpu, &mode, sizeof(double));
+    cudaMemcpyToSymbol(driftMode_gpu, &mode, sizeof(DriftMode));
 	// -----------------------------------------------------------------
     
-	Dirac.setScalar(ivec.data());
+	/*Dirac.setScalar(ivec.data());
 
-	/*for(int i=0; i<vol; i++) {
-		in.data()[4*i] = 2*i;
-		in.data()[4*i+1] = 2*i + 1;
-		in.data()[4*i+2] = 0;
-		in.data()[4*i+3] = 0;
+	for(int i=0; i<4*vol; i++) {
+		in.data()[i] = (double) rand() / RAND_MAX;
+		cpy.data()[i] = in.data()[i];
+		if (i<vol) ivec.data()[i] = (double) rand() / RAND_MAX;
 	}
 				CG.solve(in.data(), out.data(), Dirac, MatrixType::Normal);
 				Dirac.applyD(out.data(), in.data(), MatrixType::Dagger);
 				cudaDeviceSynchronize();
-				//Dirac.applyD(in.data(), out.data(), MatrixType::Normal);
-				//cudaDeviceSynchronize();
+				Dirac.applyD(in.data(), out.data(), MatrixType::Normal);
+				cudaDeviceSynchronize();
 	std::cout << "Results CG: \n";
 	for(int i=0; i<4*vol; i++) {
-		std::cout << in.data()[i] << "\n";
-	}*/
+		std::cout << out.data()[i] << "\t" << cpy.data()[i] << "\n";
+	}
+	std::cout << std::endl;*/
 	
 	// burn in a little bit, since the drift might be stronger at the beginning, since we are
 	// likely far from the equilibrium state
