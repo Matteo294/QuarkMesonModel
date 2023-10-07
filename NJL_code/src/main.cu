@@ -48,7 +48,7 @@ __constant__ double fermion_mass_gpu;
 __constant__ thrust::complex<double> im_gpu;
 __constant__ double cutFraction_gpu;
 __constant__ double sq2Kappa_gpu;
-__constant__ double drftMode_gpu;
+__constant__ DriftMode driftMode_gpu;
 // ----------------------------------------------------------
 
 
@@ -264,7 +264,7 @@ int main(int argc, char** argv) {
 	cudaMemcpyToSymbol(im_gpu, &im, sizeof(thrust::complex<double>));
     cudaMemcpyToSymbol(cutFraction_gpu, &cutFraction, sizeof(double));
     cudaMemcpyToSymbol(sq2Kappa_gpu, &sq2Kappa, sizeof(double));
-    cudaMemcpyToSymbol(driftMode_gpu, &mode, sizeof(DriftMode));
+    cudaMemcpyToSymbol(driftMode_gpu, &driftMode, sizeof(DriftMode));
 	// -----------------------------------------------------------------
     
 	/*Dirac.setScalar(ivec.data());

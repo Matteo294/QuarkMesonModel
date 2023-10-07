@@ -4,7 +4,7 @@
 extern __constant__ double yukawa_coupling_gpu;
 extern __constant__ thrust::complex<double> im_gpu;
 extern __constant__ double cutFraction_gpu;
-extern __constant__ double drftMoode_gpu;
+extern __constant__ DriftMode driftMode_gpu;
 
 FermionicDrift::FermionicDrift(int const seed) : gen(rd()), dist(0.0, 1.0)
 {
@@ -89,7 +89,7 @@ __global__ void computeDrift(cp<double> *afterCG,cp<double> *noise, double *outV
                                                                             + conj(afterCG[4*i+1])*noise[4*i+1] 
                                                                             + conj(afterCG[4*i+2])*noise[4*i+2] 
                                                                             + conj(afterCG[4*i+3])*noise[4*i+3]).real();
-        else if (mode_gpu == DriftMode::Rescaled) 
+        else if (driftMode_gpu == DriftMode::Rescaled) 
             outVec[i] = - cutFraction_gpu*cutFraction_gpu * yukawa_coupling_gpu * (  conj(afterCG[4*i+0])*noise[4*i+0]
                                                                             + conj(afterCG[4*i+1])*noise[4*i+1] 
                                                                             + conj(afterCG[4*i+2])*noise[4*i+2] 
