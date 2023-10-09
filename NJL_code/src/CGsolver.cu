@@ -165,10 +165,8 @@ __global__ void solve_kernel(cp<double>  *inVec, cp<double> *outVec,
 	
 	}
 
-	//if (k < IterMax) std::cout << "Convergence reached in " << k-1 << " steps \n";
-	//else std::cout << "Max. number of iterations reached (" << IterMax << "), final err: " << sqrt(rmodsq) << "\n";
 	//if (k >= IterMax) std::cout << "Max. number of iterations reached (" << IterMax << "), final err: " << sqrt(rmodsq) << "\n";
-	if (threadIdx.x == 0 && blockIdx.x == 0) printf("N. iter: %d \n", k);
+	//if (threadIdx.x == 0 && blockIdx.x == 0) printf("N. iter: %d \n", k);
 }
 
 __device__ void gpuSumSpinors(cp<double> *s1, cp<double> *s2, cp<double> *res, thrust::complex<double> c, int size){

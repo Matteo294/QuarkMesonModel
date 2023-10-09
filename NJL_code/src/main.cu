@@ -267,9 +267,9 @@ int main(int argc, char** argv) {
     cudaMemcpyToSymbol(driftMode_gpu, &driftMode, sizeof(DriftMode));
 	// -----------------------------------------------------------------
     
-	/*Dirac.setScalar(ivec.data());
+	Dirac.setScalar(ivec.data());
 
-	for(int i=0; i<4*vol; i++) {
+	/*for(int i=0; i<4*vol; i++) {
 		in.data()[i] = (double) rand() / RAND_MAX;
 		cpy.data()[i] = in.data()[i];
 		if (i<vol) ivec.data()[i] = (double) rand() / RAND_MAX;
@@ -427,7 +427,7 @@ int main(int argc, char** argv) {
                     << "partial avg: " << (double) avg_magnetisation / (double) nMeasurements / (double) vol << "\n";
         
         // -------------------- extract fermion mass ----------------------------------
-		setZeroArgs[0] = (void*) &in.data();
+		/*setZeroArgs[0] = (void*) &in.data();
 		cudaLaunchCooperativeKernel((void*) &setZero_kernel, dimGrid_setZero, dimBlock_setZero, setZeroArgs, 0, NULL);
 		cudaDeviceSynchronize();
 
@@ -475,7 +475,7 @@ int main(int argc, char** argv) {
             *trace = 0.0;
         }
 		
-        tracefile << (double) (*trace) / vol / 4.0 << "," << (double) (avg[0] / vol) << "," << (double) (std::sqrt(sum2) / vol) << "\n";
+        tracefile << (double) (*trace) / vol / 4.0 << "," << (double) (avg[0] / vol) << "," << (double) (std::sqrt(sum2) / vol) << "\n";*/
 		// ------------------------------------------------------
 
 		
