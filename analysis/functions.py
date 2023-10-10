@@ -68,11 +68,11 @@ class Dataset:
             print("Fermionic two-points correlator failed")
             
         # physical quark mass
-        try:
-            val, err = get_phys_quark_mass_via_timeslices(self.correlator_f, volume)
-            self.m_q_phys.append((val, err))
-        except:
-            print("Physical quark mass failed")
+        #try:
+        val, err = get_phys_quark_mass_via_timeslices(val, volume)
+        self.m_q_phys.append((val, err))
+        #except:
+        #    print("Physical quark mass failed")
             
         # parameter value
         p = toml_params[param[0]][param[1]]
@@ -136,27 +136,49 @@ def expectedM(m0, g, sigma, pi):
 def fitfuncSinh(x, m_re, A):
     return A * np.sinh(m_re*(Nt/2-x))
 
+def fitfuncExp(x, m_re, A):
+    return A * np.exp(-x*m_re)
+
+def fitToExp(ydata, startidx, endidx):
+    yvals = ydata[startidx:endidx]
+    xvals = np.array(range(startidx, endidx))
+
+    fitparams = fit(fitfuncExp, xvals, yvals, p0=[1.0, 1.0], maxfev=5000)
+    
+    if True is True:
+        plt.plot(xvals, fitfuncExp(xvals, fitparams[0][0], fitparams[0][1]), label="fit")
+        plt.plot(xvals, yvals, '.', markersize=6, label="data")
+        plt.legend()
+        plt.xlabel("t")
+        plt.show()
+        
+    return fitparams[0]
+
 def fitToSinh(ydata, startidx, endidx, plot=False):
     yvals = ydata[startidx:endidx]
     xvals = np.array(range(startidx, endidx))
 
-    fitparams = fit(fitfuncSinh, xvals, yvals)
+    fitparams = fit(fitfuncSinh, xvals, yvals, p0=[1.0, 1.0], maxfev=5000)
+    
+    if plot is True:
+        plt.plot(xvals, fitfuncSinh(xvals, fitparams[0][0], fitparams[0][1]), label="fit")
+        plt.plot(xvals, yvals, '.', markersize=6, label="data")
+        plt.legend()
+        plt.xlabel("t")
+        plt.show()
         
     return fitparams[0]
 
 def get_fermionic_correlator(Sq_t):
     val = np.average(Sq_t, axis=0)
     err = np.std(Sq_t, axis=0)
-    print(val)
     return val, err
     
 def get_phys_quark_mass_via_timeslices(corr, volume):
+    global Nt
     Nt = int(volume[0])
-    try:
-    	val, err = fitToSinh(corr, 1, Nt, plot=False)
-    except:
-    	val = 0
-    	err = 0
+    val, err = fitToSinh(corr, 1, Nt-1, plot=True)
+    val, err = fitToExp(corr, 1, 6)
     del Nt
     return [val, err]
 
