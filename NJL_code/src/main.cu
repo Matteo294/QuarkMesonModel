@@ -156,7 +156,6 @@ int main(int argc, char** argv) {
 	} catch (std::exception& e) {}
 
 	// ----------------------------------------------------------
-    int const spinor_vol = 4 * vol;
 
 	myType sum2 = 0.0;
 	auto const& fermionsSection = toml::find(inputData, "fermions");
@@ -268,22 +267,6 @@ int main(int argc, char** argv) {
 	// -----------------------------------------------------------------
     
 	Dirac.setScalar(ivec.data());
-
-	/*for(int i=0; i<4*vol; i++) {
-		in.data()[i] = (double) rand() / RAND_MAX;
-		cpy.data()[i] = in.data()[i];
-		if (i<vol) ivec.data()[i] = (double) rand() / RAND_MAX;
-	}
-				CG.solve(in.data(), out.data(), Dirac, MatrixType::Normal);
-				Dirac.applyD(out.data(), in.data(), MatrixType::Dagger);
-				cudaDeviceSynchronize();
-				Dirac.applyD(in.data(), out.data(), MatrixType::Normal);
-				cudaDeviceSynchronize();
-	std::cout << "Results CG: \n";
-	for(int i=0; i<4*vol; i++) {
-		std::cout << out.data()[i] << "\t" << cpy.data()[i] << "\n";
-	}
-	std::cout << std::endl;*/
 	
 	// burn in a little bit, since the drift might be stronger at the beginning, since we are
 	// likely far from the equilibrium state

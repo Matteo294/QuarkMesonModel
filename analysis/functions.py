@@ -7,14 +7,13 @@ import ctypes
 from correlations import *
 from read_in_data import *
 
-lib_path = "/home/matteo/Downloads/ac/build/"
+lib_path = "/home/zortea/QuarkMesonModel/analysis/AutoCorrelation/build/"
 
 class Dataset:
     
     # mode can be either 0 (no rescaling of params) or 1 (rescaling params / block spin)
     def add_data(self, folder, param, mode):
         fields_data = read_csv(folder + '/traces.csv')
-        mass_data = read_csv(folder + '/data.csv')
         S_t = get_time_slices_from_timeslicefile(folder + "/slice.dat", field_axis=0, return_all=False)
         data_Sq_t = read_csv(folder + "/data.csv")
         Sq_t = data_Sq_t['corr'].to_numpy(np.dtype('f8')).reshape((-1, self.Nt))
@@ -23,25 +22,58 @@ class Dataset:
         volume = (self.Nt, self.Nx)
         
         # magnetisation
-        blob = ComputeStatistics(fields_data['sigma'])
-        self.phi.append((blob.average, blob.sigmaF))
-        avgxxx = blob.average
-        avgxxxerr = blob.sigmaF
+        try: 
+            blob = ComputeStatistics(fields_data['sigma'])
+            self.phi.append((blob.average, blob.sigmaF))
+            avgxxx = blob.average
+            avgxxxerr = blob.sigmaF
+        except:
+            print("Magnetisation failed")
+        
+        # absolute magnetisation
+        try: 
+            blob = ComputeStatistics(np.abs(fields_data['sigma']))
+            self.abs_phi.append((blob.average, blob.sigmaF))
+        except:
+            print("Abs. magnetisation failed")
+            
         # condensate
-        blob = ComputeStatistics(fields_data['tr'])
-        self.condensate.append((blob.average, blob.sigmaF))
+        try:
+            blob = ComputeStatistics(fields_data['tr'])
+            self.condensate.append((blob.average, blob.sigmaF))
+        except:
+            print("Condensate failed")
+            
         # susceptibility
-        blob = ComputeStatistics((fields_data['sigma'] - avgxxx)**2)
-        self.chi2.append((blob.average, blob.sigmaF))
-        chi2 = blob.average
-        chi2err = blob.sigmaF
+        try:
+            blob = ComputeStatistics((fields_data['sigma'] - avgxxx)**2)
+            self.chi2.append((blob.average, blob.sigmaF))
+            chi2 = blob.average
+            chi2err = blob.sigmaF
+        except:
+            print("Susceptibility failed")
+            
         # renormalised bosonic mass
-        val, err = get_ren_mass_right_via_timeslices(S_t, volume)
-        #val, err = get_ren_mass_right_via_timeslices2(S_t, volume, chi2, chi2err)
-        self.m_phi_r.append((val, err))
+        try:
+            val, err = get_ren_mass_right_via_timeslices(S_t, volume)
+            self.m_phi_r.append((val, err))
+        except:
+            print("Renormalised boson mass failed")
+            
+        # fermionic two-points correlator
+        try:
+            val, err = get_fermionic_correlator(Sq_t)
+            self.correlator_f.append((val, err))
+        except:
+            print("Fermionic two-points correlator failed")
+            
         # physical quark mass
-        val, err = get_phys_quark_mass_via_timeslices(Sq_t, volume)
-        self.m_q_phys.append((val, err))
+        try:
+            val, err = get_phys_quark_mass_via_timeslices(self.correlator_f, volume)
+            self.m_q_phys.append((val, err))
+        except:
+            print("Physical quark mass failed")
+            
         # parameter value
         p = toml_params[param[0]][param[1]]
         s = toml_params['physics']['cutFraction']
@@ -57,7 +89,8 @@ class Dataset:
         self.chi2 = [] # susceptiblity or second connected moment
         self.m_phi_r = [] # renormalised mesons mass
         self.m_q_phys = [] # physical quark mass
-        self.parameters = [] # x parameter
+        self.correlator_f = [] # two points correlator for fermions
+        self.parameters = [] # x parameter (for plots)
     
     def sort_data(self, data):
         arr = [(p, val) for p, val in zip(self.parameters, data)]
@@ -111,10 +144,14 @@ def fitToSinh(ydata, startidx, endidx, plot=False):
         
     return fitparams[0]
 
-def get_phys_quark_mass_via_timeslices(Sq_t, volume):
-    global Nt 
+def get_fermionic_correlator(Sq_t):
+    val = np.average(Sq_t, axis=0)
+    err = np.std(Sq_t, axis=0)
+    print(val)
+    return val, err
+    
+def get_phys_quark_mass_via_timeslices(corr, volume):
     Nt = int(volume[0])
-    corr = np.average(Sq_t, axis=0)
     try:
     	val, err = fitToSinh(corr, 1, Nt, plot=False)
     except:

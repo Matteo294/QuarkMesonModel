@@ -26,8 +26,9 @@ int constexpr nVectorComponents = 1;
 
 using dimArray = std::array<int, nDim>;
 
-dimArray constexpr Sizes = {64, 64};
+dimArray constexpr Sizes = {16, 16};
 int const vol = Sizes[0]*Sizes[1];
+int const spinor_vol = 4*vol;
 
 template <int N>
 int constexpr Prod() { return Sizes[N-1] * Prod<N-1>(); }
