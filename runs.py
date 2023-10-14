@@ -6,18 +6,46 @@ import subprocess
 
 cluster = sys.argv[1]
 
-configurations = []
-#masses = [-1.0 + n * 0.1 for n in range(21)]
-yukawas = [0.5, 1.5]
 
-for g in yukawas:
-    configurations.append({ "physics": {"useMass": "true", "mass": 0.4, "g": 0.6, "kappa": 0.18, "lambda": 0.02, "cutFraction": 0.0}, \
-                        "langevin": {"averageEpsilon": 0.025, "MaxLangevinTime": 10000.0, "ExportTime": 0.5, "burnCount": 200, "MeasureDriftCount": 60}, \
+configurations = []
+
+'''quark_masses = [0.0 - 0.15 * n for n in range(21)]
+s = 1.0
+for mq in quark_masses:
+    configurations.append({ "physics": {"useMass": "true", "mass": 10.0, "g": 0.4, "kappa": 0.18, "lambda": 0.02, "cutFraction": s}, \
+                        "langevin": {"averageEpsilon": 0.02, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 200, "MeasureDriftCount": 60}, \
                         "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
                         "random": {"seed": 1432}, \
-                        "fermions": {"yukawa_coupling": g, "fermion_mass": 0.7}, \
-						"lattice": {"Nt": 128, "Nx": 128} })
+                        "fermions": {"yukawa_coupling": 0.6, "fermion_mass": mq, "driftMode": 0}, \
+						"lattice": {"Nt": int(16/s), "Nx": int(16/s)} })'''
 
+
+masses = [-1.0 + 0.2 * n for n in range(11)]
+
+s = 0.5 
+for m2 in masses:
+    configurations.append({ "physics": {"useMass": "true", "mass": m2*s*s, "g": 0.4*s*s, "kappa": 0.18, "lambda": 0.02, "cutFraction": s}, \
+                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 100000.0, "ExportTime": 1.0, "burnCount": 200, "MeasureDriftCount": 60}, \
+                        "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
+                        "random": {"seed": 1432}, \
+                        "fermions": {"yukawa_coupling": 0.5*s, "fermion_mass": 0.3*s, "driftMode": 0}, \
+						"lattice": {"Nt": int(16/s), "Nx": int(16/s)} })
+'''s = 0.5 
+for m2 in masses:
+    configurations.append({ "physics": {"useMass": "true", "mass": m2*s*s, "g": 0.4*s*s, "kappa": 0.18, "lambda": 0.02, "cutFraction": s}, \
+                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 100000.0, "ExportTime": 1.0, "burnCount": 200, "MeasureDriftCount": 60}, \
+                        "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
+                        "random": {"seed": 1432}, \
+                        "fermions": {"yukawa_coupling": 0.5, "fermion_mass": 0.3, "driftMode": 1}, \
+						"lattice": {"Nt": int(16/s), "Nx": int(16/s)} })
+s = 0.25
+for m2 in masses:
+    configurations.append({ "physics": {"useMass": "true", "mass": m2*s*s, "g": 0.4*s*s, "kappa": 0.18, "lambda": 0.02, "cutFraction": s}, \
+                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 100000.0, "ExportTime": 1.0, "burnCount": 200, "MeasureDriftCount": 60}, \
+                        "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
+                        "random": {"seed": 1432}, \
+                        "fermions": {"yukawa_coupling": 0.5, "fermion_mass": 0.3, "driftMode": 1}, \
+						"lattice": {"Nt": int(16/s), "Nx": int(16/s)} })'''
 
 n_old_confs = max([int(d.replace("conf", "")) for d in os.listdir("./") if "conf" in d], default=0)
 print("tot old configurations:", n_old_confs)

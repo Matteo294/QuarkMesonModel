@@ -84,11 +84,12 @@ __global__ void computeDrift(cp<double> *afterCG,cp<double> *noise, double *outV
 
 	cg::grid_group grid = cg::this_grid();
 	for (int i = grid.thread_rank(); i < vol; i += grid.size()){
-		if (driftMode_gpu == DriftMode::Normal) 
+		if (driftMode_gpu == DriftMode::Normal) {
             outVec[i] = - yukawa_coupling_gpu * (  conj(afterCG[4*i+0])*noise[4*i+0]
                                                                             + conj(afterCG[4*i+1])*noise[4*i+1] 
                                                                             + conj(afterCG[4*i+2])*noise[4*i+2] 
                                                                             + conj(afterCG[4*i+3])*noise[4*i+3]).real();
+		}
         else if (driftMode_gpu == DriftMode::Rescaled) 
             outVec[i] = - cutFraction_gpu*cutFraction_gpu * yukawa_coupling_gpu * (  conj(afterCG[4*i+0])*noise[4*i+0]
                                                                             + conj(afterCG[4*i+1])*noise[4*i+1] 

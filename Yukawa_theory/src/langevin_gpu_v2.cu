@@ -68,7 +68,7 @@ __global__ void Run(myType *eps, myType ExportTime, myType *field,
 	cg::grid_group grid = cg::this_grid();
 	cg::thread_block cta = cg::this_thread_block();
 //	myType t = 0.0;
-	myType constexpr Kbar = 15.0;
+	myType constexpr Kbar = 20.0;
 	myType myEps = *eps;
 //	while (t < ExportTime) {
 		PotentialAndMass(field, drift, size);
