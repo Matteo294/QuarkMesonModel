@@ -42,7 +42,7 @@ __global__ void applyD_gpu(cp<double> *in, cp<double> *out, MatrixType const use
 	cg::sync(grid);
 	applyDiagonal(in, out, useDagger, M);
     cg::sync(grid);
-    applyHopping(in, out, useDagger, IUP, IDN);
+    //applyHopping(in, out, useDagger, IUP, IDN);
     cg::sync(grid);
 }
 
@@ -56,15 +56,15 @@ __device__ void applyDiagonal(cp<double> *inVec, cp<double> *outVec, MatrixType 
     
     for (int i = grid.thread_rank(); i < vol; i += grid.size()) {
         if (useDagger == MatrixType::Dagger){
-            outVec[4*i]     += two + mass + g * M[i] * inVec[4*i];
-            outVec[4*i+1]   += two + mass + g * M[i] * inVec[4*i+1];
-            outVec[4*i+2]   += two + mass + g * M[i] * inVec[4*i+2];
-            outVec[4*i+3]   += two + mass + g * M[i] * inVec[4*i+3];
+            outVec[4*i]     += (two + mass + g * M[i]) * inVec[4*i];
+            outVec[4*i+1]   += (two + mass + g * M[i]) * inVec[4*i+1];
+            outVec[4*i+2]   += (two + mass + g * M[i]) * inVec[4*i+2];
+            outVec[4*i+3]   += (two + mass + g * M[i]) * inVec[4*i+3];
         } else{
-            outVec[4*i]     += two + mass + g * M[i] * inVec[4*i];
-            outVec[4*i+1]   += two + mass + g * M[i] * inVec[4*i+1];
-            outVec[4*i+2]   += two + mass + g * M[i] * inVec[4*i+2];
-            outVec[4*i+3]   += two + mass + g * M[i] * inVec[4*i+3];
+            outVec[4*i]     += (two + mass + g * M[i]) * inVec[4*i];
+            outVec[4*i+1]   += (two + mass + g * M[i]) * inVec[4*i+1];
+            outVec[4*i+2]   += (two + mass + g * M[i]) * inVec[4*i+2];
+            outVec[4*i+3]   += (two + mass + g * M[i]) * inVec[4*i+3];
         }
     }
 }

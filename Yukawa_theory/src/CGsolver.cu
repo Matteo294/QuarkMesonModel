@@ -116,7 +116,7 @@ __global__ void solve_kernel(cp<double>  *inVec, cp<double> *outVec,
         cg::sync(grid);
         applyDiagonal(p, temp2, MatType, M);
         cg::sync(grid);
-		applyHopping(p, temp2, MatType, IUP, IDN);
+		//applyHopping(p, temp2, MatType, IUP, IDN);
 		cg::sync(grid);
 
 		// Apply D
@@ -125,7 +125,7 @@ __global__ void solve_kernel(cp<double>  *inVec, cp<double> *outVec,
         cg::sync(grid);
         applyDiagonal(temp2, temp, MatType, M);
         cg::sync(grid);
-		applyHopping(temp2, temp, MatType, IUP, IDN);
+		//applyHopping(temp2, temp, MatType, IUP, IDN);
 		cg::sync(grid);
     
 		if (threadIdx.x == 0 && blockIdx.x == 0) *dot_res = 0.0;
