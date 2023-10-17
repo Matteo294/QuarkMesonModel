@@ -49,6 +49,7 @@ __constant__ thrust::complex<double> im_gpu;
 __constant__ double cutFraction_gpu;
 __constant__ double sq2Kappa_gpu;
 __constant__ DriftMode driftMode_gpu;
+__constant__ double WilsonParam_gpu;
 // ----------------------------------------------------------
 
 
@@ -160,6 +161,7 @@ int main(int argc, char** argv) {
 	myType sum2 = 0.0;
 	auto const& fermionsSection = toml::find(inputData, "fermions");
 	double const fermion_mass = toml::find<double>(fermionsSection, "fermion_mass");
+    double const WilsonParam = toml::find<double>(fermionsSection, "WilsonParam");
 	double yukawa_coupling;
 	if (useMass == "true") 
 		yukawa_coupling = toml::find<double>(fermionsSection, "yukawa_coupling");
@@ -167,7 +169,7 @@ int main(int argc, char** argv) {
 		yukawa_coupling = toml::find<double>(fermionsSection, "yukawa_coupling") / sq2Kappa;
     auto driftMode = toml::find<int>(fermionsSection, "driftMode") == 0 ? DriftMode::Normal : DriftMode::Rescaled;
     
-	Spinor<double> in, out;
+	Spinor<double> in, out, cpy, out2;
 	DiracOP<double> Dirac;
 	FermionicDrift fDrift(seed);
 	CGsolver CG;
@@ -264,9 +266,27 @@ int main(int argc, char** argv) {
     cudaMemcpyToSymbol(cutFraction_gpu, &cutFraction, sizeof(double));
     cudaMemcpyToSymbol(sq2Kappa_gpu, &sq2Kappa, sizeof(double));
     cudaMemcpyToSymbol(driftMode_gpu, &driftMode, sizeof(DriftMode));
+    cudaMemcpyToSymbol(WilsonParam_gpu, &WilsonParam, sizeof(DriftMode));
 	// -----------------------------------------------------------------
     
 	Dirac.setScalar(ivec.data());
+    
+    
+    /*for(int i=0; i<4*vol; i++){
+        in.data()[i] = i/10.0;
+        cpy.data()[i] = in.data()[i];
+    }
+    for(int i=0; i<vol; i++) ivec.data()[i] = (double) 10.2/(i+1.3) + 0.4*i + (i-11.6);
+    
+    Dirac.applyD(in.data(), out.data(), MatrixType::Normal);
+    Dirac.applyD(cpy.data(), out2.data(), MatrixType::Normal);
+    
+    for(int i=0; i<4*vol; i++) std::cout << out.data()[i] << "\t" << out2.data()[i] << "\n";*/
+    
+    
+    
+    
+    
 	
 	// burn in a little bit, since the drift might be stronger at the beginning, since we are
 	// likely far from the equilibrium state
