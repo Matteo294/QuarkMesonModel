@@ -19,16 +19,16 @@ for mq in quark_masses:
                         "fermions": {"yukawa_coupling": 0.6, "fermion_mass": mq, "driftMode": 0}, \
 						"lattice": {"Nt": int(16/s), "Nx": int(16/s)} })'''
 
-'''quark_masses = [-0.1 + 0.03 * n for n in range(21)]
+quark_masses = [-0.1 + 0.03 * n for n in range(21)]
 for mq in quark_masses:
-    configurations.append({ "physics": {"useMass": "true", "mass": 15.0, "g": 0.4, "kappa": 0.18, "lambda": 0.02, "cutFraction": 0.5}, \
+    configurations.append({ "physics": {"useMass": "true", "mass": 5.0, "g": 0.4, "kappa": 0.18, "lambda": 0.02, "cutFraction": 1.0}, \
                         "langevin": {"averageEpsilon": 0.02, "MaxLangevinTime": 1000.0, "ExportTime": 1.0, "burnCount": 100, "MeasureDriftCount": 60}, \
                         "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
                         "random": {"seed": 1432}, \
-                        "fermions": {"yukawa_coupling": 0.6, "fermion_mass": mq, "driftMode": 0, "WilsonParam": 1.0}, \
-						"lattice": {"Nt": int(32), "Nx": int(32)} })'''
+                        "fermions": {"yukawa_coupling": 0.15, "fermion_mass": mq, "driftMode": 0, "WilsonParam": 1.0}, \
+						"lattice": {"Nt": int(64), "Nx": int(64)} })
 
-masses = [-1.0 + 0.2 * n for n in range(11)]
+'''masses = [-1.0 + 0.2 * n for n in range(11)]
 for m2 in masses:
     configurations.append({ "physics": {"useMass": "true", "mass": m2, "g": 0.4, "kappa": 0.18, "lambda": 0.02, "cutFraction": 1.0}, \
                         "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 100000.0, "ExportTime": 1.0, "burnCount": 100, "MeasureDriftCount": 60}, \
@@ -36,7 +36,7 @@ for m2 in masses:
                         "random": {"seed": 1432}, \
                         "fermions": {"yukawa_coupling": 0.6, "fermion_mass": -0.05355427674979719748725
                         , "driftMode": 0, "WilsonParam": 1.0}, \
-						"lattice": {"Nt": int(32), "Nx": int(32)} })
+						"lattice": {"Nt": int(32), "Nx": int(32)} })'''
 '''s = 1.0
 for m2 in masses:
     configurations.append({ "physics": {"useMass": "true", "mass": m2*s*s, "g": 0.4*s*s, "kappa": 0.18, "lambda": 0.02, "cutFraction": s}, \
