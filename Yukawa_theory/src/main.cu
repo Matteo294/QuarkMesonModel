@@ -266,7 +266,7 @@ int main(int argc, char** argv) {
     cudaMemcpyToSymbol(cutFraction_gpu, &cutFraction, sizeof(double));
     cudaMemcpyToSymbol(sq2Kappa_gpu, &sq2Kappa, sizeof(double));
     cudaMemcpyToSymbol(driftMode_gpu, &driftMode, sizeof(DriftMode));
-    cudaMemcpyToSymbol(WilsonParam_gpu, &WilsonParam, sizeof(DriftMode));
+    cudaMemcpyToSymbol(WilsonParam_gpu, &WilsonParam, sizeof(double));
 	// -----------------------------------------------------------------
     
 	Dirac.setScalar(ivec.data());

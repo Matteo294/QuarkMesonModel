@@ -19,25 +19,31 @@ for mq in quark_masses:
                         "fermions": {"yukawa_coupling": 0.6, "fermion_mass": mq, "driftMode": 0}, \
 						"lattice": {"Nt": int(16/s), "Nx": int(16/s)} })'''
 
-cutoffs = [1.0, 0.5, 0.25]
-for s in cutoffs:
-    configurations.append({ "physics": {"useMass": "true", "mass": -1.0*s*s, "g": 0.4*s*s, "kappa": 0.18, "lambda": 0.02, "cutFraction": s}, \
-                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 5000.0, "ExportTime": 1.0, "burnCount": 200, "MeasureDriftCount": 60}, \
+'''quark_masses = [-0.1 + 0.03 * n for n in range(21)]
+for mq in quark_masses:
+    configurations.append({ "physics": {"useMass": "true", "mass": 15.0, "g": 0.4, "kappa": 0.18, "lambda": 0.02, "cutFraction": 0.5}, \
+                        "langevin": {"averageEpsilon": 0.02, "MaxLangevinTime": 1000.0, "ExportTime": 1.0, "burnCount": 100, "MeasureDriftCount": 60}, \
                         "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
                         "random": {"seed": 1432}, \
-                        "fermions": {"yukawa_coupling": 1.0*s, "fermion_mass": 1.0*s, "driftMode": 1, "WilsonParam": 0.0}, \
-						"lattice": {"Nt": int(32/s), "Nx": int(32/s)} })
+                        "fermions": {"yukawa_coupling": 0.6, "fermion_mass": mq, "driftMode": 0, "WilsonParam": 1.0}, \
+						"lattice": {"Nt": int(32), "Nx": int(32)} })'''
 
-'''masses = [-1.0 + 0.2 * n for n in range(11)]
-masses = [-1.0, -0.8]
-
-s = 0.5
+masses = [-1.0 + 0.2 * n for n in range(11)]
+for m2 in masses:
+    configurations.append({ "physics": {"useMass": "true", "mass": m2, "g": 0.4, "kappa": 0.18, "lambda": 0.02, "cutFraction": 1.0}, \
+                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 100000.0, "ExportTime": 1.0, "burnCount": 100, "MeasureDriftCount": 60}, \
+                        "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
+                        "random": {"seed": 1432}, \
+                        "fermions": {"yukawa_coupling": 0.6, "fermion_mass": -0.05355427674979719748725
+                        , "driftMode": 0, "WilsonParam": 1.0}, \
+						"lattice": {"Nt": int(32), "Nx": int(32)} })
+'''s = 1.0
 for m2 in masses:
     configurations.append({ "physics": {"useMass": "true", "mass": m2*s*s, "g": 0.4*s*s, "kappa": 0.18, "lambda": 0.02, "cutFraction": s}, \
-                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 5000.0, "ExportTime": 1.0, "burnCount": 200, "MeasureDriftCount": 60}, \
+                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 100000.0, "ExportTime": 1.0, "burnCount": 200, "MeasureDriftCount": 60}, \
                         "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
                         "random": {"seed": 1432}, \
-                        "fermions": {"yukawa_coupling": 0.5*s, "fermion_mass": 0.3*s, "driftMode": 1}, \
+                        "fermions": {"yukawa_coupling": 0.5*s, "fermion_mass": 0.3*s, "driftMode": 1, "WilsonParam": 0.0}, \
 						"lattice": {"Nt": int(16/s), "Nx": int(16/s)} })'''
 
 n_old_confs = max([int(d.replace("conf", "")) for d in os.listdir("./") if "conf" in d], default=0)

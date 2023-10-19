@@ -7,11 +7,11 @@ lambda = 0.02
 cutFraction = 1.0
 
 [langevin]
-averageEpsilon = 0.005
-MaxLangevinTime = 10000.0
+averageEpsilon = 0.02
+MaxLangevinTime = 100.0
 ExportTime = 0.5
-burnCount = 200
-MeasureDriftCount = 50
+burnCount = 10
+MeasureDriftCount = 10
 
 [io]
 configFileName = "test.hdf"
@@ -25,3 +25,4 @@ seed = 1234
 yukawa_coupling =  1.0
 fermion_mass = 1.0
 driftMode = 0 # 0 for normal, 1 for rescaled (s^2 times drift)
+WilsonParam = 1.0

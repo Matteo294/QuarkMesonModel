@@ -49,7 +49,7 @@ __global__ void applyD_gpu(cp<double> *in, cp<double> *out, MatrixType const use
 __device__ void applyDiagonal(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, double *M){
     auto grid = cg::this_grid();
     
-    thrust::complex<double> const two {2.0 * r_gpu, 0.0};
+    thrust::complex<double> const two {2.0 * WilsonParam_gpu, 0.0};
     thrust::complex<double> const g = static_cast<thrust::complex<double>> (yukawa_coupling_gpu);
     thrust::complex<double> const mass = static_cast<thrust::complex<double>> (fermion_mass_gpu);
     thrust::complex<double> half {0.5, 0.0};
