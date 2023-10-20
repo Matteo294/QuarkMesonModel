@@ -173,6 +173,23 @@ __device__ void gpuDotProduct(thrust::complex<double> *vecA, thrust::complex<dou
 	}
 }
 
+__global__ void gpuTimeSlices_spinors(cp<double> *vecA, double *result, int size) {
+	cg::thread_block cta = cg::this_thread_block();
+	cg::grid_group grid = cg::this_grid();
+	
+	for (int i = grid.thread_rank(); i < Sizes[0]; i += grid.size()) {
+		
+		result[i] = 0.0;
+
+		for (int j = 0; j < Sizes[1]; j++) {
+			for (int k=0; k<4; k++){
+				result[i] += vecA[4*(i*Sizes[1] + j) + k].real();
+			}
+		}
+
+	}
+}
+
 
 
 __global__ void setZero_kernel(cp<double> *v, int const vol){

@@ -46,7 +46,7 @@ __global__ void applyD_gpu(cp<double> *in, cp<double> *out, MatrixType const use
     cg::sync(grid);
 }
 
-__device__ void applyDiagonal(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, double *M){
+/*__device__ void applyDiagonal(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, double *M){
     auto grid = cg::this_grid();
     
     thrust::complex<double> const two {2.0 * WilsonParam_gpu, 0.0};
@@ -111,6 +111,68 @@ __device__ void applyHopping(cp<double> *inVec, cp<double> *outVec, MatrixType c
 								- 0.5 * (r * inVec[IDN[i][1] + 2] - inVec[IDN[i][1] + 3]) - 0.5 * (r * inVec[IUP[i][1] + 2] + inVec[IUP[i][1] + 3]); // f1s1
             outVec[4*i + 3] +=  -sgn[0] * 0.5 * (r - 1.0) * inVec[IUP[i][0] + 3] - sgn[1] * 0.5 * (r + 1.0) * inVec[IDN[i][0] + 3] 
 								+ 0.5 * (inVec[IDN[i][1] + 2] - r * inVec[IDN[i][1] + 3]) - 0.5 * (inVec[IUP[i][1] + 2] + r * inVec[IUP[i][1] + 3]); // f1s2
+        }
+        
+    }  
+
+}*/
+
+__device__ void applyDiagonal(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, double *M){
+    auto grid = cg::this_grid();
+    
+    thrust::complex<double> const two {2.0, 0.0};
+    thrust::complex<double> const g = static_cast<thrust::complex<double>> (yukawa_coupling_gpu);
+    thrust::complex<double> const mass = static_cast<thrust::complex<double>> (fermion_mass_gpu);
+    thrust::complex<double> half {0.5, 0.0};
+    
+    for (int i = grid.thread_rank(); i < vol; i += grid.size()) {
+        if (useDagger == MatrixType::Dagger){
+            outVec[4*i]     += (two + mass + g * M[i]) * inVec[4*i];
+            outVec[4*i+1]   += (two + mass + g * M[i]) * inVec[4*i+1];
+            outVec[4*i+2]   += (two + mass + g * M[i]) * inVec[4*i+2];
+            outVec[4*i+3]   += (two + mass + g * M[i]) * inVec[4*i+3];
+        } else{
+            outVec[4*i]     += (two + mass + g * M[i]) * inVec[4*i];
+            outVec[4*i+1]   += (two + mass + g * M[i]) * inVec[4*i+1];
+            outVec[4*i+2]   += (two + mass + g * M[i]) * inVec[4*i+2];
+            outVec[4*i+3]   += (two + mass + g * M[i]) * inVec[4*i+3];
+        }
+    }
+}
+
+__device__ void applyHopping(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN){
+
+    auto grid = cg::this_grid();
+
+    int nt, nx;
+    //int IUP[2], IDN[2]; // neighbours up and down gor both directions
+    double sgn[2]; // anti-periodic boundary conditions
+	cp<double> psisum[2], psidiff[2];
+    for (int i = grid.thread_rank(); i < vol; i += grid.size()) {
+
+        auto idx = flatToVec(i);
+
+        nt = idx[0];
+        nx = idx[1];
+        
+        sgn[0] = (nt == (Sizes[0] - 1)) ? -1.0 : 1.0;
+        sgn[1] = (nt == 0) ? -1.0 : 1.0;
+        
+		if (useDagger == MatrixType::Normal) {
+            //flavour 1
+			outVec[4*i + 0] +=  -sgn[1] * inVec[IDN[i][0] + 0] - 0.5 * (inVec[IUP[i][1] + 0] - inVec[IUP[i][1] + 1]) - 0.5 * (inVec[IDN[i][1] + 0] + inVec[IDN[i][1] + 1]); // f1s1
+            outVec[4*i + 1] +=  -sgn[0] * inVec[IUP[i][0] + 1] + 0.5 * (inVec[IUP[i][1] + 0] - inVec[IUP[i][1] + 1]) - 0.5 * (inVec[IDN[i][1] + 0] + inVec[IDN[i][1] + 1]); // f1s2
+            // flavour 2
+            outVec[4*i + 2] +=  -sgn[1] * inVec[IDN[i][0] + 2] - 0.5 * (inVec[IUP[i][1] + 2] - inVec[IUP[i][1] + 3]) - 0.5 * (inVec[IDN[i][1] + 2] + inVec[IDN[i][1] + 3]); // f2s1
+            outVec[4*i + 3] +=  -sgn[0] * inVec[IUP[i][0] + 3] + 0.5 * (inVec[IUP[i][1] + 2] - inVec[IUP[i][1] + 3]) - 0.5 * (inVec[IDN[i][1] + 2] + inVec[IDN[i][1] + 3]); // f2s2
+
+        } else if (useDagger == MatrixType::Dagger) {
+            // flavour 1
+            outVec[4*i + 0] +=  -sgn[0] * inVec[IUP[i][0] + 0] - 0.5 * (inVec[IDN[i][1] + 0] - inVec[IDN[i][1] + 1]) - 0.5 * (inVec[IUP[i][1] + 0] + inVec[IUP[i][1] + 1]); // f1s1
+            outVec[4*i + 1] +=  -sgn[1] * inVec[IDN[i][0] + 1] + 0.5 * (inVec[IDN[i][1] + 0] - inVec[IDN[i][1] + 1]) - 0.5 * (inVec[IUP[i][1] + 0] + inVec[IUP[i][1] + 1]); // f1s2
+            // flavour 2
+            outVec[4*i + 2] +=  -sgn[0] * inVec[IUP[i][0] + 2] - 0.5 * (inVec[IDN[i][1] + 2] - inVec[IDN[i][1] + 3]) - 0.5 * (inVec[IUP[i][1] + 2] + inVec[IUP[i][1] + 3]); // f2s1
+            outVec[4*i + 3] +=  -sgn[1] * inVec[IDN[i][0] + 3] + 0.5 * (inVec[IDN[i][1] + 2] - inVec[IDN[i][1] + 3]) - 0.5 * (inVec[IUP[i][1] + 2] + inVec[IUP[i][1] + 3]); // f2s2
         }
         
     }  

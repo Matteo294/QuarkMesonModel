@@ -174,6 +174,7 @@ int main(int argc, char** argv) {
 	FermionicDrift fDrift(seed);
 	CGsolver CG;
     double *trace; // trace D^-1
+    ManagedVector<double> corr(Sizes[0]);
 	
 	cudaMallocManaged(&trace, sizeof(double));
     
@@ -206,6 +207,14 @@ int main(int argc, char** argv) {
 	auto dimGrid_setZero = dim3(nBlocks, 1, 1);
 	auto dimBlock_setZero = dim3(nThreads, 1, 1);
     void *setZeroArgs[] = {(void*) &in.data(), (void*) &spinor_vol};
+	
+	nBlocks = 0;
+	nThreads = 0;
+	cudaOccupancyMaxPotentialBlockSize(&nBlocks, &nThreads, gpuTimeSlices_spinors);
+	cudaDeviceSynchronize();
+	auto dimGrid_tsSpinors = dim3(nBlocks, 1, 1);
+	auto dimBlock_tsSpinors = dim3(nThreads, 1, 1);
+    void *tsSpinorsArgs[] = {(void*) &in.data(), (void*) &corr.data(), (void*) &Sizes[0]};
     
 	// set up print files
 	std::ofstream datafile, tracefile;
@@ -445,21 +454,18 @@ int main(int argc, char** argv) {
 			case '0':
 
 				CG.solve(in.data(), out.data(), Dirac, MatrixType::Normal);
-				//myvol = spinor_vol;
 				Dirac.applyD(out.data(), in.data(), MatrixType::Dagger);
 				cudaDeviceSynchronize();
 
 				break;
 		}
 		
+		cudaLaunchCooperativeKernel((void*) &gpuTimeSlices_spinors, dimGrid_tsSpinors, dimBlock_tsSpinors, tsSpinorsArgs, 0, NULL);
+		cudaDeviceSynchronize();
+		
 
-		thrust::complex<double> corr = 0.0;
 		for(int nt=0; nt<Sizes[0]; nt++){
-			corr = 0.0;
-			for(int nx=0; nx<Sizes[1]; nx++){
-				for(int j=0; j<4; j++) corr += in.data()[4*vecToFlat(nt, nx) + j];
-			}
-			datafile << corr.real() << "\n";
+			datafile << corr.data()[nt] << "\n";
 		}
         
         // -->  compute condensates from drifts as they are proportional
