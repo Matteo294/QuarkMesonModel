@@ -22,8 +22,8 @@ for s in cutoffs:
                             "fermions": {"yukawa_coupling": g, "fermion_mass": 1.0, "driftMode": 1, "WilsonParam": 0.0}, \
                             "lattice": {"Nt": int(16/s), "Nx": int(16/s)} })
 '''
-sqmasses = [-0.6,-0.4,-0.2, 0.0, 0.2, 0.4]
-quark_masses = [-0.5 + 0.1 * n for n in range(6)]
+sqmasses = [-0.2]
+quark_masses = [-0.02 + 0.03 * n for n in range(1,6)]
 
 for m2 in sqmasses:
     for mq in quark_masses:
