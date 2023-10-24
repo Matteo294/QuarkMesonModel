@@ -22,12 +22,12 @@ for s in cutoffs:
                             "fermions": {"yukawa_coupling": g, "fermion_mass": 1.0, "driftMode": 1, "WilsonParam": 0.0}, \
                             "lattice": {"Nt": int(16/s), "Nx": int(16/s)} })
 '''
-sqmasses = [-0.2]
-quark_masses = [-0.02 + 0.03 * n for n in range(1,6)]
+sqmasses = [0.0]
+quark_masses = [-0.06 + 0.03 * n for n in range(5)]
 
 for m2 in sqmasses:
     for mq in quark_masses:
-        configurations.append({ "physics": {"useMass": "true", "mass": m2, "g": 6.0, "kappa": 0.18, "lambda": 0.02, "cutFraction": 0.0}, \
+        configurations.append({ "physics": {"useMass": "true", "mass": m2, "g": 6.0, "kappa": 0.18, "lambda": 0.02, "cutFraction": 0.5001}, \
                         "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 50000.0, "ExportTime": 1.0, "burnCount": 150, "MeasureDriftCount": 100}, \
                         "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
                         "random": {"seed": 1432}, \
