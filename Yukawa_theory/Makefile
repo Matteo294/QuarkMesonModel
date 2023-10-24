@@ -4,7 +4,7 @@ INC_DIR=-I$(TOML) -I$(HDF_INC)
 LIB_DIR=-L$(HDF_LIB)
 LINK_ARGS=-Xlinker '-rpath,$(HDF_LIB)'
 
-FLAGS=-O2 --std=c++17 -Xcompiler '-march=native' -MMD -MP -rdc=true -gencode arch=compute_61,code=sm_61 -gencode arch=compute_75,code=sm_75 -gencode arch=compute_70,code=sm_70 --expt-relaxed-constexpr
+FLAGS=-O3 --std=c++17 -Xcompiler '-march=native' -MMD -MP -rdc=true -gencode arch=compute_61,code=sm_61 -gencode arch=compute_75,code=sm_75 -gencode arch=compute_70,code=sm_70 --expt-relaxed-constexpr
 LIBS=-lcurand
 
 ifeq ($(FFT), cuFFT)

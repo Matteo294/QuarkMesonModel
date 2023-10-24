@@ -198,7 +198,7 @@ int main(int argc, char** argv) {
 	cudaDeviceSynchronize();
 	auto dimGrid_traces = dim3(nBlocks, 1, 1);
 	auto dimBlock_traces = dim3(nThreads, 1, 1);
-    void *tracesArgs[] = {(void*) &drift.data(), (void*) &trace, (void*) &spinor_vol};
+    void *tracesArgs[] = {(void*) &drift.data(), (void*) &trace, (void*) &vol};
 
 	nBlocks = 0;
 	nThreads = 0;
@@ -484,7 +484,7 @@ int main(int argc, char** argv) {
             *trace = 0.0;
         }
 		
-        tracefile << (double) (*trace) / vol / 4.0 << "," << (double) (avg[0] / vol) << "," << (double) (std::sqrt(sum2) / vol) << "\n";
+        tracefile << (double) (*trace) / vol << "," << (double) (avg[0] / vol) << "," << (double) (std::sqrt(sum2) / vol) << "\n";
 		// ------------------------------------------------------
 
 		
