@@ -69,7 +69,7 @@ __device__ void applyDiagonal(cp<double> *inVec, cp<double> *outVec, MatrixType 
     }
 }
 
-__device__ void applyHopping(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN){
+/*__device__ void applyHopping(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN){
 
     auto grid = cg::this_grid();
 
@@ -113,7 +113,7 @@ __device__ void applyHopping(cp<double> *inVec, cp<double> *outVec, MatrixType c
 								+ 0.5 * (inVec[IDN[i][1] + 2] - r * inVec[IDN[i][1] + 3]) - 0.5 * (inVec[IUP[i][1] + 2] + r * inVec[IUP[i][1] + 3]); // f1s2
         }
 
-        /*if (useDagger == MatrixType::Normal) {
+        if (useDagger == MatrixType::Normal) {
             // flavour 1
             outVec[4*i + 0] +=  -sgn[1] * 0.5 * inVec[IDN[i][0] + 0] + sgn[0] * 0.5 * inVec[IUP[i][0] + 0] 
 								        + 0.5 * inVec[IUP[i][1] + 1] -          0.5 * inVec[IDN[i][1] + 1]; // f1s1
@@ -135,7 +135,55 @@ __device__ void applyHopping(cp<double> *inVec, cp<double> *outVec, MatrixType c
 								        + 0.5 * inVec[IDN[i][1] + 3] -          0.5 * inVec[IUP[i][1] + 3]; // f1s1
             outVec[4*i + 3] +=  -sgn[0] * 0.5 * inVec[IUP[i][0] + 3] + sgn[1] * 0.5 * inVec[IDN[i][0] + 3] 
 								        - 0.5 * inVec[IDN[i][1] + 2] +          0.5 * inVec[IUP[i][1] + 2]; // f1s1
-        }*/
+        }
+        
+    }  
+
+}*/
+
+__device__ void applyHopping(cp<double> *inVec, cp<double> *outVec, MatrixType const useDagger, my2dArray *IUP, my2dArray *IDN){
+
+    auto grid = cg::this_grid();
+
+    int nt, nx;
+    //int IUP[2], IDN[2]; // neighbours up and down gor both directions
+    double sgn[2]; // anti-periodic boundary conditions
+	cp<double> psisum[2], psidiff[2];
+    double r = WilsonParam_gpu;
+    
+    for (int i = grid.thread_rank(); i < vol; i += grid.size()) {
+
+        auto idx = flatToVec(i);
+
+        nt = idx[0];
+        nx = idx[1];
+        
+        sgn[0] = (nt == (Sizes[0] - 1)) ? -1.0 : 1.0;
+        sgn[1] = (nt == 0) ? -1.0 : 1.0;
+        
+		if (useDagger == MatrixType::Normal) {
+            // flavour 1
+            outVec[4*i + 0] +=  -sgn[1] * 0.5 * (r + 1.0) * inVec[IDN[i][0] + 0] - sgn[0] * 0.5 * (r - 1.0) * inVec[IUP[i][0] + 0] 
+								- 0.5 * (r * inVec[IUP[i][1] + 0] - inVec[IUP[i][1] + 1]) - 0.5 * (r * inVec[IDN[i][1] + 0] + inVec[IDN[i][1] + 1]); // f1s1
+            outVec[4*i + 1] +=  -sgn[1] * 0.5 * (r - 1.0) * inVec[IDN[i][0] + 1] - sgn[0] * 0.5 * (r + 1.0) * inVec[IUP[i][0] + 1] 
+								+ 0.5 * (inVec[IUP[i][1] + 0] - r * inVec[IUP[i][1] + 1]) - 0.5 * (inVec[IDN[i][1] + 0] + r * inVec[IDN[i][1] + 1]); // f1s2
+            // flavour 2
+            outVec[4*i + 2] +=  -sgn[1] * 0.5 * (r + 1.0) * inVec[IDN[i][0] + 2] - sgn[0] * 0.5 * (r - 1.0) * inVec[IUP[i][0] + 2] 
+								- 0.5 * (r * inVec[IUP[i][1] + 2] - inVec[IUP[i][1] + 3]) - 0.5 * (r * inVec[IDN[i][1] + 2] + inVec[IDN[i][1] + 3]); // f1s1
+            outVec[4*i + 3] +=  -sgn[1] * 0.5 * (r - 1.0) * inVec[IDN[i][0] + 3] - sgn[0] * 0.5 * (r + 1.0) * inVec[IUP[i][0] + 3] 
+								+ 0.5 * (inVec[IUP[i][1] + 2] - r * inVec[IUP[i][1] + 3]) - 0.5 * (inVec[IDN[i][1] + 2] + r * inVec[IDN[i][1] + 3]); // f1s2
+        } else if (useDagger == MatrixType::Dagger) {
+            // flavour 1
+            outVec[4*i + 0] +=  -sgn[0] * 0.5 * (r + 1.0) * inVec[IUP[i][0] + 0] - sgn[1] * 0.5 * (r - 1.0) * inVec[IDN[i][0] + 0] 
+								- 0.5 * (r * inVec[IDN[i][1] + 0] - inVec[IDN[i][1] + 1]) - 0.5 * (r * inVec[IUP[i][1] + 0] + inVec[IUP[i][1] + 1]); // f1s1
+            outVec[4*i + 1] +=  -sgn[0] * 0.5 * (r - 1.0) * inVec[IUP[i][0] + 1] - sgn[1] * 0.5 * (r + 1.0) * inVec[IDN[i][0] + 1] 
+								+ 0.5 * (inVec[IDN[i][1] + 0] - r * inVec[IDN[i][1] + 1]) - 0.5 * (inVec[IUP[i][1] + 0] + r * inVec[IUP[i][1] + 1]); // f1s2
+            // flavour 2
+            outVec[4*i + 2] +=  -sgn[0] * 0.5 * (r + 1.0) * inVec[IUP[i][0] + 2] - sgn[1] * 0.5 * (r - 1.0) * inVec[IDN[i][0] + 2] 
+								- 0.5 * (r * inVec[IDN[i][1] + 2] - inVec[IDN[i][1] + 3]) - 0.5 * (r * inVec[IUP[i][1] + 2] + inVec[IUP[i][1] + 3]); // f1s1
+            outVec[4*i + 3] +=  -sgn[0] * 0.5 * (r - 1.0) * inVec[IUP[i][0] + 3] - sgn[1] * 0.5 * (r + 1.0) * inVec[IDN[i][0] + 3] 
+								+ 0.5 * (inVec[IDN[i][1] + 2] - r * inVec[IDN[i][1] + 3]) - 0.5 * (inVec[IUP[i][1] + 2] + r * inVec[IUP[i][1] + 3]); // f1s2
+        }
         
     }  
 
