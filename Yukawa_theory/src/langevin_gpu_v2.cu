@@ -68,7 +68,7 @@ __global__ void Run(myType *eps, myType ExportTime, myType *field,
 	cg::grid_group grid = cg::this_grid();
 	cg::thread_block cta = cg::this_thread_block();
 //	myType t = 0.0;
-	myType constexpr Kbar = 15.0;
+	myType constexpr Kbar = 30.0;
 	myType myEps = *eps;
 //	while (t < ExportTime) {
 		PotentialAndMass(field, drift, size);
@@ -81,12 +81,12 @@ __global__ void Run(myType *eps, myType ExportTime, myType *field,
         cg::sync(grid);
         
         if (threadIdx.x == 0 && blockIdx.x == 0){
-            if (maxDrift[0] > 1e4) {
+            if (maxDrift[0] > 1e5) {
                 printf("Max. drift exceeded %f \n", maxDrift[0]);
-                maxDrift[0] = 1e4;
-            } else if (maxDrift[0] < 1e-4) {
+                maxDrift[0] = 1e5;
+            } else if (maxDrift[0] < 1e-5) {
                 printf("Min. drift exceeded %f \n", maxDrift[0]);
-                maxDrift[0] = 1e-4;
+                maxDrift[0] = 1e-5;
             }
         }
         

@@ -93,8 +93,8 @@ __device__ void applyHopping(cp<double> *inVec, cp<double> *outVec, MatrixType c
             // flavour 1
             outVec[4*i + 0] +=  -sgn[1] * 0.5 * (r + 1.0) * inVec[IDN[i][0] + 0] - sgn[0] * 0.5 * (r - 1.0) * inVec[IUP[i][0] + 0] 
 								- 0.5 * (r * inVec[IUP[i][1] + 0] - inVec[IUP[i][1] + 1]) - 0.5 * (r * inVec[IDN[i][1] + 0] + inVec[IDN[i][1] + 1]); // f1s1
-            outVec[4*i + 1] +=  -sgn[1] * 0.5 * (r - 1.0) * inVec[IDN[i][0] + 1] - sgn[0] * 0.5 * (r + 1.0) * inVec[IUP[i][0] + 1] 
-								+ 0.5 * (inVec[IUP[i][1] + 0] - r * inVec[IUP[i][1] + 1]) - 0.5 * (inVec[IDN[i][1] + 0] + r * inVec[IDN[i][1] + 1]); // f1s2
+            outVec[4*i + 1] +=  sgn[1] * 0.5 * (r - 1.0) * inVec[IDN[i][0] + 1] + sgn[0] * 0.5 * (r + 1.0) * inVec[IUP[i][0] + 1] 
+								- 0.5 * (inVec[IUP[i][1] + 0] - r * inVec[IUP[i][1] + 1]) - 0.5 * (inVec[IDN[i][1] + 0] + r * inVec[IDN[i][1] + 1]); // f1s2
             // flavour 2
             outVec[4*i + 2] +=  -sgn[1] * 0.5 * (r + 1.0) * inVec[IDN[i][0] + 2] - sgn[0] * 0.5 * (r - 1.0) * inVec[IUP[i][0] + 2] 
 								- 0.5 * (r * inVec[IUP[i][1] + 2] - inVec[IUP[i][1] + 3]) - 0.5 * (r * inVec[IDN[i][1] + 2] + inVec[IDN[i][1] + 3]); // f1s1
@@ -112,6 +112,30 @@ __device__ void applyHopping(cp<double> *inVec, cp<double> *outVec, MatrixType c
             outVec[4*i + 3] +=  -sgn[0] * 0.5 * (r - 1.0) * inVec[IUP[i][0] + 3] - sgn[1] * 0.5 * (r + 1.0) * inVec[IDN[i][0] + 3] 
 								+ 0.5 * (inVec[IDN[i][1] + 2] - r * inVec[IDN[i][1] + 3]) - 0.5 * (inVec[IUP[i][1] + 2] + r * inVec[IUP[i][1] + 3]); // f1s2
         }
+
+        /*if (useDagger == MatrixType::Normal) {
+            // flavour 1
+            outVec[4*i + 0] +=  -sgn[1] * 0.5 * inVec[IDN[i][0] + 0] + sgn[0] * 0.5 * inVec[IUP[i][0] + 0] 
+								        + 0.5 * inVec[IUP[i][1] + 1] -          0.5 * inVec[IDN[i][1] + 1]; // f1s1
+            outVec[4*i + 1] +=  -sgn[1] * 0.5 * inVec[IDN[i][0] + 1] + sgn[0] * 0.5 * inVec[IUP[i][0] + 1] 
+								        - 0.5 * inVec[IUP[i][1] + 0] +          0.5 * inVec[IDN[i][1] + 0]; // f1s1
+            // flavour 2
+            outVec[4*i + 2] +=  -sgn[1] * 0.5 * inVec[IDN[i][0] + 2] + sgn[0] * 0.5 * inVec[IUP[i][0] + 2] 
+								        + 0.5 * inVec[IUP[i][1] + 3] -          0.5 * inVec[IDN[i][1] + 3]; // f1s1
+            outVec[4*i + 3] +=  -sgn[1] * 0.5 * inVec[IDN[i][0] + 3] + sgn[0] * 0.5 * inVec[IUP[i][0] + 3] 
+								        - 0.5 * inVec[IUP[i][1] + 2] +          0.5 * inVec[IDN[i][1] + 2]; // f1s1
+        } else if (useDagger == MatrixType::Dagger) {
+            // flavour 1
+            outVec[4*i + 0] +=  -sgn[0] * 0.5 * inVec[IUP[i][0] + 0] + sgn[1] * 0.5 * inVec[IDN[i][0] + 0] 
+								        + 0.5 * inVec[IDN[i][1] + 1] -          0.5 * inVec[IUP[i][1] + 1]; // f1s1
+            outVec[4*i + 1] +=  -sgn[0] * 0.5 * inVec[IUP[i][0] + 1] + sgn[1] * 0.5 * inVec[IDN[i][0] + 1] 
+								        - 0.5 * inVec[IDN[i][1] + 0] +          0.5 * inVec[IUP[i][1] + 0]; // f1s1
+            // flavour 2
+            outVec[4*i + 2] +=  -sgn[0] * 0.5 * inVec[IUP[i][0] + 2] + sgn[1] * 0.5 * inVec[IDN[i][0] + 2] 
+								        + 0.5 * inVec[IDN[i][1] + 3] -          0.5 * inVec[IUP[i][1] + 3]; // f1s1
+            outVec[4*i + 3] +=  -sgn[0] * 0.5 * inVec[IUP[i][0] + 3] + sgn[1] * 0.5 * inVec[IDN[i][0] + 3] 
+								        - 0.5 * inVec[IDN[i][1] + 2] +          0.5 * inVec[IUP[i][1] + 2]; // f1s1
+        }*/
         
     }  
 

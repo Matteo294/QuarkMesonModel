@@ -141,7 +141,7 @@ ColouredNoise::ColouredNoise(ManagedVector<myType>& noise, int const& N, double 
 	for (int pos = 0; pos < SIZE; ++pos) {
 		auto const momSq = GlobalCoordinateToMomentumSquared(IndexToGlobalCoords(pos));
 		if (momSq >= 0)
-			momentumMask[arr++] = (momSq < cutSq ? 1.0 / N : 0.0);
+			momentumMask[arr++] = (momSq <= cutSq ? 1.0 / N : 0.0);
 	}
 }
 

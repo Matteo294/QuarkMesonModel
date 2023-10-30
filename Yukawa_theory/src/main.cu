@@ -124,8 +124,8 @@ int main(int argc, char** argv) {
 		kappa  = toml::find<myType>(parameters, "kappa");
 		Lambda = toml::find<myType>(parameters, "lambda");
 
-		my_m2 = (1.0 - 2.0*Lambda) / kappa - 2.0*nDim;
-		myLambda = 6.0 * Lambda / (kappa*kappa);
+		my_m2 = ((1.0 - 2.0*Lambda) / kappa - 2.0*nDim);
+		myLambda = (6.0 * Lambda / (kappa*kappa));
 	}
 	auto const sq2Kappa = std::sqrt(2.0 * kappa);
 	auto const cutFraction = toml::find<myType>(parameters, "cutFraction");
@@ -446,8 +446,8 @@ int main(int argc, char** argv) {
 		// Set source
         in.data()[0] = 1.0;
 		in.data()[1] = 1.0;
-		in.data()[2] = 1.0;
-		in.data()[3] = 1.0;
+		in.data()[2] = 0.0;
+		in.data()[3] = 0.0;
 
         switch (CGmode) {
 			
@@ -469,12 +469,8 @@ int main(int argc, char** argv) {
 		}
         
         // -->  compute condensates from drifts as they are proportional
-        
-
         fDrift.getForce(drift.data(), Dirac, CG, dimGrid_drift, dimBlock_drift);        
-		
         *trace = 0.0;
-        
 		cudaLaunchCooperativeKernel((void*) &gpuTraces, dimGrid_traces, dimBlock_traces, tracesArgs, 32 * sizeof(double), NULL);
 		cudaDeviceSynchronize();
        	//std::cout << "Trace: " << *trace << std::endl; 
