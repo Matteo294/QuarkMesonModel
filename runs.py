@@ -11,7 +11,7 @@ cluster = sys.argv[1]
 configurations = []
 
 
-'''yukawas = [0.0 + 0.2 * n for n in range(1, 4)]
+'''yukawas = [0.0 + 0.2 * n for n in range(10)]
 cutoffs = [1.0, 1/2, 1/4]
 for s in cutoffs:
     for g in yukawas:
@@ -19,20 +19,22 @@ for s in cutoffs:
                             "langevin": {"averageEpsilon": 0.02, "MaxLangevinTime": 10000.0, "ExportTime": 1.0, "burnCount": 200, "MeasureDriftCount": 60}, \
                             "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
                             "random": {"seed": 1432}, \
-                            "fermions": {"yukawa_coupling": g, "fermion_mass": 1.0, "driftMode": 1, "WilsonParam": 0.0}, \
-                            "lattice": {"Nt": int(16/s), "Nx": int(16/s)} })
-'''
-sqmasses = [0.0]
-quark_masses = [-0.06 + 0.03 * n for n in range(5)]
+                            "fermions": {"yukawa_coupling": g, "fermion_mass": 1.0, "driftMode": 1, "WilsonParam": 1.0}, \
+                            "lattice": {"Nt": int(16/s), "Nx": int(16/s)} })'''
 
-for m2 in sqmasses:
-    for mq in quark_masses:
-        configurations.append({ "physics": {"useMass": "true", "mass": m2, "g": 6.0, "kappa": 0.18, "lambda": 0.02, "cutFraction": 0.5001}, \
-                        "langevin": {"averageEpsilon": 0.01, "MaxLangevinTime": 50000.0, "ExportTime": 1.0, "burnCount": 150, "MeasureDriftCount": 100}, \
+
+#sqmasses = []
+
+NTs = range(2, 25, 4)
+s = 0.5
+for t in NTs:
+        configurations.append({ "physics": {"useMass": "true", "mass": -0.5*s*s, "g": 1.582*s*s, "kappa": 0.275, "lambda": 0.02, "cutFraction": s}, \
+                        "langevin": {"averageEpsilon": 0.005, "MaxLangevinTime": 50000.0, "ExportTime": 1.0, "burnCount": 100, "MeasureDriftCount": 100}, \
                         "io": {"configFileName": "test.hdf", "export": "false", "timeSliceFileName": "slice.dat"}, \
-                        "random": {"seed": 1432}, \
-                        "fermions": {"yukawa_coupling": 0.15, "fermion_mass": mq, "driftMode": 0, "WilsonParam": 1.0}, \
-                        "lattice": {"Nt": int(32), "Nx": int(32)} })
+                        "random": {"seed": 2904}, \
+                        "fermions": {"yukawa_coupling": 0.07, "fermion_mass": 0.01, "driftMode": 1, "WilsonParam": 0.0}, \
+                        "lattice": {"Nt": int(t), "Nx": int(16/s)} })
+
 
 n_old_confs = max([int(d.replace("conf", "")) for d in os.listdir("./") if "conf" in d], default=0)
 print("tot old configurations:", n_old_confs)
