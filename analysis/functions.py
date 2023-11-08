@@ -12,20 +12,25 @@ lib_path = "/home/matteo/code/QuarkMesonModel/analysis/AutoCorrelation/build/"
 class Dataset:
     
     # mode can be either 0 (no rescaling of params) or 1 (rescaling params / block spin)
-    def add_data(self, folder, param, mode):
-        self.fields_data = read_csv(folder + '/traces.csv')
+    def add_data(self, folder):
         try:
-            self.fields_data = read_csv(folder + '/traces.csv')
+            self.fields_data = read_csv(folder + '/tr.csv')
         except:
-            print("Reading traces.csv was not possible")
+            try:
+                self.fields_data = read_csv(folder + '/traces.csv')
+            except:
+                print("Reading traces.csv was not possible")
         try:
             self.S_t = get_time_slices_from_timeslicefile(folder + "/slice.dat", field_axis=0, return_all=False)
         except:
             print("Reading slice.dat was not possible")
         try:
-            self.data_Sq_t = read_csv(folder + "/data.csv")
+            self.data_Sq_t = read_csv(folder + "/corr.csv")
         except:
-            print("Reading data.csv was not possible")
+            try:
+                self.data_Sq_t = read_csv(folder + "/data.csv")
+            except:
+                print("Reading data.csv was not possible")
         try:
             self.Sq_t = self.data_Sq_t['corr'].to_numpy(np.dtype('f8')).reshape((-1, self.Nt))
         except:
@@ -33,44 +38,43 @@ class Dataset:
              
         self.toml_params = self.get_toml_params(folder + '/input.toml')
         self.volume = (self.Nt, self.Nx)
-        self.mode = mode
     
-    def compute_mag(self, printing=False):
+    def compute_mag(self):
         blob = ComputeStatistics(self.fields_data['sigma'])
-        if printing:
-            print("Npoints:", len(self.fields_data['sigma']), " \t val:", blob.average, "+-", blob.sigmaF, "\t ACtime:", blob.ACtime)
         return blob.average, blob.sigmaF
     
-    def compute_abs_mag(self, printing=False):
+    def compute_abs_mag(self):
         blob = ComputeStatistics(self.fields_data['phi'])
-        if printing:
-            print("Npoints:", len(self.fields_data['sigma']), " \t val:", blob.average, "+-", blob.sigmaF, "\t ACtime:", blob.ACtime)
         return blob.average, blob.sigmaF
     
-    def compute_condensate(self, printing=False):
+    def compute_condensate(self):
         blob = ComputeStatistics(self.fields_data['tr'])
-        if printing:
-            print("Npoints:", len(self.fields_data['sigma']), " \t val:", blob.average, "+-", blob.sigmaF, "\t ACtime:", blob.ACtime)
         return blob.average, blob.sigmaF
             
-    def compute_susceptibility(self, printing=False):
+    def compute_susceptibility(self):
         blob = ComputeStatistics(self.fields_data['sigma'])
         blob = ComputeStatistics((self.fields_data['sigma'] - blob.average)**2)
-        if printing:
-            print("Npoints:", len(self.fields_data['sigma']), " \t val:", blob.average, "+-", blob.sigmaF, "\t ACtime:", blob.ACtime)
-        return blob.average, blob.sigmaF
+        return self.Nt*self.Nx*blob.average, self.Nt*self.Nx*blob.sigmaF
     
-    def compute_mphir(self, printing=False):
+    def compute_mphir(self):
         val, err = get_ren_mass_right_via_timeslices(self.S_t, self.volume)
-        if printing:
-            print("Npoints:", len(self.fields_data['sigma']), " \t val:", val, "+-", err)
         return val, err
     
-    def compute_mqphys(self, printing=False):
+    def compute_mqphys(self, interval=None, func=None, plotting=False, filtering=False):
         val, err = get_fermionic_correlator(self.Sq_t)
-        val, err = get_phys_quark_mass_via_sinh(val, self.volume, plotting=False)
-        if printing:
-            print(p[1], "Npoints:", len(self.fields_data['sigma']), " \t val:", val, "+-", err)
+        if func is None or func == "sinh":
+            val, err = get_phys_quark_mass_via_sinh(val, self.volume, interval=interval, plotting=plotting, filtering=filtering)
+        elif func == "exp":
+            val, err = get_phys_quark_mass_via_exp(val, self.volume, interval=interval, plotting=plotting)
+        else:
+            print("Function not available")
+        return val, err
+    
+    def compute_binder_cumulant(self):
+        blob1 = ComputeStatistics(self.fields_data['sigma']**4)
+        blob2 = ComputeStatistics(self.fields_data['sigma']**2)
+        val = 1 - 1/3 * blob1.average/blob2.average**2
+        err = 1/3 * val * propagate_division_relative(blob1.average, blob1.sigmaF, blob2.average, blob2.sigmaF)
         return val, err
     
     def get_toml_params(self, filename):
@@ -134,12 +138,14 @@ def fitToExp(ydata, startidx, endidx, plotting):
         plt.xlabel("t")
         plt.show()
         
-    return fitparams[0]
+    return fitparams[0][0], fitparams[1][0][0]
 
-def fitToSinh(ydata, startidx, endidx, plotting):
+def fitToSinh(ydata, startidx, endidx, plotting, filtering=False):
     yvals = ydata[startidx:endidx]
-    xvals = np.array(range(startidx, endidx))
-
+    if filtering is False:
+        xvals = np.array(range(startidx, endidx))
+    else:
+        xvals = np.array(range(startidx, endidx, 2))
     fitparams = fit(fitfuncSinh, xvals, yvals, p0=[1.0, 1.0], maxfev=5000)
     
     if plotting is True:
@@ -149,32 +155,42 @@ def fitToSinh(ydata, startidx, endidx, plotting):
         plt.xlabel("t")
         plt.show()
         
-    return fitparams[0]
+    return fitparams[0][0], fitparams[1][0][0]
 
 def get_fermionic_correlator(Sq_t):
     val = np.average(Sq_t, axis=0)
     err = np.std(Sq_t, axis=0)
     return val, err
     
-def get_phys_quark_mass_via_sinh(corr, volume,  startidx=1, endidx=None, plotting=True, printing=True):
-    if endidx is None:
-        endidx = volume[0] - 1
+def get_phys_quark_mass_via_sinh(corr, volume, interval, plotting=True, filtering=False):
     global Nt
     Nt = int(volume[0])
-    val, err = fitToSinh(corr, startidx, endidx, plotting=plotting)
-    if printing:
-        print(val, err)
+    if interval is None:
+        startidx = 1
+        endidx = Nt - 1
+    else:
+        startidx, endidx = interval
+
+    if filtering:
+        filtered_corr = []
+        for i in range(len(corr)):
+            if i % 2 == 0:
+                filtered_corr.append(corr[i])
+    else:
+        filtered_corr = corr
+    val, err = fitToSinh(filtered_corr, startidx, endidx, plotting=plotting, filtering=filtering)
     del Nt
     return val, err
 
-def get_phys_quark_mass_via_exp(corr, volume, startidx=0, endidx=None, plotting=True, printing=True):
-    if endidx is None:
-        endidx = volume[0] - 1
+def get_phys_quark_mass_via_exp(corr, volume, interval=None, plotting=True):
     global Nt
     Nt = int(volume[0])
+    if interval is None:
+        startidx = 1
+        endidx = Nt - 1
+    else:
+        startidx, endidx = interval
     val, err = fitToExp(corr, startidx, endidx, plotting=plotting)
-    if printing:
-        print(val, err)
     del Nt
     return val, err
 
@@ -189,15 +205,15 @@ def get_ren_mass_right_via_timeslices2(S_t, volume, chi2, chi_err):
 
 
     connected_corr_t, connected_corr_t_err = get_connected_2pt_fct(S_t)
-    #chi2 = Nx * np.sum( connected_corr_t)
     mu2 = 2 * Nx * np.sum( connected_corr_t * a**2)
     
     ren_mass2 = 2*2 * chi2/mu2
     ren_mass = np.sqrt( ren_mass2 )
-        
-    #chi_err = Nx * np.sqrt( np.sum( connected_corr_t_err**2 ))
+
     mu_err = 2*Nx * np.sqrt( np.sum( (a**2 * connected_corr_t_err)**2  )   )
     mass2_err = ren_mass2 * np.sqrt( (chi_err/chi2)**2 + (mu_err/mu2)**2 )
     mass_err = ren_mass *0.5 *mass2_err/ren_mass2
 
     return ren_mass, mass_err
+
+propagate_division_relative = lambda x, dx, y, dy : np.sqrt((x/dx)**2 + (y/dy)**2) # (dz/z)^2 = (dx/x)^2 + (dy/y)^2 
